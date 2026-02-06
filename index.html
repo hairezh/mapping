@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Web Mania Editor V5 — edit menor + preview in-game</title>
+  <title>Web Mania Editor V6 — timeline vertical à esquerda</title>
   <style>
     :root{
       --bg:#0b0c0f;
@@ -151,7 +151,7 @@
       min-height:0;
     }
 
-    /* ======= STAGE (edit menor + preview ao lado) ======= */
+    /* ======= STAGE (timeline vertical + edit + preview) ======= */
     .stageWrap{
       position:relative;
       flex:1;
@@ -165,7 +165,7 @@
       position:absolute; inset:0;
       padding:12px;
       display:grid;
-      grid-template-columns: minmax(520px, 720px) 340px;
+      grid-template-columns: 120px minmax(520px, 720px) 340px;
       gap:12px;
       align-content:stretch;
       justify-content:start;
@@ -177,6 +177,9 @@
       overflow:hidden;
       background:#07090d;
       min-height:0;
+    }
+    .pane.timeline{
+      background:#07090d;
     }
 
     canvas{display:block; width:100%; height:100%}
@@ -196,6 +199,7 @@
       background:rgba(0,0,0,.35);
       color:var(--muted);
       backdrop-filter: blur(6px);
+      white-space:nowrap;
     }
     .badge b{color:var(--fg); font-weight:600}
 
@@ -213,20 +217,23 @@
       backdrop-filter: blur(6px);
     }
 
-    .timelineWrap{
-      height:145px;
-      border-radius:var(--r2);
-      border:1px solid var(--border);
-      overflow:hidden;
-      background:#07090d;
-      position:relative;
-    }
+    /* HUD da timeline vertical: em coluna (pra caber na faixa estreita) */
     .timelineHud{
       position:absolute;
-      top:10px; left:10px;
-      display:flex; gap:8px; flex-wrap:wrap;
+      top:10px; left:10px; right:10px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
       z-index:5;
       pointer-events:none;
+    }
+    .timelineHud .badge{
+      font-size:10.5px;
+      padding:3px 8px;
+      width:max-content;
+      max-width:100%;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
     .right{
@@ -347,8 +354,13 @@
     }
 
     @media (max-width: 1200px){
+      .stageInner{ grid-template-columns: 120px 1fr; }
+      .pane.preview{ display:none; }
+    }
+    @media (max-width: 820px){
       .stageInner{ grid-template-columns: 1fr; }
       .pane.preview{ display:none; }
+      .pane.timeline{ display:none; }
     }
     @media (max-width: 1100px){
       .app{ grid-template-columns: 84px 1fr; }
@@ -435,7 +447,17 @@
     <section class="center">
       <div class="stageWrap" id="stageWrap">
         <div class="stageInner">
-          <!-- EDIT PANE (menor, estilo osu) -->
+          <!-- TIMELINE VERTICAL (esquerda do map edit) -->
+          <div class="pane timeline" id="timelineWrap">
+            <div class="timelineHud">
+              <span class="badge">Win: <b class="mono" id="tlWin">8</b>s</span>
+              <span class="badge">Wf: <b class="mono" id="tlWf">—</b></span>
+              <span class="badge">Break: <b class="mono" id="brkStatus">—</b></span>
+            </div>
+            <canvas id="timelineCanvas"></canvas>
+          </div>
+
+          <!-- EDIT PANE -->
           <div class="pane edit" id="editWrap">
             <div class="hud">
               <span class="badge">Time: <b class="mono" id="hudTime">0</b> ms</span>
@@ -446,21 +468,12 @@
             <canvas id="stageCanvas"></canvas>
           </div>
 
-          <!-- PREVIEW PANE (in-game) -->
+          <!-- PREVIEW PANE -->
           <div class="pane preview" id="previewWrap">
             <div class="previewLabel">In-game preview</div>
             <canvas id="previewCanvas"></canvas>
           </div>
         </div>
-      </div>
-
-      <div class="timelineWrap" id="timelineWrap">
-        <div class="timelineHud">
-          <span class="badge">Timeline window: <b class="mono" id="tlWin">8</b>s</span>
-          <span class="badge">Waveform: <b class="mono" id="tlWf">—</b></span>
-          <span class="badge">Break: <b class="mono" id="brkStatus">—</b></span>
-        </div>
-        <canvas id="timelineCanvas"></canvas>
       </div>
     </section>
 
@@ -502,7 +515,7 @@
 
           <div class="hint" style="margin-top:10px">
             <div><b>Atalhos</b>: <span class="mono">Space</span> play/pause • <span class="mono">Wheel</span> scroll tempo • <span class="mono">Ctrl+Z</span> undo • <span class="mono">Delete</span> apagar</div>
-            <div>Minimap: clique para seek rápido. Timeline: clique e arraste para navegar.</div>
+            <div>Timeline vertical: clique/arraste para seek.</div>
           </div>
         </div>
       </div>
@@ -718,6 +731,7 @@
   const previewCanvas = $("previewCanvas");
   const prctx = previewCanvas.getContext("2d");
 
+  // TIMELINE VERTICAL agora mora aqui:
   const timelineWrap = $("timelineWrap");
   const timelineCanvas = $("timelineCanvas");
   const tctx = timelineCanvas.getContext("2d");
@@ -748,6 +762,9 @@
   const selStr = $("selStr");
 
   const SNAP_OPTS = [1,2,3,4,6,8,12,16];
+
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
   const state = {
     tab: "compose",
@@ -809,12 +826,9 @@
       lookAheadMs: 2200,
       lookBackMs: 250,
       hitLinePad: 70,
-      speedFactor: 0.70, // usa scrollPxPerSec * fator (ajusta o "feel" da queda)
+      speedFactor: 0.70,
     }
   };
-
-  function uid(){ return Math.random().toString(36).slice(2,10); }
-  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
   function resizeCanvas(canvas, wrap){
     const r = wrap.getBoundingClientRect();
@@ -1486,12 +1500,11 @@ SliderTickRate:1
     };
   }
 
-  // ======= EDIT VIEW (menor) =======
+  // ======= EDIT VIEW =======
   function drawStage(){
     const w = SW(), h = SH();
     sctx.clearRect(0,0,w,h);
 
-    // bg image
     if(state.bgImg){
       sctx.globalAlpha = state.bgOpacity;
       const img = state.bgImg;
@@ -1505,7 +1518,6 @@ SliderTickRate:1
       sctx.fillRect(0,0,w,h);
     }
 
-    // lanes
     const lw = laneW();
     for(let i=0;i<state.keys;i++){
       sctx.fillStyle = `rgba(255,255,255,${state.laneOpacity})`;
@@ -1516,7 +1528,6 @@ SliderTickRate:1
     sctx.fillStyle = "rgba(255,255,255,.12)";
     sctx.fillRect(w-1,0,1,h);
 
-    // grid
     const viewMs = h / pxPerMs();
     const tMin = state.timeMs - viewMs*0.65;
     const tMax = state.timeMs + viewMs*0.45;
@@ -1555,7 +1566,6 @@ SliderTickRate:1
       }
     }
 
-    // playhead
     sctx.strokeStyle = "rgba(125,211,252,.92)";
     sctx.lineWidth = 2;
     sctx.beginPath();
@@ -1563,7 +1573,6 @@ SliderTickRate:1
     sctx.lineTo(w, centerY());
     sctx.stroke();
 
-    // breaks overlay
     if(state.breaks.length){
       sctx.globalAlpha = 0.10;
       sctx.fillStyle = "rgba(134,239,172,1)";
@@ -1578,7 +1587,6 @@ SliderTickRate:1
       sctx.globalAlpha = 1;
     }
 
-    // notes
     for(const n of state.notes){
       const y = yFromTime(n.t);
       if(y < -140 || y > h+140) continue;
@@ -1610,7 +1618,6 @@ SliderTickRate:1
       }
     }
 
-    // box select
     if(state.drag.mode === "box" && state.drag.box){
       const b = rectNorm(state.drag.box);
       sctx.fillStyle = "rgba(125,211,252,.12)";
@@ -1626,7 +1633,6 @@ SliderTickRate:1
     const w = PW(), h = PH();
     prctx.clearRect(0,0,w,h);
 
-    // background (bem sutil pra lembrar in-game)
     prctx.fillStyle = "#07090d";
     prctx.fillRect(0,0,w,h);
 
@@ -1640,7 +1646,6 @@ SliderTickRate:1
       prctx.globalAlpha = 1;
     }
 
-    // playfield frame
     prctx.fillStyle = "rgba(0,0,0,.25)";
     prctx.fillRect(10, 10, w-20, h-20);
     prctx.strokeStyle = "rgba(255,255,255,.10)";
@@ -1656,7 +1661,6 @@ SliderTickRate:1
     const keys = state.keys;
     const lw = playW / keys;
 
-    // lanes
     for(let i=0;i<keys;i++){
       prctx.fillStyle = "rgba(255,255,255,.04)";
       prctx.fillRect(padX + i*lw, topY, lw-1, playH);
@@ -1666,7 +1670,6 @@ SliderTickRate:1
     prctx.fillStyle = "rgba(255,255,255,.12)";
     prctx.fillRect(padX + playW - 1, topY, 1, playH);
 
-    // hitline + receptors
     const hitY = botY - state.preview.hitLinePad;
     prctx.strokeStyle = "rgba(125,211,252,.95)";
     prctx.lineWidth = 2;
@@ -1675,7 +1678,6 @@ SliderTickRate:1
     prctx.lineTo(padX + playW, hitY);
     prctx.stroke();
 
-    // receptors (retângulos)
     const recH = 16;
     for(let i=0;i<keys;i++){
       const x0 = padX + i*lw;
@@ -1686,14 +1688,10 @@ SliderTickRate:1
       prctx.strokeRect(x0 + 6, hitY + 10, lw-12, recH);
     }
 
-    // preview speed
     const pxPerMsPrev = (state.scrollPxPerSec * state.preview.speedFactor) / 1000;
-
-    // window
     const t0 = state.timeMs - state.preview.lookBackMs;
     const t1 = state.timeMs + state.preview.lookAheadMs;
 
-    // breaks overlay (preview)
     if(state.breaks.length){
       prctx.globalAlpha = 0.10;
       prctx.fillStyle = "rgba(134,239,172,1)";
@@ -1708,20 +1706,17 @@ SliderTickRate:1
       prctx.globalAlpha = 1;
     }
 
-    // notes falling
     for(const n of state.notes){
       if(n.t > t1 || (n.type === "hold" ? n.end < t0 : n.t < t0)) continue;
 
       const lane = n.lane;
       const x0 = padX + lane*lw;
-
       const isSel = state.selected.has(n.id);
 
       const headY = hitY - (n.t - state.timeMs) * pxPerMsPrev;
       const rectH = 12;
       const rectW = lw - 12;
 
-      // hold body
       if(n.type === "hold"){
         const tailY = hitY - (n.end - state.timeMs) * pxPerMsPrev;
         const top = Math.min(headY, tailY);
@@ -1730,12 +1725,10 @@ SliderTickRate:1
         prctx.fillStyle = isSel ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.14)";
         prctx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
 
-        // tail cap
         prctx.fillStyle = isSel ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.70)";
         prctx.fillRect(x0 + 6, tailY - rectH/2, rectW, rectH);
       }
 
-      // head
       prctx.fillStyle = isSel ? "rgba(125,211,252,.95)" : "rgba(255,255,255,.78)";
       prctx.fillRect(x0 + 6, headY - rectH/2, rectW, rectH);
 
@@ -1746,7 +1739,6 @@ SliderTickRate:1
       }
     }
 
-    // vignette for “game feel”
     const grd = prctx.createLinearGradient(0, topY, 0, botY);
     grd.addColorStop(0, "rgba(0,0,0,.55)");
     grd.addColorStop(0.20, "rgba(0,0,0,.00)");
@@ -1756,20 +1748,20 @@ SliderTickRate:1
     prctx.fillRect(padX, topY, playW, playH);
   }
 
-  // Timeline
+  // ======= TIMELINE VERTICAL =======
   function tlRange(){
     const half = (state.tlWinSec*1000)/2;
     return { start: state.timeMs - half, end: state.timeMs + half };
   }
-  function xFromTime(ms){
+  function yFromTimeTL(ms){
     const {start,end} = tlRange();
-    const w = TW();
-    return ((ms - start) / (end - start)) * w;
+    const h = TH();
+    return ((ms - start) / (end - start)) * h;
   }
-  function timeFromX(x){
+  function timeFromYTL(y){
     const {start,end} = tlRange();
-    const w = TW();
-    return start + (x / w) * (end - start);
+    const h = TH();
+    return start + (y / h) * (end - start);
   }
 
   function drawTimeline(){
@@ -1780,35 +1772,38 @@ SliderTickRate:1
 
     const {start,end} = tlRange();
 
+    // waveform (barrinhas horizontais)
     if(state.wf.ready){
-      tctx.globalAlpha = 0.35;
+      tctx.globalAlpha = 0.40;
       tctx.strokeStyle = "rgba(125,211,252,.85)";
       tctx.lineWidth = 1;
-      tctx.beginPath();
-      const mid = h*0.5;
-      for(let x=0; x<=w; x+=2){
-        const ms = timeFromX(x);
+      const mid = w*0.55;
+      for(let y=0; y<=h; y+=2){
+        const ms = timeFromYTL(y);
         const a = ampAtMs(ms);
-        const amp = a*(h*0.42);
-        tctx.moveTo(x, mid-amp);
-        tctx.lineTo(x, mid+amp);
+        const amp = a*(w*0.40);
+        tctx.beginPath();
+        tctx.moveTo(mid-amp, y);
+        tctx.lineTo(mid+amp, y);
+        tctx.stroke();
       }
-      tctx.stroke();
       tctx.globalAlpha = 1;
     }
 
+    // breaks overlay
     if(state.breaks.length){
       tctx.globalAlpha = 0.10;
       tctx.fillStyle = "rgba(134,239,172,1)";
       for(const b of state.breaks){
         if(b.end < start || b.start > end) continue;
-        const x1 = xFromTime(b.start);
-        const x2 = xFromTime(b.end);
-        tctx.fillRect(Math.min(x1,x2), 0, Math.abs(x2-x1), h);
+        const y1 = yFromTimeTL(b.start);
+        const y2 = yFromTimeTL(b.end);
+        tctx.fillRect(0, Math.min(y1,y2), w, Math.abs(y2-y1));
       }
       tctx.globalAlpha = 1;
     }
 
+    // grid lines (snap)
     const tp = activeTP(state.timeMs);
     const beatLen = 60000 / tp.bpm;
     const step = beatLen / state.snap;
@@ -1816,7 +1811,7 @@ SliderTickRate:1
 
     const n0 = Math.ceil((start - base) / step);
     for(let t = base + n0*step; t <= end; t += step){
-      const x = xFromTime(t);
+      const y = yFromTimeTL(t);
       const rel = t - base;
       const beatIndex = Math.round(rel / beatLen);
       const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
@@ -1826,33 +1821,43 @@ SliderTickRate:1
       tctx.strokeStyle = `rgba(255,255,255,${a})`;
       tctx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
       tctx.beginPath();
-      tctx.moveTo(x,0);
-      tctx.lineTo(x,h);
+      tctx.moveTo(0,y);
+      tctx.lineTo(w,y);
       tctx.stroke();
     }
 
-    const laneH = h / state.keys;
+    // notes markers (lanes na horizontal)
+    const laneWtl = w / state.keys;
     for(const n of state.notes){
       if(n.t < start || n.t > end) continue;
-      const x = xFromTime(n.t);
-      const y = (n.lane + 0.5)*laneH;
+      const y = yFromTimeTL(n.t);
+      const x = (n.lane + 0.5)*laneWtl;
 
-      tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.75)";
-      tctx.fillRect(x-2, y-6, 4, 12);
+      tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.92)" : "rgba(255,255,255,.75)";
+      tctx.fillRect(x-3, y-3, 6, 6);
 
       if(n.type === "hold"){
-        const x2 = xFromTime(n.end);
+        const y2 = yFromTimeTL(n.end);
         tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.18)";
-        tctx.fillRect(Math.min(x,x2), y-2, Math.abs(x2-x), 4);
+        tctx.fillRect(x-2, Math.min(y,y2), 4, Math.abs(y2-y));
       }
     }
 
-    const xPH = xFromTime(state.timeMs);
+    // playhead line
+    const yPH = yFromTimeTL(state.timeMs);
     tctx.strokeStyle = "rgba(125,211,252,.95)";
     tctx.lineWidth = 2;
     tctx.beginPath();
-    tctx.moveTo(xPH,0);
-    tctx.lineTo(xPH,h);
+    tctx.moveTo(0,yPH);
+    tctx.lineTo(w,yPH);
+    tctx.stroke();
+
+    // border line (pra separar do playfield)
+    tctx.strokeStyle = "rgba(255,255,255,.08)";
+    tctx.lineWidth = 1;
+    tctx.beginPath();
+    tctx.moveTo(w-0.5,0);
+    tctx.lineTo(w-0.5,h);
     tctx.stroke();
   }
 
@@ -2019,7 +2024,7 @@ SliderTickRate:1
     updateSelectionUI();
   }
 
-  // Editor interactions (no editWrap, não no preview)
+  // Editor interactions
   editWrap.addEventListener("wheel", (e)=>{
     e.preventDefault();
     if(!state.buffer) return;
@@ -2032,7 +2037,6 @@ SliderTickRate:1
     state.drag.down = true;
     state.drag.x0 = m.x; state.drag.y0 = m.y;
 
-    // break mode uses playhead
     if(state.breakArming){
       commitBreakAt(state.timeMs);
       return;
@@ -2139,19 +2143,19 @@ SliderTickRate:1
     state.drag.holdId=null;
   });
 
-  // Timeline drag seek
-  function timelineSeekAtX(x){ seekMs(timeFromX(x)); }
+  // Timeline vertical drag seek
+  function timelineSeekAtY(y){ seekMs(timeFromYTL(y)); }
 
   timelineWrap.addEventListener("mousedown", (e)=>{
     if(!state.buffer) return;
     state.tlDrag = true;
     const m = mousePos(e, timelineWrap);
-    timelineSeekAtX(m.x);
+    timelineSeekAtY(m.y);
   });
   window.addEventListener("mousemove", (e)=>{
     if(!state.tlDrag) return;
     const m = mousePos(e, timelineWrap);
-    timelineSeekAtX(m.x);
+    timelineSeekAtY(m.y);
   });
   window.addEventListener("mouseup", ()=> state.tlDrag=false);
 
@@ -2223,6 +2227,7 @@ SliderTickRate:1
     updateSelectionUI();
     e.preventDefault();
   }
+
   window.addEventListener("keydown", (e)=>{
     if(e.code === "Space"){
       e.preventDefault();
@@ -2340,7 +2345,6 @@ SliderTickRate:1
     });
   });
 
-  // HUD
   function renderHUD(){
     const tp = activeTP(state.timeMs);
     hudTime.textContent = String(Math.round(state.timeMs));
@@ -2377,7 +2381,7 @@ SliderTickRate:1
     requestAnimationFrame(loop);
   }
 
-  // Init
+  // init
   setTab("compose");
   setTool("select");
   setKeys(4);
@@ -2401,6 +2405,53 @@ SliderTickRate:1
   tpReset.disabled = true;
 
   requestAnimationFrame(loop);
+
+  // helper selection UI (referenciada acima)
+  function updateSelectionUI(){
+    const countSel = state.selected.size;
+    selStr.textContent = `sel: ${countSel}`;
+    deleteBtn.disabled = countSel === 0;
+
+    if(countSel === 0){
+      selLine.textContent = "—";
+      setPropsEnabled(false);
+      return;
+    }
+    if(countSel > 1){
+      selLine.textContent = `${countSel} notas selecionadas`;
+      setPropsEnabled(false);
+      return;
+    }
+
+    const n = getSelectedOne();
+    if(!n){ selLine.textContent="—"; setPropsEnabled(false); return; }
+
+    selLine.textContent = `lane ${n.lane+1} @ ${Math.round(n.t)}ms`;
+    setPropsEnabled(true);
+
+    propTime.value = Math.round(n.t);
+    propLane.value = n.lane+1;
+    propType.value = n.type;
+    propEnd.value = Math.round(n.end ?? n.t);
+    hsVol.value = String(n.vol ?? 0);
+    hsFlags.value = String(n.hs ?? 0);
+
+    const hs = n.hs ?? 0;
+    hsWhistle.classList.toggle("active", (hs & 2) !== 0);
+    hsFinish.classList.toggle("active", (hs & 4) !== 0);
+    hsClap.classList.toggle("active", (hs & 8) !== 0);
+  }
+  function setPropsEnabled(on){
+    propTime.disabled = !on;
+    propLane.disabled = !on;
+    propType.disabled = !on;
+    propEnd.disabled = !on;
+    hsVol.disabled = !on;
+    hsFlags.disabled = !on;
+    hsWhistle.disabled = !on;
+    hsFinish.disabled = !on;
+    hsClap.disabled = !on;
+  }
 })();
 </script>
 </body>

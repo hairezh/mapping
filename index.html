@@ -1,0 +1,1353 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>osu!mania Mapping Assistant (Brush + Validator)</title>
+  <style>
+    :root{
+      --bg:#0b0c10;
+      --panel:rgba(255,255,255,.06);
+      --panel2:rgba(255,255,255,.035);
+      --border:rgba(255,255,255,.12);
+      --fg:#f2f2f2;
+      --muted:rgba(255,255,255,.65);
+      --good:#3ddc97;
+      --bad:#ff5c7a;
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --r:16px;
+      --r2:12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:radial-gradient(1200px 800px at 20% 10%, rgba(61,220,151,.12), transparent 55%),
+                 radial-gradient(1100px 700px at 80% 20%, rgba(120,130,255,.12), transparent 55%),
+                 var(--bg);
+      color:var(--fg);
+      font-family:var(--font);
+      line-height:1.35;
+    }
+    .wrap{
+      max-width:1240px;
+      margin:0 auto;
+      padding:18px 14px 38px;
+      display:grid;
+      grid-template-columns: 420px 1fr;
+      gap:14px;
+    }
+    @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.035));
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .hd{
+      padding:14px 14px 10px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .title{font-size:14px;font-weight:800;letter-spacing:.2px}
+    .subtitle{margin-top:6px;color:var(--muted);font-size:12px}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.25);
+      color:rgba(255,255,255,.85);
+      font-size:12px; white-space:nowrap;
+    }
+    .bd{ padding:14px; }
+    label{ display:block; font-size:12px; color:var(--muted); margin:0 0 6px; }
+    input[type="text"], input[type="number"], select{
+      width:100%;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.28);
+      color:var(--fg);
+      outline:none;
+    }
+    input:focus, select:focus{
+      border-color: rgba(61,220,151,.45);
+      box-shadow: 0 0 0 3px rgba(61,220,151,.12);
+    }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .row{ display:flex; gap:10px; align-items:center; }
+    .hint{ margin-top:6px; font-size:12px; color:rgba(255,255,255,.55); }
+    .btns{ display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    button{
+      border:none; border-radius:14px;
+      padding:11px 12px;
+      background:rgba(255,255,255,.08);
+      color:var(--fg);
+      border:1px solid rgba(255,255,255,.12);
+      cursor:pointer; font-weight:800; letter-spacing:.2px;
+    }
+    button:hover{ background:rgba(255,255,255,.11) }
+    button.primary{
+      background:rgba(61,220,151,.14);
+      border-color: rgba(61,220,151,.38);
+    }
+    button.primary:hover{ background:rgba(61,220,151,.18) }
+    button.danger{
+      background:rgba(255,92,122,.12);
+      border-color: rgba(255,92,122,.35);
+    }
+    .divider{ height:1px; background:rgba(255,255,255,.08); margin:12px 0; }
+    .status{
+      font-size:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.22);
+      color:rgba(255,255,255,.80);
+    }
+    .status.good{ border-color: rgba(61,220,151,.35); }
+    .status.bad{ border-color: rgba(255,92,122,.35); }
+    .mono{
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(255,255,255,.85);
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+    .drop{
+      border:1px dashed rgba(255,255,255,.22);
+      border-radius:14px;
+      padding:12px;
+      background:rgba(0,0,0,.18);
+      color:rgba(255,255,255,.75);
+      font-size:12px;
+    }
+    canvas{
+      width:100%;
+      height:680px;
+      display:block;
+      background:linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.30));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--r);
+      cursor:crosshair;
+      user-select:none;
+    }
+    .kbd{
+      font-family:var(--mono);
+      font-size:11px;
+      color:rgba(255,255,255,.75);
+      border:1px solid rgba(255,255,255,.15);
+      padding:3px 6px;
+      border-radius:8px;
+      background:rgba(0,0,0,.25);
+      white-space:nowrap;
+    }
+    .warnlist{
+      max-height:240px;
+      overflow:auto;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.22);
+      padding:10px;
+      border-radius:14px;
+    }
+    .warn{ color:rgba(255,255,255,.82); margin:0 0 8px; }
+    .warn b{ color:#fff; }
+    .warn .bad{ color:rgba(255,92,122,.95); }
+    .warn .good{ color:rgba(61,220,151,.95); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LEFT -->
+  <div class="card">
+    <div class="hd">
+      <div>
+        <div class="title">Mapping Assistant (osu!mania)</div>
+        <div class="subtitle">Selecione um trecho → aplique um “brush” → valide → exporte.</div>
+      </div>
+      <div class="pill">Brush + Validator</div>
+    </div>
+
+    <div class="bd">
+      <div class="drop" id="dropZone">
+        Arraste aqui seu <b>.osu</b> (mania) ou use o botão abaixo.
+        <div class="hint" style="margin-top:8px">Dica: também dá pra importar áudio (opcional) só pra ouvir e ver duração.</div>
+      </div>
+
+      <div class="btns" style="margin-top:10px">
+        <input id="osuFile" type="file" accept=".osu" style="display:none"/>
+        <button id="btnLoadOsu" class="primary">Importar .osu</button>
+
+        <input id="audioFile" type="file" accept="audio/*" style="display:none"/>
+        <button id="btnLoadAudio">Importar áudio</button>
+
+        <button id="btnExport" class="primary">Exportar .osu</button>
+        <button id="btnUndo" class="danger">Undo</button>
+      </div>
+
+      <div id="status" class="status" style="margin-top:12px">
+        Nenhum mapa carregado ainda.
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid">
+        <div>
+          <label>Keymode (CS)</label>
+          <input id="cs" type="number" min="1" max="18" step="1" value="4"/>
+          <div class="hint">Ao importar .osu, isso vem do arquivo (CircleSize). Você pode ajustar.</div>
+        </div>
+        <div>
+          <label>BPM (para brushes)</label>
+          <input id="bpm" type="number" min="30" max="400" step="0.01" value="180"/>
+          <div class="hint">Se o mapa já tem timing, você pode colocar o BPM principal aqui.</div>
+        </div>
+
+        <div>
+          <label>Snap (divisor do beat)</label>
+          <select id="snap">
+            <option value="1">1/1</option>
+            <option value="2">1/2</option>
+            <option value="3">1/3</option>
+            <option value="4" selected>1/4</option>
+            <option value="6">1/6</option>
+            <option value="8">1/8</option>
+            <option value="12">1/12</option>
+            <option value="16">1/16</option>
+          </select>
+          <div class="hint">Define o passo do brush no trecho selecionado.</div>
+        </div>
+        <div>
+          <label>Offset base (ms)</label>
+          <input id="baseOffset" type="number" step="1" value="0"/>
+          <div class="hint">Usado pelos brushes como “grid zero”.</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <label>Brush</label>
+        <select id="brush">
+          <option value="stream">Stream alternado (1212…)</option>
+          <option value="jumpstream">Jumpstream (saltos controlados)</option>
+          <option value="chord2">Chords 2-notas (13/24…)</option>
+          <option value="lnsprinkle">LN sprinkle (algumas viram hold)</option>
+          <option value="densify">Densify (duplica: 1/2→1/4 etc.)</option>
+          <option value="simplify">Simplify (remove excesso / reduz chords)</option>
+        </select>
+
+        <div class="grid" style="margin-top:10px">
+          <div>
+            <label>Chord chance (%)</label>
+            <input id="chordChance" type="number" min="0" max="100" step="1" value="15"/>
+          </div>
+          <div>
+            <label>Hold chance (%)</label>
+            <input id="holdChance" type="number" min="0" max="100" step="1" value="18"/>
+          </div>
+          <div>
+            <label>Hold length (beats)</label>
+            <input id="holdBeats" type="number" min="0.25" max="8" step="0.25" value="1.5"/>
+          </div>
+          <div>
+            <label>Seed (variação)</label>
+            <input id="seed" type="text" value="reze"/>
+          </div>
+        </div>
+
+        <div class="btns">
+          <button id="btnApply" class="primary">Aplicar brush no trecho</button>
+          <button id="btnMirror">Mirror trecho</button>
+          <button id="btnShift">Shift colunas (+1)</button>
+          <button id="btnDelete" class="danger">Deletar trecho</button>
+        </div>
+
+        <div class="hint">
+          Atalhos: <span class="kbd">Arrastar</span> seleciona trecho • <span class="kbd">Espaço</span> play/pause áudio •
+          <span class="kbd">V</span> valida • <span class="kbd">Ctrl+Z</span> undo
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid">
+        <div>
+          <label>Validador: Jack min gap (ms)</label>
+          <input id="jackGap" type="number" min="20" max="500" step="5" value="110"/>
+        </div>
+        <div>
+          <label>Limite chord (4K)</label>
+          <input id="chordLimit4k" type="number" min="1" max="4" step="1" value="2"/>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="btnValidate">Validar</button>
+        <button id="btnClearSel">Limpar seleção</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <label>Warnings</label>
+        <div id="warnings" class="warnlist mono">Sem validação ainda.</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div>
+        <label>Áudio</label>
+        <audio id="audio" controls style="width:100%"></audio>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="card">
+    <div class="hd">
+      <div>
+        <div class="title">Preview do chart</div>
+        <div class="subtitle">Colunas × tempo. Selecione um trecho arrastando no canvas.</div>
+      </div>
+      <div class="pill">
+        <span>Zoom:</span>
+        <select id="zoom" style="width:auto; padding:8px 10px; border-radius:999px;">
+          <option value="0.6">Baixo</option>
+          <option value="1.0" selected>Médio</option>
+          <option value="1.6">Alto</option>
+          <option value="2.2">Muito</option>
+        </select>
+      </div>
+    </div>
+    <div class="bd">
+      <canvas id="cv"></canvas>
+      <div class="divider"></div>
+      <div class="mono" style="color:rgba(255,255,255,.72)">
+Seleção:
+- Arraste no canvas para marcar um intervalo de tempo.
+- O brush atua apenas no intervalo selecionado.
+
+O que isso NÃO é:
+- não substitui o editor do osu.
+O que isso É:
+- “ferramenta de alto nível” pra acelerar padrão/limpeza/variação.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  // ------------------ Utilities ------------------
+  const el = id => document.getElementById(id);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const fmt = (n) => (Math.round(n*1000)/1000).toString();
+  const pad2 = n => String(n).padStart(2,'0');
+
+  function hashStrToU32(str){
+    let h = 2166136261 >>> 0;
+    for(let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function makeRng(seedStr){
+    let x = hashStrToU32(seedStr || 'seed') || 0x12345678;
+    return function rng(){
+      x ^= x << 13; x >>>= 0;
+      x ^= x >>> 17; x >>>= 0;
+      x ^= x << 5;  x >>>= 0;
+      return (x >>> 0) / 4294967296;
+    };
+  }
+
+  function downloadText(filename, text){
+    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  }
+
+  // osu mania: x -> column
+  function xToCol(x, keys){
+    const w = 512 / keys;
+    // inverse of center calc; hitobject x is centered in col bucket usually
+    let c = Math.floor(x / w);
+    return clamp(c, 0, keys-1);
+  }
+  function colToX(col, keys){
+    const w = 512 / keys;
+    return Math.floor(col * w + w/2);
+  }
+
+  // ------------------ State ------------------
+  const state = {
+    rawText: '',
+    sections: new Map(), // name -> string (original)
+    // parsed minimal fields:
+    general: {},
+    metadata: {},
+    difficulty: {},
+    timingPoints: [],
+    hitObjects: [], // {t, col, type:'circle'|'hold', end?, rawLine?, otherRaw?}
+    formatLine: 'osu file format v14',
+    mode: 3,
+    cs: 4,
+    audioFilename: '',
+    // selection
+    sel: { active:false, t0:null, t1:null },
+    // view
+    view: { tMin:0, tMax:60000, zoom:1.0 },
+    // undo
+    undoStack: []
+  };
+
+  // ------------------ Elements ------------------
+  const dropZone = el('dropZone');
+  const status = el('status');
+  const warnings = el('warnings');
+
+  const osuFile = el('osuFile');
+  const btnLoadOsu = el('btnLoadOsu');
+  const btnExport = el('btnExport');
+  const btnUndo = el('btnUndo');
+
+  const audioFile = el('audioFile');
+  const btnLoadAudio = el('btnLoadAudio');
+  const audio = el('audio');
+
+  const cs = el('cs');
+  const bpm = el('bpm');
+  const snap = el('snap');
+  const baseOffset = el('baseOffset');
+  const brush = el('brush');
+  const chordChance = el('chordChance');
+  const holdChance = el('holdChance');
+  const holdBeats = el('holdBeats');
+  const seed = el('seed');
+
+  const btnApply = el('btnApply');
+  const btnMirror = el('btnMirror');
+  const btnShift = el('btnShift');
+  const btnDelete = el('btnDelete');
+  const btnValidate = el('btnValidate');
+  const btnClearSel = el('btnClearSel');
+
+  const jackGap = el('jackGap');
+  const chordLimit4k = el('chordLimit4k');
+
+  const zoom = el('zoom');
+
+  const cv = el('cv');
+  const ctx = cv.getContext('2d');
+
+  function setStatus(msg, ok=true){
+    status.textContent = msg;
+    status.classList.toggle('good', ok);
+    status.classList.toggle('bad', !ok);
+  }
+
+  // ------------------ Parsing / Building ------------------
+  function parseOsu(text){
+    state.rawText = text;
+    state.sections.clear();
+    state.timingPoints = [];
+    state.hitObjects = [];
+    state.general = {};
+    state.metadata = {};
+    state.difficulty = {};
+    state.audioFilename = '';
+    state.mode = 3;
+    state.cs = 4;
+    state.formatLine = 'osu file format v14';
+
+    const lines = text.replace(/\r/g,'').split('\n');
+    if(lines[0]?.startsWith('osu file format')) state.formatLine = lines[0].trim();
+
+    let current = null;
+    let buf = [];
+    const flush = () => {
+      if(current){
+        state.sections.set(current, buf.join('\n'));
+      }
+      buf = [];
+    };
+
+    for(let i=0;i<lines.length;i++){
+      const line = lines[i];
+      const sec = line.match(/^\[(.+)\]\s*$/);
+      if(sec){
+        flush();
+        current = sec[1];
+        continue;
+      }
+      if(current) buf.push(line);
+    }
+    flush();
+
+    // Parse key-value sections
+    function parseKV(sectionName, target){
+      const secText = state.sections.get(sectionName) || '';
+      const ls = secText.split('\n');
+      for(const l of ls){
+        const line = l.trim();
+        if(!line || line.startsWith('//')) continue;
+        const idx = line.indexOf(':');
+        if(idx === -1) continue;
+        const k = line.slice(0,idx).trim();
+        const v = line.slice(idx+1).trim();
+        target[k] = v;
+      }
+    }
+
+    parseKV('General', state.general);
+    parseKV('Metadata', state.metadata);
+    parseKV('Difficulty', state.difficulty);
+
+    state.audioFilename = state.general.AudioFilename || '';
+    state.mode = parseInt(state.general.Mode || '3', 10);
+    state.cs = parseInt(state.difficulty.CircleSize || '4', 10);
+
+    // TimingPoints minimal parse
+    const tpText = state.sections.get('TimingPoints') || '';
+    for(const l of tpText.split('\n')){
+      const line = l.trim();
+      if(!line || line.startsWith('//')) continue;
+      const parts = line.split(',');
+      if(parts.length < 2) continue;
+      const time = parseFloat(parts[0]);
+      const mpb = parseFloat(parts[1]);
+      if(!isFinite(time) || !isFinite(mpb)) continue;
+      state.timingPoints.push({ time, mpb, raw: line });
+    }
+
+    // HitObjects parse (mania notes and holds)
+    const hoText = state.sections.get('HitObjects') || '';
+    for(const l of hoText.split('\n')){
+      const line = l.trim();
+      if(!line || line.startsWith('//')) continue;
+      const parts = line.split(',');
+      if(parts.length < 5) continue;
+
+      const x = parseInt(parts[0],10);
+      const time = parseInt(parts[2],10);
+      const type = parseInt(parts[3],10);
+
+      if(!isFinite(x) || !isFinite(time) || !isFinite(type)) continue;
+
+      // mania hold: type has 128 bit
+      const isHold = (type & 128) === 128;
+      const col = xToCol(x, state.cs);
+
+      if(isHold){
+        // params: parts[5] like "endTime:0:0:0:0:"
+        const params = parts[5] || '';
+        const endStr = params.split(':')[0];
+        const end = parseInt(endStr,10);
+        if(isFinite(end)){
+          state.hitObjects.push({ t: time, col, type:'hold', end, rawLine: line });
+        } else {
+          // fallback as circle
+          state.hitObjects.push({ t: time, col, type:'circle', rawLine: line });
+        }
+      } else {
+        state.hitObjects.push({ t: time, col, type:'circle', rawLine: line });
+      }
+    }
+
+    // sort for sanity
+    state.hitObjects.sort((a,b) => a.t - b.t || a.col - b.col);
+
+    // set default view range
+    const minT = state.hitObjects[0]?.t ?? 0;
+    const maxT = state.hitObjects[state.hitObjects.length-1]?.t ?? 60000;
+    const pad = 2000;
+    state.view.tMin = Math.max(0, minT - pad);
+    state.view.tMax = maxT + pad;
+
+    // sync UI
+    cs.value = state.cs;
+    if(state.mode !== 3){
+      setStatus('Esse .osu não parece ser Mode:3 (mania). Ainda dá pra abrir, mas o preview/brush pode não bater.', false);
+    } else {
+      setStatus(`Carregado: ${state.metadata.Title || '(sem título)'} — ${state.cs}K — objetos: ${state.hitObjects.length}`, true);
+    }
+  }
+
+  function buildOsu(){
+    // rebuild sections while preserving most original text
+    // We will update General.Mode, General.AudioFilename (kept), Difficulty.CircleSize, and HitObjects.
+    state.general.Mode = '3';
+    state.difficulty.CircleSize = String(state.cs);
+
+    const order = [
+      'General','Editor','Metadata','Difficulty','Events','TimingPoints','Colours','HitObjects'
+    ];
+
+    function buildKVSection(obj, originalText){
+      // Preserve keys that exist, update known ones; keep comments/unknown lines if possible
+      // Simple strategy: rebuild from obj keys, and append any non-kv lines from original
+      const lines = [];
+      // keep original comment lines
+      if(originalText){
+        for(const l of originalText.split('\n')){
+          const t = l.trim();
+          if(t.startsWith('//')) lines.push(l);
+        }
+      }
+      // stable ordering for common keys
+      const keys = Object.keys(obj);
+      keys.sort((a,b)=>a.localeCompare(b));
+      for(const k of keys){
+        lines.push(`${k}:${obj[k]}`);
+      }
+      return lines.join('\n');
+    }
+
+    // Update sections map
+    const genTxt = buildKVSection(state.general, state.sections.get('General')||'');
+    state.sections.set('General', genTxt);
+
+    const metaTxt = buildKVSection(state.metadata, state.sections.get('Metadata')||'');
+    state.sections.set('Metadata', metaTxt);
+
+    const diffTxt = buildKVSection(state.difficulty, state.sections.get('Difficulty')||'');
+    state.sections.set('Difficulty', diffTxt);
+
+    // TimingPoints: keep original raw (we won't rewrite)
+    if(!state.sections.has('TimingPoints')) state.sections.set('TimingPoints','');
+
+    // HitObjects rebuild from parsed objects
+    const hoLines = [];
+    for(const o of state.hitObjects){
+      const x = colToX(o.col, state.cs);
+      if(o.type === 'hold'){
+        const end = Math.max(o.t+1, o.end|0);
+        hoLines.push(`${x},192,${o.t},128,0,${end}:0:0:0:0:`);
+      } else {
+        hoLines.push(`${x},192,${o.t},1,0,0:0:0:0:`);
+      }
+    }
+    state.sections.set('HitObjects', hoLines.join('\n'));
+
+    // Compose full file
+    const out = [];
+    out.push(state.formatLine);
+    out.push('');
+    for(const name of order){
+      if(state.sections.has(name)){
+        out.push(`[${name}]`);
+        out.push(state.sections.get(name) || '');
+        out.push('');
+      }
+    }
+    // Any other sections not in order
+    for(const [name, txt] of state.sections.entries()){
+      if(order.includes(name)) continue;
+      out.push(`[${name}]`);
+      out.push(txt || '');
+      out.push('');
+    }
+    return out.join('\n').trimEnd() + '\n';
+  }
+
+  // ------------------ Selection helpers ------------------
+  function selActive(){ return state.sel.t0 != null && state.sel.t1 != null && state.sel.t1 > state.sel.t0; }
+  function selRange(){
+    const a = state.sel.t0 ?? 0;
+    const b = state.sel.t1 ?? 0;
+    return [Math.min(a,b), Math.max(a,b)];
+  }
+
+  function pushUndo(label){
+    const snapshot = {
+      label,
+      hitObjects: state.hitObjects.map(o => ({...o})),
+      cs: state.cs
+    };
+    state.undoStack.push(snapshot);
+    if(state.undoStack.length > 50) state.undoStack.shift();
+    btnUndo.disabled = state.undoStack.length === 0;
+  }
+
+  function undo(){
+    const snap = state.undoStack.pop();
+    if(!snap) return;
+    state.hitObjects = snap.hitObjects.map(o => ({...o}));
+    state.cs = snap.cs;
+    cs.value = state.cs;
+    btnUndo.disabled = state.undoStack.length === 0;
+    setStatus(`Undo: ${snap.label}`, true);
+    render();
+  }
+
+  // ------------------ Brushes (core idea) ------------------
+  function beatMs(){ return 60000 / (parseFloat(bpm.value) || 180); }
+  function stepMs(){
+    const div = parseInt(snap.value,10) || 4;
+    return beatMs() / div;
+  }
+
+  function quantizeTime(t){
+    const base = parseInt(baseOffset.value,10) || 0;
+    const s = stepMs();
+    const n = Math.round((t - base) / s);
+    return Math.round(base + n*s);
+  }
+
+  function removeObjectsInRange(t0, t1){
+    state.hitObjects = state.hitObjects.filter(o => !(o.t >= t0 && o.t <= t1));
+  }
+
+  function objectsInRange(t0, t1){
+    return state.hitObjects.filter(o => o.t >= t0 && o.t <= t1);
+  }
+
+  function normalizeSort(){
+    // Also prevent negative time
+    for(const o of state.hitObjects){
+      o.t = Math.max(0, o.t|0);
+      if(o.type==='hold'){
+        o.end = Math.max(o.t+1, o.end|0);
+      }
+      o.col = clamp(o.col|0, 0, state.cs-1);
+    }
+    state.hitObjects.sort((a,b)=>a.t-b.t || a.col-b.col);
+  }
+
+  function applyBrush(){
+    if(!selActive()){
+      setStatus('Selecione um trecho no canvas (arraste) antes de aplicar brush.', false);
+      return;
+    }
+    const [t0raw, t1raw] = selRange();
+    const t0 = quantizeTime(t0raw);
+    const t1 = quantizeTime(t1raw);
+    const k = state.cs;
+
+    if(k < 1){ setStatus('Keymode inválido.', false); return; }
+
+    const rng = makeRng(seed.value || 'seed');
+    const cc = clamp((parseFloat(chordChance.value)||0)/100, 0, 1);
+    const hc = clamp((parseFloat(holdChance.value)||0)/100, 0, 1);
+    const hlBeats = clamp(parseFloat(holdBeats.value)||1.5, 0.25, 8);
+    const step = stepMs();
+    const beat = beatMs();
+
+    pushUndo(`Apply brush (${brush.value})`);
+
+    // strategy depends on brush
+    if(brush.value === 'simplify'){
+      // Remove notes that create big chords, and thin dense clusters
+      const limit = (k===4) ? (parseInt(chordLimit4k.value,10)||2) : 4;
+      // group by time
+      const kept = [];
+      const byTime = new Map();
+      for(const o of state.hitObjects){
+        if(o.t < t0 || o.t > t1) { kept.push(o); continue; }
+        const qt = quantizeTime(o.t);
+        const arr = byTime.get(qt) || [];
+        arr.push({...o, t: qt});
+        byTime.set(qt, arr);
+      }
+      for(const [qt, arr] of byTime.entries()){
+        // sort cols
+        arr.sort((a,b)=>a.col-b.col);
+        // reduce to limit by dropping middle-ish notes first
+        while(arr.length > limit){
+          // drop a note that makes it "wider" less? simplest: drop a random mid index
+          const idx = Math.floor(arr.length/2);
+          arr.splice(idx,1);
+        }
+        for(const o of arr) kept.push(o);
+      }
+      state.hitObjects = kept;
+      normalizeSort();
+      setStatus(`Simplify aplicado em ${t0}–${t1}ms`, true);
+      render();
+      return;
+    }
+
+    if(brush.value === 'densify'){
+      // Add notes between existing quantized steps in range (double density)
+      const existing = objectsInRange(t0, t1).map(o => ({...o, t: quantizeTime(o.t)}));
+      // Build a set of occupied (time,col)
+      const occ = new Set(existing.map(o => `${o.t}|${o.col}`));
+      // For each existing note at time t, try add at t+step/2 (quantized to half-step)
+      const half = step/2;
+      for(const o of existing){
+        const tNew = Math.round(o.t + half);
+        if(tNew > t1) continue;
+        // choose a column variation near o.col
+        let c = o.col;
+        if(rng() < 0.75){
+          c = clamp(c + (rng()<0.5?-1:1), 0, k-1);
+        } else {
+          c = Math.floor(rng()*k);
+        }
+        const key = `${tNew}|${c}`;
+        if(!occ.has(key)){
+          state.hitObjects.push({ t:tNew, col:c, type:'circle' });
+          occ.add(key);
+        }
+      }
+      normalizeSort();
+      setStatus(`Densify aplicado em ${t0}–${t1}ms`, true);
+      render();
+      return;
+    }
+
+    // For pattern brushes we usually overwrite the range (replace notes)
+    removeObjectsInRange(t0, t1);
+
+    // Pattern generators
+    let lastCol = Math.floor(rng()*k);
+
+    function pickNeighborish(cur){
+      if(k<=1) return 0;
+      const r = rng();
+      if(r < 0.70){
+        const dir = (rng()<0.5)?-1:1;
+        return clamp(cur + dir, 0, k-1);
+      }
+      if(r < 0.90){
+        const dir = (rng()<0.5)?-2:2;
+        return clamp(cur + dir, 0, k-1);
+      }
+      return Math.floor(rng()*k);
+    }
+
+    function addCircle(t, col){ state.hitObjects.push({ t, col, type:'circle' }); }
+    function addHold(t, col, end){ state.hitObjects.push({ t, col, type:'hold', end }); }
+
+    // Helpers for chords
+    function chordCols(baseCol, size){
+      // pick spread columns
+      const cols = [baseCol];
+      let tries = 0;
+      while(cols.length < size && tries++ < 40){
+        let c = Math.floor(rng()*k);
+        if(cols.includes(c)) continue;
+        if(k<=4 && cols.length===1 && Math.abs(c-cols[0])===1 && rng()<0.65) continue;
+        cols.push(c);
+      }
+      while(cols.length < size){
+        const c = Math.floor(rng()*k);
+        if(!cols.includes(c)) cols.push(c);
+      }
+      cols.sort((a,b)=>a-b);
+      return cols;
+    }
+
+    // Main generate loop in range
+    for(let t = t0; t <= t1; t += step){
+      const tt = quantizeTime(t);
+
+      if(brush.value === 'stream'){
+        // alternating with neighbor bias
+        let c = pickNeighborish(lastCol);
+        // sometimes small chords
+        if(rng() < cc){
+          const size = (k===4) ? 2 : (rng()<0.65 ? 2 : 3);
+          for(const col of chordCols(c, size)) addCircle(tt, col);
+        } else {
+          addCircle(tt, c);
+        }
+        lastCol = c;
+      }
+
+      else if(brush.value === 'jumpstream'){
+        // prefer jumps (skip a column)
+        let c = lastCol;
+        if(k<=2){
+          c = (lastCol+1)%k;
+        } else {
+          const jump = (rng()<0.6) ? 2 : 1;
+          const dir = (rng()<0.5)?-jump:jump;
+          c = clamp(lastCol + dir, 0, k-1);
+          // occasional big jump
+          if(rng()<0.18) c = Math.floor(rng()*k);
+        }
+        if(rng() < cc){
+          // 2-note chord leaning to opposite side
+          const other = (rng()<0.5) ? clamp(c + (rng()<0.5?-2:2),0,k-1) : Math.floor(rng()*k);
+          const cols = Array.from(new Set([c, other])).slice(0,2).sort((a,b)=>a-b);
+          for(const col of cols) addCircle(tt, col);
+        } else {
+          addCircle(tt, c);
+        }
+        lastCol = c;
+      }
+
+      else if(brush.value === 'chord2'){
+        // mostly 2-note chords in a stable pattern
+        // In 4K: 13 / 24. In higher K: pick two far columns
+        if(k === 4){
+          const pat = (Math.floor((tt - t0)/step) % 2 === 0) ? [0,2] : [1,3];
+          for(const col of pat) addCircle(tt, col);
+          lastCol = pat[0];
+        } else {
+          let a = Math.floor(rng()*k);
+          let b = a;
+          let tries=0;
+          while((b===a || Math.abs(b-a) < Math.floor(k/2)) && tries++<40){
+            b = Math.floor(rng()*k);
+          }
+          addCircle(tt, Math.min(a,b));
+          addCircle(tt, Math.max(a,b));
+          lastCol = a;
+        }
+      }
+
+      else if(brush.value === 'lnsprinkle'){
+        // base = stream-ish circles, but some become holds
+        let c = pickNeighborish(lastCol);
+        const makeChord = rng() < cc;
+        if(makeChord){
+          const cols = chordCols(c, (k===4?2:(rng()<0.7?2:3)));
+          for(const col of cols){
+            if(rng() < hc){
+              const end = tt + Math.round(beat * hlBeats);
+              addHold(tt, col, end);
+            } else {
+              addCircle(tt, col);
+            }
+          }
+        } else {
+          if(rng() < hc){
+            const end = tt + Math.round(beat * hlBeats);
+            addHold(tt, c, end);
+          } else {
+            addCircle(tt, c);
+          }
+        }
+        lastCol = c;
+      }
+    }
+
+    normalizeSort();
+    setStatus(`Brush "${brush.options[brush.selectedIndex].text}" aplicado em ${t0}–${t1}ms`, true);
+    render();
+  }
+
+  function mirrorRange(){
+    if(!selActive()){ setStatus('Selecione um trecho para Mirror.', false); return; }
+    const [t0, t1] = selRange();
+    pushUndo('Mirror trecho');
+    for(const o of state.hitObjects){
+      if(o.t>=t0 && o.t<=t1){
+        o.col = (state.cs - 1 - o.col);
+      }
+    }
+    normalizeSort();
+    setStatus('Mirror aplicado no trecho.', true);
+    render();
+  }
+
+  function shiftRange(){
+    if(!selActive()){ setStatus('Selecione um trecho para Shift.', false); return; }
+    const [t0, t1] = selRange();
+    pushUndo('Shift colunas (+1) trecho');
+    for(const o of state.hitObjects){
+      if(o.t>=t0 && o.t<=t1){
+        o.col = (o.col + 1) % state.cs;
+      }
+    }
+    normalizeSort();
+    setStatus('Shift (+1) aplicado no trecho.', true);
+    render();
+  }
+
+  function deleteRange(){
+    if(!selActive()){ setStatus('Selecione um trecho para deletar.', false); return; }
+    const [t0, t1] = selRange();
+    pushUndo('Delete trecho');
+    removeObjectsInRange(t0, t1);
+    normalizeSort();
+    setStatus(`Trecho deletado (${t0}–${t1}ms).`, true);
+    render();
+  }
+
+  // ------------------ Validator ------------------
+  function validate(){
+    if(!state.hitObjects.length){
+      warnings.textContent = 'Nada para validar.';
+      return;
+    }
+    const k = state.cs;
+    const gap = parseInt(jackGap.value,10) || 110;
+    const chordLim = (k===4) ? (parseInt(chordLimit4k.value,10) || 2) : 4;
+
+    const byColLast = new Array(k).fill(-1e15);
+    const warns = [];
+
+    // chord grouping by quantized time for more real-world meaning
+    const s = stepMs();
+    const base = parseInt(baseOffset.value,10) || 0;
+
+    const qt = (t) => {
+      const n = Math.round((t-base)/s);
+      return Math.round(base + n*s);
+    };
+
+    // build chords per qt
+    const chordMap = new Map();
+    for(const o of state.hitObjects){
+      const tKey = qt(o.t);
+      const arr = chordMap.get(tKey) || [];
+      arr.push(o);
+      chordMap.set(tKey, arr);
+    }
+
+    // chord warnings
+    for(const [tKey, arr] of chordMap.entries()){
+      const cols = new Set(arr.map(x=>x.col));
+      if(cols.size > chordLim){
+        warns.push(`⛔ <b class="bad">Chord grande</b> em <b>${tKey}ms</b>: ${cols.size} notas (limite ${chordLim} p/ ${k}K).`);
+      }
+    }
+
+    // jack warnings
+    const sorted = [...state.hitObjects].sort((a,b)=>a.t-b.t || a.col-b.col);
+    for(const o of sorted){
+      const dt = o.t - byColLast[o.col];
+      if(dt > 0 && dt < gap){
+        warns.push(`⚠️ <b class="bad">Jack rápido</b> col ${o.col+1} em <b>${o.t}ms</b> (gap ${dt}ms; min ${gap}ms).`);
+      }
+      byColLast[o.col] = o.t;
+    }
+
+    // LN overlap warnings per column
+    const holdsByCol = Array.from({length:k}, ()=>[]);
+    for(const o of sorted){
+      if(o.type==='hold') holdsByCol[o.col].push(o);
+    }
+    for(let c=0;c<k;c++){
+      const hs = holdsByCol[c].sort((a,b)=>a.t-b.t);
+      let lastEnd = -1e15;
+      for(const h of hs){
+        if(h.t < lastEnd){
+          warns.push(`⚠️ <b class="bad">LN overlap</b> col ${c+1}: hold em ${h.t}ms começa antes do anterior terminar (${lastEnd}ms).`);
+        }
+        lastEnd = Math.max(lastEnd, h.end);
+      }
+    }
+
+    if(!warns.length){
+      warnings.innerHTML = `<span class="good">✅</span> Sem problemas detectados pelos checks atuais.`;
+    } else {
+      warnings.innerHTML = warns.map(w=>`<div class="warn">${w}</div>`).join('');
+    }
+    setStatus(`Validação concluída: ${warns.length} aviso(s).`, warns.length===0);
+  }
+
+  // ------------------ Rendering ------------------
+  function resizeCanvas(){
+    const rect = cv.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    cv.width = Math.floor(rect.width * dpr);
+    cv.height = Math.floor(rect.height * dpr);
+  }
+
+  function timeToY(t){
+    const tMin = state.view.tMin;
+    const tMax = state.view.tMax;
+    const H = cv.height;
+    const pad = 24 * (window.devicePixelRatio || 1);
+    const usable = H - pad*2;
+
+    const z = parseFloat(zoom.value) || 1;
+    const frac = clamp((t - tMin) / Math.max(1, (tMax - tMin)), 0, 1);
+    return pad + frac * usable * z;
+  }
+
+  function yToTime(y){
+    const tMin = state.view.tMin;
+    const tMax = state.view.tMax;
+    const H = cv.height;
+    const pad = 24 * (window.devicePixelRatio || 1);
+    const usable = H - pad*2;
+    const z = parseFloat(zoom.value) || 1;
+
+    const frac = clamp((y - pad) / Math.max(1, usable * z), 0, 1);
+    return tMin + frac * (tMax - tMin);
+  }
+
+  function render(){
+    resizeCanvas();
+    const W = cv.width, H = cv.height;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,W,H);
+
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const k = state.cs;
+    const colW = W / Math.max(1,k);
+
+    // background columns
+    for(let c=0;c<k;c++){
+      ctx.fillStyle = (c%2===0) ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)';
+      ctx.fillRect(c*colW, 0, colW, H);
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(c*colW,0); ctx.lineTo(c*colW,H); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.beginPath(); ctx.moveTo(W-1,0); ctx.lineTo(W-1,H); ctx.stroke();
+
+    // grid lines (beats) from baseOffset
+    const BPM = parseFloat(bpm.value)||180;
+    const beat = 60000/BPM;
+    const base = parseInt(baseOffset.value,10)||0;
+    const t0 = state.view.tMin;
+    const t1 = state.view.tMax;
+    // draw a handful (avoid huge)
+    const firstBeatIdx = Math.floor((t0 - base)/beat) - 1;
+    const maxLines = 2200;
+    let count = 0;
+
+    for(let i=firstBeatIdx; count < maxLines; i++){
+      const t = base + i*beat;
+      if(t > t1) break;
+      if(t < t0) continue;
+      const y = timeToY(t);
+      ctx.strokeStyle = 'rgba(61,220,151,0.08)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+      count++;
+    }
+
+    // draw notes
+    const noteH = 6*dpr;
+    const inset = 6*dpr;
+
+    for(const o of state.hitObjects){
+      const y = timeToY(o.t);
+      if(y < -50 || y > H+50) continue;
+
+      const x = o.col * colW;
+      const w = colW - inset*2;
+
+      if(o.type === 'hold'){
+        const y2 = timeToY(o.end);
+        const top = Math.min(y,y2);
+        const hh = Math.max(8*dpr, Math.abs(y2-y));
+        ctx.fillStyle = 'rgba(61,220,151,0.18)';
+        ctx.fillRect(x+inset, top, w, hh);
+        ctx.fillStyle = 'rgba(61,220,151,0.55)';
+        ctx.fillRect(x+inset, y - noteH/2, w, noteH);
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.70)';
+        ctx.fillRect(x+inset, y - noteH/2, w, noteH);
+      }
+    }
+
+    // selection overlay
+    if(selActive()){
+      const [a,b] = selRange();
+      const ya = timeToY(a);
+      const yb = timeToY(b);
+      const top = Math.min(ya,yb);
+      const hh = Math.abs(yb-ya);
+      ctx.fillStyle = 'rgba(120,130,255,0.14)';
+      ctx.fillRect(0, top, W, hh);
+      ctx.strokeStyle = 'rgba(120,130,255,0.40)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, top, W, hh);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.82)';
+      ctx.font = `${Math.floor(12*dpr)}px ${getComputedStyle(document.body).fontFamily}`;
+      ctx.fillText(`Seleção: ${Math.round(a)}ms → ${Math.round(b)}ms`, 12*dpr, top + 18*dpr);
+    }
+
+    // footer stats
+    const circles = state.hitObjects.filter(o=>o.type==='circle').length;
+    const holds = state.hitObjects.filter(o=>o.type==='hold').length;
+    ctx.fillStyle = 'rgba(255,255,255,0.70)';
+    ctx.font = `${Math.floor(12*dpr)}px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.fillText(`${k}K | notes: ${circles} | holds: ${holds} | total: ${state.hitObjects.length}`, 12*dpr, H - 14*dpr);
+  }
+
+  // ------------------ Canvas interaction ------------------
+  let dragging = false;
+
+  function canvasPos(ev){
+    const r = cv.getBoundingClientRect();
+    const x = ev.clientX - r.left;
+    const y = ev.clientY - r.top;
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    return { x: x*dpr, y: y*dpr };
+  }
+
+  cv.addEventListener('mousedown', (ev) => {
+    dragging = true;
+    const p = canvasPos(ev);
+    const t = yToTime(p.y);
+    state.sel.active = true;
+    state.sel.t0 = t;
+    state.sel.t1 = t;
+    render();
+  });
+
+  window.addEventListener('mousemove', (ev) => {
+    if(!dragging) return;
+    const p = canvasPos(ev);
+    const t = yToTime(p.y);
+    state.sel.t1 = t;
+    render();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if(!dragging) return;
+    dragging = false;
+    if(!selActive()){
+      // keep it but tiny selection means nothing
+      render();
+      return;
+    }
+    const [a,b] = selRange();
+    setStatus(`Trecho selecionado: ${Math.round(a)}–${Math.round(b)}ms`, true);
+    render();
+  });
+
+  // ------------------ File loading ------------------
+  function loadFileText(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        parseOsu(String(reader.result || ''));
+        // apply cs to UI
+        cs.value = state.cs;
+        // try to set BPM guess from first uninherited timing point
+        const tp = state.timingPoints.find(tp => tp.mpb > 0);
+        if(tp){
+          const guess = 60000 / tp.mpb;
+          if(isFinite(guess) && guess>20 && guess<400){
+            bpm.value = guess.toFixed(2);
+            baseOffset.value = Math.round(tp.time);
+          }
+        }
+        render();
+      }catch(e){
+        setStatus('Falha ao ler o .osu (formato estranho?).', false);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function handleDropFile(file){
+    if(!file) return;
+    if(file.name.toLowerCase().endsWith('.osu')){
+      loadFileText(file);
+    } else {
+      setStatus('Arraste um arquivo .osu.', false);
+    }
+  }
+
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'rgba(61,220,151,.45)'; });
+  dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = 'rgba(255,255,255,.22)'; });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'rgba(255,255,255,.22)';
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    handleDropFile(f);
+  });
+
+  btnLoadOsu.addEventListener('click', () => osuFile.click());
+  osuFile.addEventListener('change', () => {
+    const f = osuFile.files && osuFile.files[0];
+    if(f) loadFileText(f);
+    osuFile.value = '';
+  });
+
+  btnLoadAudio.addEventListener('click', () => audioFile.click());
+  audioFile.addEventListener('change', () => {
+    const f = audioFile.files && audioFile.files[0];
+    if(!f) return;
+    const url = URL.createObjectURL(f);
+    audio.src = url;
+    audio.load();
+    setStatus(`Áudio carregado: ${f.name}`, true);
+    audioFile.value = '';
+  });
+
+  // ------------------ UI actions ------------------
+  cs.addEventListener('change', () => {
+    const v = clamp(parseInt(cs.value,10)||4, 1, 18);
+    state.cs = v;
+    cs.value = v;
+    setStatus(`Keymode ajustado para ${v}K.`, true);
+    render();
+  });
+
+  zoom.addEventListener('change', render);
+  window.addEventListener('resize', render);
+
+  btnApply.addEventListener('click', applyBrush);
+  btnMirror.addEventListener('click', mirrorRange);
+  btnShift.addEventListener('click', shiftRange);
+  btnDelete.addEventListener('click', deleteRange);
+
+  btnValidate.addEventListener('click', validate);
+  btnClearSel.addEventListener('click', () => {
+    state.sel = {active:false, t0:null, t1:null};
+    setStatus('Seleção limpa.', true);
+    render();
+  });
+
+  btnExport.addEventListener('click', () => {
+    if(!state.rawText && !state.hitObjects.length){
+      setStatus('Nada para exportar (importe um .osu primeiro).', false);
+      return;
+    }
+    normalizeSort();
+    const out = buildOsu();
+    const title = (state.metadata.Title || 'export').replace(/[^\w\-]+/g,'_').slice(0,50) || 'export';
+    const fname = `${title}_assistant.osu`;
+    downloadText(fname, out);
+    setStatus(`Exportado: ${fname}`, true);
+  });
+
+  btnUndo.addEventListener('click', undo);
+  btnUndo.disabled = true;
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    if(e.ctrlKey && (e.key === 'z' || e.key === 'Z')){
+      e.preventDefault();
+      undo();
+      return;
+    }
+    if(e.key === ' '){
+      // play/pause audio
+      if(audio.src){
+        e.preventDefault();
+        if(audio.paused) audio.play(); else audio.pause();
+      }
+    }
+    if(e.key === 'v' || e.key === 'V'){
+      validate();
+    }
+  });
+
+  // ------------------ Init ------------------
+  render();
+})();
+</script>
+</body>
+</html>

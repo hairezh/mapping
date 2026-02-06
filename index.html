@@ -1,714 +1,1125 @@
 <!doctype html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>osu!mania Pack Builder (MVP)</title>
+  <title>Mania Mapper (Quaver-like)</title>
   <style>
     :root{
-      --bg:#0b0c0f; --panel:#12141a; --panel2:#0f1116;
-      --fg:#e8e8e8; --muted:#a0a6b3; --border:rgba(255,255,255,.10);
-      --accent:#7aa2ff; --accent2:#77f2c6; --danger:#ff6b6b;
-      --r:10px; --pad:14px; --fs:14px;
+      --bg:#0b0d12;
+      --panel:#101522;
+      --panel2:#0e1320;
+      --fg:#e9eefc;
+      --muted:#97a3c2;
+      --accent:#7aa2ff;
+      --accent2:#7affc7;
+      --danger:#ff5d7a;
+      --border:rgba(255,255,255,.08);
+      --shadow:rgba(0,0,0,.45);
+      --r:12px;
+      --gap:12px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
+
     *{box-sizing:border-box}
     body{
-      margin:0; background:linear-gradient(180deg,#0b0c0f 0%, #07080b 100%);
-      color:var(--fg); font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
-      font-size:var(--fs);
+      margin:0;
+      background: radial-gradient(1200px 900px at 70% -10%, rgba(122,162,255,.18), transparent 55%),
+                  radial-gradient(900px 700px at 10% 10%, rgba(122,255,199,.12), transparent 55%),
+                  var(--bg);
+      color:var(--fg);
+      font-family:var(--font);
+      overflow:hidden;
     }
-    header{
-      padding:18px 18px 10px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
+
+    .app{
+      display:grid;
+      grid-template-columns: 360px 1fr 420px;
+      gap:var(--gap);
+      padding:var(--gap);
+      height:100vh;
     }
-    .title{
-      display:flex; flex-direction:column; gap:4px;
-    }
-    .title h1{margin:0; font-size:16px; letter-spacing:.2px}
-    .title p{margin:0; color:var(--muted); font-size:12px}
-    .wrap{
-      padding:12px 18px 18px;
-      display:grid; grid-template-columns: 380px 1fr; gap:12px;
-    }
-    @media (max-width: 980px){
-      .wrap{grid-template-columns:1fr}
-    }
+
     .card{
-      background:rgba(255,255,255,.03);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
       border:1px solid var(--border);
       border-radius:var(--r);
-      padding:var(--pad);
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      box-shadow: 0 12px 40px var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
     }
+
     .card h2{
-      margin:0 0 10px; font-size:13px; color:#dfe6ff;
-      letter-spacing:.2px;
+      margin:0;
+      padding:14px 16px;
+      font-size:14px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+      border-bottom:1px solid var(--border);
+      background: rgba(255,255,255,.02);
     }
-    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
-    .col{display:flex; flex-direction:column; gap:8px}
-    label{font-size:12px; color:var(--muted)}
-    input[type="file"], input[type="text"], input[type="number"]{
+
+    .pad{ padding:14px 16px; }
+
+    .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row > *{ flex: 1; min-width: 0; }
+
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+
+    input[type="text"], input[type="number"], select{
       width:100%;
-      background:rgba(0,0,0,.25);
-      border:1px solid var(--border);
-      border-radius:8px;
       padding:10px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.25);
       color:var(--fg);
       outline:none;
     }
-    input[type="number"]{max-width:140px}
+
+    input[type="range"]{
+      width:100%;
+    }
+
     button{
-      background:rgba(255,255,255,.06);
       border:1px solid var(--border);
+      background: rgba(255,255,255,.05);
       color:var(--fg);
-      border-radius:8px;
       padding:10px 12px;
+      border-radius:10px;
       cursor:pointer;
-      transition:.15s transform, .15s background, .15s border;
-      user-select:none;
+      transition: transform .05s ease, background .15s ease;
+      font-weight:600;
     }
-    button:hover{background:rgba(255,255,255,.10)}
-    button:active{transform:scale(.98)}
-    .primary{border-color:rgba(122,162,255,.5); background:rgba(122,162,255,.14)}
-    .primary:hover{background:rgba(122,162,255,.20)}
-    .danger{border-color:rgba(255,107,107,.45); background:rgba(255,107,107,.12)}
-    .danger:hover{background:rgba(255,107,107,.18)}
-    .mini{padding:8px 10px; font-size:12px}
-    .pill{
-      padding:6px 10px; border-radius:999px;
-      border:1px solid var(--border);
-      color:var(--muted);
+    button:hover{ background: rgba(255,255,255,.08); }
+    button:active{ transform: translateY(1px); }
+    button.primary{
+      background: linear-gradient(180deg, rgba(122,162,255,.22), rgba(122,162,255,.10));
+      border-color: rgba(122,162,255,.35);
+    }
+    button.danger{
+      background: linear-gradient(180deg, rgba(255,93,122,.22), rgba(255,93,122,.10));
+      border-color: rgba(255,93,122,.35);
+    }
+
+    .tiny{
       font-size:12px;
-      background:rgba(0,0,0,.18);
+      color:var(--muted);
+      line-height:1.45;
     }
-    .status{
-      display:flex; flex-direction:column; gap:6px;
-      font-size:12px; color:var(--muted);
-      border-top:1px dashed rgba(255,255,255,.08);
-      margin-top:12px; padding-top:12px;
+
+    .split{
+      display:grid;
+      grid-template-rows: 1fr auto;
+      min-height:0;
     }
-    .status b{color:var(--fg); font-weight:600}
-    .previewWrap{
-      display:flex; flex-direction:column; gap:10px;
-    }
-    .previewTop{
-      display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
-    }
-    .audioBar{
-      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-    }
-    .range{
-      width:240px; max-width:100%;
+
+    .canvasWrap{
+      position:relative;
+      min-height:0;
+      height:100%;
+      background: rgba(0,0,0,.22);
+      border-top:1px solid var(--border);
     }
     canvas{
       width:100%;
-      height:520px;
-      background:rgba(0,0,0,.25);
-      border:1px solid var(--border);
-      border-radius:12px;
+      height:100%;
       display:block;
     }
-    .small{
-      font-size:12px; color:var(--muted);
+
+    .hud{
+      position:absolute;
+      left:10px;
+      top:10px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      pointer-events:none;
     }
-    .kbd{
-      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    .pill{
+      pointer-events:none;
       font-size:12px;
-      padding:2px 6px;
+      padding:6px 10px;
+      border-radius:999px;
       border:1px solid var(--border);
-      border-radius:6px;
-      background:rgba(0,0,0,.22);
-      color:#d7dcff;
+      background: rgba(0,0,0,.35);
+      color:var(--fg);
+      backdrop-filter: blur(8px);
+    }
+    .pill b{ color:var(--accent2); font-weight:800; }
+
+    .timelineInfo{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      color:var(--muted);
+      margin-top:8px;
+    }
+
+    .kbd{
+      font-size:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      padding:2px 7px;
+      border-radius:8px;
+      color:var(--fg);
+      display:inline-block;
+    }
+
+    .list{
+      border-top:1px solid var(--border);
+      max-height: 220px;
+      overflow:auto;
+    }
+    .noteItem{
+      display:grid;
+      grid-template-columns: 1fr auto auto;
+      gap:10px;
+      align-items:center;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .noteItem b{ color:var(--fg); }
+    .noteItem button{
+      padding:6px 8px;
+      border-radius:9px;
+      font-size:12px;
+    }
+
+    textarea{
+      width:100%;
+      min-height: 160px;
+      resize:vertical;
+      padding:10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.22);
+      color:var(--fg);
+      outline:none;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:12px;
+    }
+
+    .divider{
+      height:1px;
+      background: var(--border);
+      margin:12px 0;
     }
   </style>
 </head>
 <body>
-<header>
-  <div class="title">
-    <h1>osu!mania Pack Builder (MVP)</h1>
-    <p>Carrega .osu + áudio + bg → preview → exporta .zip com tudo junto</p>
+  <div class="app">
+
+    <!-- LEFT: SETTINGS -->
+    <section class="card">
+      <h2>Config</h2>
+      <div class="pad" style="display:flex; flex-direction:column; gap:12px; min-height:0;">
+        <div class="row">
+          <label>
+            Keymode
+            <select id="keymode">
+              <option value="4">4K</option>
+              <option value="6">6K</option>
+              <option value="7">7K</option>
+            </select>
+          </label>
+          <label>
+            Snap
+            <select id="snap">
+              <option value="0">Livre</option>
+              <option value="1">1/1</option>
+              <option value="2">1/2</option>
+              <option value="4" selected>1/4</option>
+              <option value="8">1/8</option>
+              <option value="16">1/16</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            BPM
+            <input id="bpm" type="number" value="180" min="1" step="1" />
+          </label>
+          <label>
+            Offset (ms)
+            <input id="offset" type="number" value="0" step="1" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Scroll speed
+            <input id="scroll" type="range" min="200" max="2400" value="900" />
+            <div class="tiny"><span id="scrollVal">900</span> px/s</div>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Volume
+            <input id="vol" type="range" min="0" max="1" step="0.01" value="0.9" />
+            <div class="tiny"><span id="volVal">0.90</span></div>
+          </label>
+          <label>
+            Playback
+            <input id="rate" type="range" min="0.5" max="1.5" step="0.01" value="1" />
+            <div class="tiny"><span id="rateVal">1.00</span>x</div>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Carregar áudio
+            <input id="audioFile" type="file" accept="audio/*" />
+          </label>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="playBtn">Play</button>
+          <button id="stopBtn">Stop</button>
+          <button class="danger" id="clearBtn">Limpar notas</button>
+        </div>
+
+        <label>
+          Seek (ms)
+          <input id="seek" type="range" min="0" max="1000" value="0" />
+          <div class="timelineInfo">
+            <span>t = <b id="timeNow">0</b> ms</span>
+            <span>len = <b id="timeLen">0</b> ms</span>
+          </div>
+        </label>
+
+        <div class="tiny">
+          Teclas (padrão):
+          <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+            <span class="kbd">D</span><span class="kbd">F</span><span class="kbd">J</span><span class="kbd">K</span>
+            <span class="kbd">S</span><span class="kbd">L</span><span class="kbd">;</span>
+          </div>
+          <div style="margin-top:8px;">
+            <span class="kbd">Space</span> Play/Pause • <span class="kbd">Backspace</span> Deletar nota mais próxima •
+            <span class="kbd">Ctrl</span> + clique = deletar nota
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER: EDITOR TIMELINE -->
+    <section class="card split">
+      <h2>Editor (timeline)</h2>
+      <div class="canvasWrap">
+        <canvas id="editor"></canvas>
+        <div class="hud">
+          <div class="pill">Modo: <b id="hudMode">Edit</b></div>
+          <div class="pill">Notas: <b id="hudNotes">0</b></div>
+          <div class="pill">Snap: <b id="hudSnap">1/4</b></div>
+        </div>
+      </div>
+
+      <div class="pad" style="border-top:1px solid var(--border); display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button id="zoomOut">- Zoom</button>
+        <button id="zoomIn">+ Zoom</button>
+        <div class="tiny" style="flex:1;">
+          Clique para posicionar nota no tempo. Use o mouse para mirar a coluna.
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: GAMEPLAY PREVIEW + IO -->
+    <section class="card">
+      <h2>Preview + Import/Export</h2>
+      <div class="canvasWrap" style="flex:1; min-height:240px;">
+        <canvas id="game"></canvas>
+        <div class="hud">
+          <div class="pill">Hitline</div>
+          <div class="pill">Tempo: <b id="hudTime">0</b> ms</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="pad" style="display:flex; flex-direction:column; gap:10px;">
+        <div class="row">
+          <button id="exportBtn" class="primary">Export .osu (mania)</button>
+          <button id="importBtn">Import .osu</button>
+        </div>
+        <textarea id="io" spellcheck="false" placeholder="Aqui aparece o .osu exportado (ou cole um .osu para importar)."></textarea>
+
+        <div class="list" id="noteList"></div>
+      </div>
+    </section>
+
   </div>
-  <div class="row">
-    <span class="pill">Preview: piano-roll simples</span>
-    <span class="pill">Export: ZIP</span>
-  </div>
-</header>
-
-<div class="wrap">
-  <!-- LEFT: inputs -->
-  <section class="card">
-    <h2>Arquivos</h2>
-    <div class="col">
-      <div>
-        <label>Mapa (.osu) — modo mania</label>
-        <input id="osuFile" type="file" accept=".osu,text/plain" />
-      </div>
-      <div>
-        <label>Áudio (opcional) — .mp3/.ogg</label>
-        <input id="audioFile" type="file" accept="audio/*" />
-      </div>
-      <div>
-        <label>Background (opcional) — .png/.jpg</label>
-        <input id="bgFile" type="file" accept="image/*" />
-      </div>
-    </div>
-
-    <div style="height:12px"></div>
-
-    <h2>Config</h2>
-    <div class="row">
-      <div class="col" style="flex:1; min-width:220px">
-        <label>Nome do pack (pasta dentro do zip)</label>
-        <input id="packName" type="text" placeholder="MeuPack_Mania" />
-      </div>
-      <div class="col">
-        <label>Janela (ms) no preview</label>
-        <input id="windowMs" type="number" min="2000" max="60000" step="500" value="12000" />
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <button id="exportZip" class="primary">Exportar .zip</button>
-      <button id="resetAll" class="danger">Zerar tudo</button>
-    </div>
-
-    <div class="status" id="statusBox">
-      <div><b>Mapa:</b> <span id="sMap">nenhum</span></div>
-      <div><b>Áudio:</b> <span id="sAudio">nenhum</span></div>
-      <div><b>BG:</b> <span id="sBg">nenhum</span></div>
-      <div class="small">Atalhos: <span class="kbd">Space</span> play/pause • <span class="kbd">←</span>/<span class="kbd">→</span> seek</div>
-    </div>
-  </section>
-
-  <!-- RIGHT: preview -->
-  <section class="card previewWrap">
-    <div class="previewTop">
-      <div class="row" style="gap:8px">
-        <span class="pill" id="metaKeys">Keys: -</span>
-        <span class="pill" id="metaObjects">Objects: -</span>
-        <span class="pill" id="metaBpm">BPM: (estimado) -</span>
-      </div>
-
-      <div class="audioBar">
-        <button id="btnPlay" class="mini">Play</button>
-        <button id="btnStop" class="mini">Stop</button>
-        <input id="seek" class="range" type="range" min="0" max="1000" value="0" />
-        <span class="pill" id="timeLabel">00:00.000</span>
-      </div>
-    </div>
-
-    <canvas id="cv" width="1400" height="520"></canvas>
-    <div class="small" id="hint">Carregue um .osu mania para ver a preview.</div>
-  </section>
-</div>
-
-<!-- JSZip (minificado via CDN) -->
-<script>
-/* JSZip loader (sem depender de build). */
-(async function loadJSZip(){
-  if (window.JSZip) return;
-  const s=document.createElement('script');
-  s.src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
-  s.crossOrigin="anonymous";
-  document.head.appendChild(s);
-  await new Promise(r=>s.onload=r);
-})();
-</script>
 
 <script>
-  // ---------------------------
-  // Estado
-  // ---------------------------
+(() => {
+  // --------------------------
+  // State
+  // --------------------------
   const state = {
-    osuText: "",
-    osuName: "",
-    audioBlob: null,
-    audioName: "",
-    bgBlob: null,
-    bgName: "",
-    keys: 0,
-    objects: [], // {t, lane, end?, type:'note'|'hold'}
-    timingPoints: [], // {t, msPerBeat, uninherited}
-    audio: null, // HTMLAudioElement
+    keymode: 4,
+    bpm: 180,
+    offset: 0,
+    snap: 4, // 0 = free
+    scroll: 900, // px/s
+    rate: 1,
+    vol: 0.9,
     playing: false,
+
+    // timeline scaling
+    msPerPixel: 2.5, // zoom (smaller => zoom in)
+    editorCenterMs: 0, // where center line points
     durationMs: 0,
-    t0: 0, // current time in ms
-    raf: 0
+
+    // audio
+    audioEl: new Audio(),
+    audioReady: false,
+
+    // notes: {t, lane} with t in ms (absolute in song time)
+    notes: [],
   };
 
-  // ---------------------------
+  // key bindings per keymode (simple + comfy)
+  const keymaps = {
+    4: ["d","f","j","k"],
+    6: ["s","d","f","j","k","l"],
+    7: ["s","d","f","space","j","k","l"], // center = space (common-ish)
+  };
+
+  // --------------------------
+  // DOM
+  // --------------------------
+  const $ = (id) => document.getElementById(id);
+
+  const editor = $("editor");
+  const game = $("game");
+  const ectx = editor.getContext("2d");
+  const gctx = game.getContext("2d");
+
+  const keymodeSel = $("keymode");
+  const snapSel = $("snap");
+  const bpmInp = $("bpm");
+  const offsetInp = $("offset");
+  const scrollR = $("scroll");
+  const scrollVal = $("scrollVal");
+  const volR = $("vol");
+  const volVal = $("volVal");
+  const rateR = $("rate");
+  const rateVal = $("rateVal");
+
+  const audioFile = $("audioFile");
+  const playBtn = $("playBtn");
+  const stopBtn = $("stopBtn");
+  const clearBtn = $("clearBtn");
+
+  const seekR = $("seek");
+  const timeNow = $("timeNow");
+  const timeLen = $("timeLen");
+
+  const hudMode = $("hudMode");
+  const hudNotes = $("hudNotes");
+  const hudSnap = $("hudSnap");
+  const hudTime = $("hudTime");
+
+  const zoomOut = $("zoomOut");
+  const zoomIn = $("zoomIn");
+
+  const exportBtn = $("exportBtn");
+  const importBtn = $("importBtn");
+  const io = $("io");
+  const noteList = $("noteList");
+
+  // --------------------------
   // Helpers
-  // ---------------------------
-  const $ = sel => document.querySelector(sel);
+  // --------------------------
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
-
-  function msToStr(ms){
-    ms = Math.max(0, ms|0);
-    const m = Math.floor(ms/60000);
-    const s = Math.floor((ms%60000)/1000);
-    const r = ms%1000;
-    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(r).padStart(3,'0')}`;
+  function resizeCanvasToDisplaySize(c){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const rect = c.getBoundingClientRect();
+    const w = Math.floor(rect.width * dpr);
+    const h = Math.floor(rect.height * dpr);
+    if (c.width !== w || c.height !== h){
+      c.width = w; c.height = h;
+      return true;
+    }
+    return false;
   }
 
-  function setStatus(){
-    $("#sMap").textContent = state.osuName || "nenhum";
-    $("#sAudio").textContent = state.audioName || "nenhum";
-    $("#sBg").textContent = state.bgName || "nenhum";
+  function songTimeMs(){
+    if (!state.audioReady) return state.editorCenterMs;
+    return Math.floor(state.audioEl.currentTime * 1000);
   }
 
-  function estimateBpm(){
-    // Bem simples: pega primeiro timing point uninherited e calcula BPM
-    const tp = state.timingPoints.find(x=>x.uninherited);
-    if(!tp || !isFinite(tp.msPerBeat) || tp.msPerBeat<=0) return null;
-    return 60000 / tp.msPerBeat;
+  function setSongTimeMs(ms){
+    ms = clamp(ms, 0, state.durationMs || ms);
+    state.editorCenterMs = ms;
+    if (state.audioReady){
+      state.audioEl.currentTime = ms / 1000;
+    }
+    syncSeekUI();
   }
 
-  // ---------------------------
-  // Parser .osu (mania)
-  // ---------------------------
+  function syncSeekUI(){
+    const now = songTimeMs();
+    timeNow.textContent = now;
+    hudTime.textContent = now;
+    seekR.value = String(clamp(now, 0, Number(seekR.max || 0)));
+  }
+
+  function beatMs(){
+    return 60000 / Math.max(1, state.bpm);
+  }
+
+  function snapMs(){
+    if (state.snap === 0) return 0;
+    return beatMs() / state.snap;
+  }
+
+  function quantizeMs(ms){
+    const s = snapMs();
+    if (!s) return ms;
+    // apply offset as grid origin (like common mapping)
+    const origin = state.offset;
+    const rel = ms - origin;
+    const q = Math.round(rel / s) * s + origin;
+    return Math.max(0, Math.floor(q));
+  }
+
+  function laneFromX(x, width){
+    const k = state.keymode;
+    const laneW = width / k;
+    return clamp(Math.floor(x / laneW), 0, k-1);
+  }
+
+  function sortNotes(){
+    state.notes.sort((a,b) => a.t - b.t || a.lane - b.lane);
+  }
+
+  function addNote(t, lane){
+    t = Math.floor(t);
+    if (state.snap !== 0) t = quantizeMs(t);
+    // avoid duplicates same time+lane
+    if (state.notes.some(n => n.t === t && n.lane === lane)) return;
+    state.notes.push({t, lane});
+    sortNotes();
+    refreshNoteList();
+  }
+
+  function deleteNearestNote(t, laneOrNull = null){
+    if (!state.notes.length) return;
+    let bestI = -1;
+    let bestD = Infinity;
+    for (let i=0; i<state.notes.length; i++){
+      const n = state.notes[i];
+      if (laneOrNull !== null && n.lane !== laneOrNull) continue;
+      const d = Math.abs(n.t - t);
+      if (d < bestD){
+        bestD = d; bestI = i;
+      }
+    }
+    if (bestI >= 0){
+      state.notes.splice(bestI, 1);
+      refreshNoteList();
+    }
+  }
+
+  function refreshNoteList(){
+    hudNotes.textContent = String(state.notes.length);
+    noteList.innerHTML = "";
+    const maxShow = 120;
+    const slice = state.notes.slice(0, maxShow);
+    for (const n of slice){
+      const row = document.createElement("div");
+      row.className = "noteItem";
+      row.innerHTML = `
+        <div>t=<b>${n.t}</b> ms • lane=<b>${n.lane+1}</b></div>
+        <button data-jump="1">Ir</button>
+        <button data-del="1" class="danger">Del</button>
+      `;
+      row.querySelector("[data-jump]").onclick = () => setSongTimeMs(n.t);
+      row.querySelector("[data-del]").onclick = () => { 
+        const idx = state.notes.findIndex(x => x.t===n.t && x.lane===n.lane);
+        if (idx>=0) state.notes.splice(idx,1);
+        refreshNoteList();
+      };
+      noteList.appendChild(row);
+    }
+    if (state.notes.length > maxShow){
+      const more = document.createElement("div");
+      more.className = "noteItem";
+      more.innerHTML = `<div>... mostrando ${maxShow} de ${state.notes.length}</div><div></div><div></div>`;
+      noteList.appendChild(more);
+    }
+  }
+
+  function updateHudSnap(){
+    hudSnap.textContent = state.snap === 0 ? "Livre" : `1/${state.snap}`;
+  }
+
+  // --------------------------
+  // Rendering: Editor timeline
+  // --------------------------
+  function drawEditor(){
+    resizeCanvasToDisplaySize(editor);
+    const w = editor.width, h = editor.height;
+
+    ectx.clearRect(0,0,w,h);
+
+    // background
+    ectx.fillStyle = "rgba(0,0,0,.18)";
+    ectx.fillRect(0,0,w,h);
+
+    const k = state.keymode;
+    const laneW = w / k;
+
+    // lanes
+    for (let i=0;i<k;i++){
+      const x = i*laneW;
+      ectx.fillStyle = i%2===0 ? "rgba(255,255,255,.03)" : "rgba(255,255,255,.02)";
+      ectx.fillRect(x,0,laneW,h);
+      ectx.strokeStyle = "rgba(255,255,255,.08)";
+      ectx.beginPath();
+      ectx.moveTo(x,0);
+      ectx.lineTo(x,h);
+      ectx.stroke();
+    }
+    // right border
+    ectx.strokeStyle="rgba(255,255,255,.10)";
+    ectx.beginPath(); ectx.moveTo(w,0); ectx.lineTo(w,h); ectx.stroke();
+
+    // time mapping: center line at h*0.55 (more space ahead)
+    const centerY = h * 0.55;
+    const centerT = songTimeMs();
+
+    // grid lines (beats)
+    const bms = beatMs();
+    const s = snapMs();
+    const gridStep = state.snap === 0 ? bms : s;
+
+    // pick a reasonable step for rendering density
+    let renderStep = gridStep;
+    while (renderStep / state.msPerPixel < 16) renderStep *= 2;
+
+    const visibleMs = h * state.msPerPixel;
+    const tTop = centerT - centerY*state.msPerPixel;
+    const tBot = centerT + (h-centerY)*state.msPerPixel;
+
+    // grid origin
+    const origin = state.offset;
+    const first = Math.floor((tTop - origin)/renderStep)*renderStep + origin;
+
+    for (let t = first; t <= tBot + renderStep; t += renderStep){
+      const y = centerY + (t - centerT) / state.msPerPixel;
+      const isBeat = Math.abs(((t - origin) / bms) - Math.round((t - origin) / bms)) < 1e-6;
+
+      ectx.strokeStyle = isBeat ? "rgba(122,162,255,.30)" : "rgba(255,255,255,.08)";
+      ectx.lineWidth = isBeat ? 2 : 1;
+      ectx.beginPath();
+      ectx.moveTo(0, y);
+      ectx.lineTo(w, y);
+      ectx.stroke();
+
+      // time label occasionally
+      if (isBeat){
+        ectx.fillStyle = "rgba(151,163,194,.9)";
+        ectx.font = `${Math.floor(11*(w/900+0.6))}px ${getComputedStyle(document.body).fontFamily}`;
+        ectx.fillText(`${Math.round(t)}ms`, 10, y - 6);
+      }
+    }
+
+    // notes as rectangles
+    const noteH = 10 * (w/900 + 0.7);
+    for (const n of state.notes){
+      if (n.t < tTop-1000 || n.t > tBot+1000) continue;
+      const y = centerY + (n.t - centerT) / state.msPerPixel;
+      const x = n.lane * laneW;
+      ectx.fillStyle = "rgba(122,255,199,.75)";
+      ectx.fillRect(x+3, y - noteH/2, laneW-6, noteH);
+      ectx.strokeStyle = "rgba(0,0,0,.35)";
+      ectx.strokeRect(x+3, y - noteH/2, laneW-6, noteH);
+    }
+
+    // center playhead
+    ectx.strokeStyle = "rgba(255,255,255,.55)";
+    ectx.lineWidth = 2;
+    ectx.beginPath();
+    ectx.moveTo(0, centerY);
+    ectx.lineTo(w, centerY);
+    ectx.stroke();
+
+    // hint text
+    ectx.fillStyle = "rgba(233,238,252,.75)";
+    ectx.font = `${Math.floor(12*(w/900+0.6))}px ${getComputedStyle(document.body).fontFamily}`;
+    ectx.fillText("PLAYHEAD", 10, centerY - 10);
+  }
+
+  // --------------------------
+  // Rendering: Gameplay preview
+  // --------------------------
+  function drawGame(){
+    resizeCanvasToDisplaySize(game);
+    const w = game.width, h = game.height;
+
+    gctx.clearRect(0,0,w,h);
+    gctx.fillStyle = "rgba(0,0,0,.18)";
+    gctx.fillRect(0,0,w,h);
+
+    const k = state.keymode;
+    const laneW = w / k;
+
+    // lanes + borders
+    for (let i=0;i<k;i++){
+      const x = i*laneW;
+      gctx.fillStyle = i%2===0 ? "rgba(255,255,255,.035)" : "rgba(255,255,255,.02)";
+      gctx.fillRect(x,0,laneW,h);
+
+      gctx.strokeStyle = "rgba(255,255,255,.09)";
+      gctx.beginPath();
+      gctx.moveTo(x,0);
+      gctx.lineTo(x,h);
+      gctx.stroke();
+    }
+    gctx.strokeStyle="rgba(255,255,255,.12)";
+    gctx.beginPath(); gctx.moveTo(w,0); gctx.lineTo(w,h); gctx.stroke();
+
+    // hitline at 80% height
+    const hitY = h * 0.82;
+    gctx.strokeStyle = "rgba(122,162,255,.55)";
+    gctx.lineWidth = 3;
+    gctx.beginPath();
+    gctx.moveTo(0, hitY);
+    gctx.lineTo(w, hitY);
+    gctx.stroke();
+
+    // draw notes that are within a window based on scroll speed
+    // scroll: px/s => px/ms = scroll/1000
+    const pxPerMs = state.scroll / 1000;
+    const now = songTimeMs();
+
+    // show ~2s ahead and 1s behind
+    const tMin = now - 1200;
+    const tMax = now + 2600;
+
+    const noteH = 12 * (w/900 + 0.7);
+    for (const n of state.notes){
+      if (n.t < tMin || n.t > tMax) continue;
+
+      const dt = n.t - now; // positive => future => above hitline
+      const y = hitY - dt * pxPerMs;
+      const x = n.lane * laneW;
+
+      // color based on dt
+      const a = clamp(1 - Math.abs(dt)/2600, 0.25, 1);
+      gctx.fillStyle = `rgba(122,255,199,${0.75*a})`;
+      gctx.fillRect(x+4, y - noteH/2, laneW-8, noteH);
+      gctx.strokeStyle = `rgba(0,0,0,${0.35*a})`;
+      gctx.strokeRect(x+4, y - noteH/2, laneW-8, noteH);
+    }
+
+    // receptors
+    gctx.fillStyle = "rgba(255,255,255,.10)";
+    for (let i=0;i<k;i++){
+      const x = i*laneW;
+      gctx.fillRect(x+6, hitY+10, laneW-12, 10);
+    }
+  }
+
+  // --------------------------
+  // Main loop
+  // --------------------------
+  function tick(){
+    // If playing, center follows audio
+    if (state.playing && state.audioReady){
+      state.editorCenterMs = songTimeMs();
+      syncSeekUI();
+    }
+    drawEditor();
+    drawGame();
+    requestAnimationFrame(tick);
+  }
+
+  // --------------------------
+  // Controls wiring
+  // --------------------------
+  function setPlaying(on){
+    if (!state.audioReady) on = false;
+    state.playing = on;
+    hudMode.textContent = on ? "Play" : "Edit";
+    playBtn.textContent = on ? "Pause" : "Play";
+    if (state.audioReady){
+      if (on) state.audioEl.play().catch(()=>{});
+      else state.audioEl.pause();
+    }
+  }
+
+  keymodeSel.onchange = () => {
+    state.keymode = Number(keymodeSel.value);
+  };
+
+  snapSel.onchange = () => {
+    state.snap = Number(snapSel.value);
+    updateHudSnap();
+  };
+
+  bpmInp.oninput = () => state.bpm = Number(bpmInp.value || 180);
+  offsetInp.oninput = () => state.offset = Number(offsetInp.value || 0);
+
+  scrollR.oninput = () => {
+    state.scroll = Number(scrollR.value);
+    scrollVal.textContent = String(state.scroll);
+  };
+
+  volR.oninput = () => {
+    state.vol = Number(volR.value);
+    volVal.textContent = state.vol.toFixed(2);
+    state.audioEl.volume = state.vol;
+  };
+
+  rateR.oninput = () => {
+    state.rate = Number(rateR.value);
+    rateVal.textContent = state.rate.toFixed(2);
+    state.audioEl.playbackRate = state.rate;
+  };
+
+  playBtn.onclick = () => setPlaying(!state.playing);
+
+  stopBtn.onclick = () => {
+    setPlaying(false);
+    setSongTimeMs(0);
+  };
+
+  clearBtn.onclick = () => {
+    setPlaying(false);
+    state.notes = [];
+    refreshNoteList();
+  };
+
+  zoomIn.onclick = () => {
+    state.msPerPixel = clamp(state.msPerPixel * 0.80, 0.25, 20);
+  };
+  zoomOut.onclick = () => {
+    state.msPerPixel = clamp(state.msPerPixel * 1.25, 0.25, 20);
+  };
+
+  seekR.oninput = () => {
+    setPlaying(false);
+    setSongTimeMs(Number(seekR.value));
+  };
+
+  audioFile.onchange = async () => {
+    const f = audioFile.files && audioFile.files[0];
+    if (!f) return;
+
+    setPlaying(false);
+    state.audioReady = false;
+    state.durationMs = 0;
+
+    const url = URL.createObjectURL(f);
+    state.audioEl.src = url;
+    state.audioEl.volume = state.vol;
+    state.audioEl.playbackRate = state.rate;
+
+    await new Promise((res) => {
+      state.audioEl.onloadedmetadata = () => res();
+      state.audioEl.onerror = () => res();
+    });
+
+    if (isFinite(state.audioEl.duration) && state.audioEl.duration > 0){
+      state.audioReady = true;
+      state.durationMs = Math.floor(state.audioEl.duration * 1000);
+      seekR.max = String(state.durationMs);
+      timeLen.textContent = state.durationMs;
+      setSongTimeMs(0);
+    } else {
+      state.audioReady = false;
+      timeLen.textContent = "0";
+      seekR.max = "1000";
+      alert("Não consegui ler a duração do áudio. Tenta outro formato (mp3/ogg/wav).");
+    }
+  };
+
+  // --------------------------
+  // Editor interactions (click to place/delete)
+  // --------------------------
+  function editorPosToTimeAndLane(ev){
+    const rect = editor.getBoundingClientRect();
+    const dpr = editor.width / rect.width;
+    const x = (ev.clientX - rect.left) * dpr;
+    const y = (ev.clientY - rect.top) * dpr;
+
+    const w = editor.width, h = editor.height;
+    const centerY = h * 0.55;
+    const now = songTimeMs();
+    const t = now + (y - centerY) * state.msPerPixel;
+    const lane = laneFromX(x, w);
+    return {t: clamp(Math.floor(t), 0, state.durationMs || Math.floor(t)), lane};
+  }
+
+  editor.addEventListener("mousedown", (ev) => {
+    const {t, lane} = editorPosToTimeAndLane(ev);
+    if (ev.ctrlKey || ev.metaKey){
+      deleteNearestNote(t, lane);
+    } else {
+      addNote(t, lane);
+      // optional: snap editor center to that spot when paused
+      if (!state.playing) setSongTimeMs(t);
+    }
+  });
+
+  // wheel = scrub time
+  editor.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const delta = Math.sign(ev.deltaY);
+    setPlaying(false);
+    setSongTimeMs(songTimeMs() + delta * 60); // 60ms steps
+  }, {passive:false});
+
+  // --------------------------
+  // Keyboard mapping (place notes at playhead)
+  // --------------------------
+  window.addEventListener("keydown", (ev) => {
+    if (ev.repeat) return;
+
+    // avoid typing into inputs
+    const tag = (document.activeElement && document.activeElement.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+    if (ev.code === "Space"){
+      ev.preventDefault();
+      // In 7K we also use space as a lane key, but play/pause is more important.
+      // If you want space to place a note for 7K center, change this behavior.
+      setPlaying(!state.playing);
+      return;
+    }
+
+    if (ev.code === "Backspace"){
+      ev.preventDefault();
+      deleteNearestNote(songTimeMs(), null);
+      return;
+    }
+
+    const km = keymaps[state.keymode] || keymaps[4];
+    const key = ev.key.toLowerCase();
+
+    // 7K: we avoid using actual space here because Space is play/pause
+    // We'll interpret "g" as center-lane placement for 7K to keep a full mapping option.
+    if (state.keymode === 7 && key === "g"){
+      addNote(songTimeMs(), 3);
+      return;
+    }
+
+    const idx = km.indexOf(key);
+    if (idx >= 0){
+      addNote(songTimeMs(), idx);
+    }
+  });
+
+  // --------------------------
+  // Import/Export .osu (mania) basic
+  // --------------------------
+  function exportOsu(){
+    // Minimal mania format:
+    // HitObjects: x,y,time,type,hitSound,objectParams,hitSample
+    // For normal notes: type=1
+    // x mapped by lane: (lane + 0.5) * (512/keymode)
+    const k = state.keymode;
+    const laneW = 512 / k;
+
+    const hitObjects = state.notes.map(n => {
+      const x = Math.floor((n.lane + 0.5) * laneW);
+      const y = 192; // mania uses fixed y often
+      const time = Math.max(0, Math.floor(n.t));
+      const type = 1; // normal hitcircle
+      const hitSound = 0;
+      const objectParams = "0:0:0:0:";
+      const hitSample = "0:0:0:0:";
+      return `${x},${y},${time},${type},${hitSound},${objectParams},${hitSample}`;
+    });
+
+    const content =
+`osu file format v14
+
+[General]
+AudioFilename: audio.mp3
+AudioLeadIn: 0
+PreviewTime: -1
+Countdown: 0
+SampleSet: Soft
+StackLeniency: 0.7
+Mode: 3
+LetterboxInBreaks: 0
+WidescreenStoryboard: 0
+
+[Editor]
+DistanceSpacing: 1.0
+BeatDivisor: ${state.snap === 0 ? 4 : state.snap}
+GridSize: 4
+TimelineZoom: 1
+
+[Metadata]
+Title: Untitled
+Artist: Unknown
+Creator: ManiaMapper
+Version: Edit
+Source:
+Tags:
+
+[Difficulty]
+HPDrainRate: 5
+CircleSize: ${k}
+OverallDifficulty: 5
+ApproachRate: 5
+SliderMultiplier: 1.4
+SliderTickRate: 1
+
+[TimingPoints]
+${state.offset},${(60000/Math.max(1,state.bpm)).toFixed(6)},4,2,0,100,1,0
+
+[HitObjects]
+${hitObjects.join("\n")}
+`;
+    io.value = content;
+  }
+
   function parseOsu(text){
     const lines = text.split(/\r?\n/);
-    let section = "";
-    let mode = null;
-    let circleSize = null;
-    const timingPoints = [];
-    const objects = [];
-    let bgCandidate = null;
+    let mode = 0;
+    let cs = 4;
+    let timingOffset = 0;
+    let bpm = state.bpm;
+    let inTiming = false;
+    let inHit = false;
+
+    const notes = [];
 
     for (const raw of lines){
       const line = raw.trim();
-      if(!line || line.startsWith("//")) continue;
-      const m = line.match(/^\[(.+)\]$/);
-      if(m){ section = m[1]; continue; }
+      if (!line || line.startsWith("//")) continue;
 
-      if(section === "General"){
-        // Mode: 3 for mania
-        if(line.startsWith("Mode:")) mode = Number(line.split(":")[1]);
+      if (line.startsWith("[")){
+        inTiming = (line.toLowerCase() === "[timingpoints]");
+        inHit = (line.toLowerCase() === "[hitobjects]");
+        continue;
       }
-      if(section === "Difficulty"){
-        if(line.startsWith("CircleSize:")) circleSize = Number(line.split(":")[1]);
+
+      if (!inTiming && !inHit){
+        if (line.toLowerCase().startsWith("mode:")){
+          mode = Number(line.split(":")[1].trim());
+        }
+        if (line.toLowerCase().startsWith("circlesize:")){
+          cs = Number(line.split(":")[1].trim());
+        }
       }
-      if(section === "Events"){
-        // Background: 0,0,"bg.jpg",0,0
-        // ou Video: 1, ...
-        // Vamos pegar o primeiro evento de background (2º campo 0 e tem string)
+
+      if (inTiming){
+        // first uninherited timing point
+        // format: offset,msPerBeat,...
         const parts = line.split(",");
-        if(parts.length>=3){
-          const type = parts[0].trim();
-          // Em osu!, o background costuma vir como: 0,0,"filename",0,0
-          if(type === "0" && parts[1].trim() === "0"){
-            const name = parts[2].trim().replace(/^"|"$/g,"");
-            if(name && !bgCandidate) bgCandidate = name;
+        if (parts.length >= 2){
+          const off = Number(parts[0]);
+          const mpb = Number(parts[1]);
+          if (isFinite(off) && isFinite(mpb) && mpb > 0){
+            timingOffset = off;
+            bpm = 60000 / mpb;
+            inTiming = false; // take first
           }
         }
       }
-      if(section === "TimingPoints"){
-        // time, beatLength, meter, sampleSet, sampleIndex, volume, uninherited, effects
-        const parts = line.split(",").map(x=>x.trim());
-        if(parts.length >= 2){
-          const t = Number(parts[0]);
-          const beatLength = Number(parts[1]);
-          const uninherited = parts[6] ? parts[6].trim() === "1" : true;
-          if(isFinite(t) && isFinite(beatLength)){
-            timingPoints.push({ t, msPerBeat: beatLength, uninherited });
-          }
-        }
-      }
-      if(section === "HitObjects"){
-        // mania: x,y,time,type,hitSound,objectParams,hitSample
-        const parts = line.split(",").map(x=>x.trim());
-        if(parts.length >= 5){
+
+      if (inHit){
+        // mania x,y,time,type,...
+        const parts = line.split(",");
+        if (parts.length >= 5){
           const x = Number(parts[0]);
-          const time = Number(parts[2]);
+          const t = Number(parts[2]);
           const type = Number(parts[3]);
-          if(!isFinite(x) || !isFinite(time) || !isFinite(type)) continue;
 
-          // lane calc: x em [0..512). Keys = CircleSize.
-          // lane = floor(x * keys / 512)
-          const keys = circleSize || 4;
-          const lane = clamp(Math.floor(x * keys / 512), 0, keys-1);
+          if (!isFinite(x) || !isFinite(t) || !isFinite(type)) continue;
 
-          const isHold = (type & 128) !== 0; // 128 = hold
-          if(isHold){
-            // objectParams: endTime:... (primeira parte antes de ':')
-            const objParams = parts[5] || "";
-            const endStr = objParams.split(":")[0];
-            const endTime = Number(endStr);
-            if(isFinite(endTime)){
-              objects.push({ t: time, lane, end: endTime, kind:"hold" });
-            }else{
-              objects.push({ t: time, lane, kind:"note" });
-            }
-          }else{
-            objects.push({ t: time, lane, kind:"note" });
-          }
+          // ignore holds for now (type 128). You can extend later.
+          const isHold = (type & 128) === 128;
+          if (isHold) continue;
+
+          // infer lane
+          const k = cs || state.keymode;
+          const lane = clamp(Math.floor((x / 512) * k), 0, k-1);
+          notes.push({t: Math.floor(t), lane});
         }
       }
     }
 
-    return {
-      mode, keys: circleSize || 0, objects,
-      timingPoints,
-      bgSuggested: bgCandidate
-    };
+    // only accept mania
+    if (mode !== 3){
+      alert("Esse .osu não parece ser osu!mania (Mode:3).");
+      return null;
+    }
+    return {cs: cs || 4, bpm, offset: timingOffset, notes};
   }
 
-  // ---------------------------
-  // Preview Canvas (piano-roll)
-  // ---------------------------
-  const cv = $("#cv");
-  const ctx = cv.getContext("2d");
+  exportBtn.onclick = exportOsu;
 
-  function clearCanvas(){
-    ctx.clearRect(0,0,cv.width,cv.height);
+  importBtn.onclick = () => {
+    const parsed = parseOsu(io.value || "");
+    if (!parsed) return;
+
+    setPlaying(false);
+    state.keymode = clamp(parsed.cs, 4, 10);
+    if (![4,6,7].includes(state.keymode)) state.keymode = 4; // keep supported modes
+    keymodeSel.value = String(state.keymode);
+
+    state.bpm = Math.max(1, Math.round(parsed.bpm));
+    bpmInp.value = String(state.bpm);
+
+    state.offset = Math.floor(parsed.offset || 0);
+    offsetInp.value = String(state.offset);
+
+    state.notes = parsed.notes || [];
+    sortNotes();
+    refreshNoteList();
+    updateHudSnap();
+    setSongTimeMs(0);
+  };
+
+  // --------------------------
+  // Init
+  // --------------------------
+  function init(){
+    state.audioEl.preload = "metadata";
+    scrollVal.textContent = String(state.scroll);
+    volVal.textContent = state.vol.toFixed(2);
+    rateVal.textContent = state.rate.toFixed(2);
+    updateHudSnap();
+    refreshNoteList();
+
+    // set seek defaults
+    seekR.max = "1000";
+    timeLen.textContent = "0";
+
+    // stop audio when ended
+    state.audioEl.onended = () => setPlaying(false);
+
+    window.addEventListener("resize", () => {
+      resizeCanvasToDisplaySize(editor);
+      resizeCanvasToDisplaySize(game);
+    });
+
+    tick();
   }
 
-  function draw(){
-    clearCanvas();
-
-    const keys = state.keys || 0;
-    const objs = state.objects || [];
-    const win = Number($("#windowMs").value) || 12000;
-
-    // fundo sutil
-    ctx.fillStyle = "rgba(255,255,255,0.03)";
-    ctx.fillRect(0,0,cv.width,cv.height);
-
-    if(keys <= 0 || objs.length === 0){
-      // grid vazio
-      ctx.fillStyle = "rgba(255,255,255,0.12)";
-      ctx.font = "14px ui-sans-serif,system-ui";
-      ctx.fillText("Carregue um .osu mania para ver a preview.", 18, 32);
-      return;
-    }
-
-    const pad = 18;
-    const w = cv.width - pad*2;
-    const h = cv.height - pad*2;
-
-    // tempo atual como centro da janela
-    const tCenter = state.t0 || 0;
-    const tStart = tCenter - win*0.35; // mais “ahead” do que “behind”
-    const tEnd   = tCenter + win*0.65;
-
-    // colunas
-    const colW = w / keys;
-
-    // grid colunas
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
-    for(let k=0;k<=keys;k++){
-      const x = pad + k*colW;
-      ctx.beginPath();
-      ctx.moveTo(x, pad);
-      ctx.lineTo(x, pad+h);
-      ctx.stroke();
-    }
-
-    // ticks de tempo (a cada 1s)
-    const tick = 1000;
-    const firstTick = Math.floor(tStart / tick) * tick;
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
-    for(let t=firstTick; t<=tEnd; t+=tick){
-      const x = pad + (t - tStart) / (tEnd - tStart) * w;
-      ctx.beginPath();
-      ctx.moveTo(x, pad);
-      ctx.lineTo(x, pad+h);
-      ctx.stroke();
-    }
-
-    // desenhar objetos
-    // (nota: sem cores fixas, mas vamos variar alpha por tipo)
-    for(const o of objs){
-      if(o.t > tEnd + 2000) break; // objs ordenados
-      if(o.t < tStart - 2000) continue;
-
-      const x0 = pad + o.lane * colW + 2;
-      const x1 = pad + (o.lane+1) * colW - 2;
-
-      const y = (t)=> pad + (t - tStart) / (tEnd - tStart) * h;
-
-      if(o.kind === "hold" && isFinite(o.end)){
-        const y1 = y(o.t);
-        const y2 = y(o.end);
-        const top = Math.min(y1,y2);
-        const hh = Math.abs(y2-y1);
-        ctx.fillStyle = "rgba(122,162,255,0.25)";
-        ctx.fillRect(x0, top, x1-x0, Math.max(3, hh));
-        ctx.fillStyle = "rgba(122,162,255,0.5)";
-        ctx.fillRect(x0, y1-2, x1-x0, 4);
-      } else {
-        const yy = y(o.t);
-        ctx.fillStyle = "rgba(119,242,198,0.35)";
-        ctx.fillRect(x0, yy-3, x1-x0, 6);
-      }
-    }
-
-    // linha do tempo atual (tCenter)
-    const xNow = pad + (tCenter - tStart) / (tEnd - tStart) * w;
-    ctx.strokeStyle = "rgba(255,255,255,0.55)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(xNow, pad);
-    ctx.lineTo(xNow, pad+h);
-    ctx.stroke();
-
-    // legenda
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.font = "12px ui-sans-serif,system-ui";
-    ctx.fillText(`t=${msToStr(tCenter)}  window=${win}ms`, pad, pad-6);
-  }
-
-  // ---------------------------
-  // Audio controls
-  // ---------------------------
-  function ensureAudio(){
-    if(!state.audio){
-      state.audio = new Audio();
-      state.audio.preload = "metadata";
-      state.audio.addEventListener("loadedmetadata", ()=>{
-        state.durationMs = Math.floor(state.audio.duration * 1000) || 0;
-      });
-      state.audio.addEventListener("timeupdate", ()=>{
-        if(state.playing){
-          state.t0 = Math.floor(state.audio.currentTime * 1000);
-          syncSeekBar();
-        }
-      });
-      state.audio.addEventListener("ended", ()=>{
-        state.playing = false;
-        $("#btnPlay").textContent = "Play";
-      });
-    }
-    return state.audio;
-  }
-
-  function syncSeekBar(){
-    const max = Number($("#seek").max);
-    const dur = state.durationMs || 1;
-    const v = Math.floor((state.t0 / dur) * max);
-    $("#seek").value = clamp(v, 0, max);
-    $("#timeLabel").textContent = msToStr(state.t0);
-  }
-
-  function setTimeMs(ms){
-    state.t0 = Math.max(0, ms|0);
-    $("#timeLabel").textContent = msToStr(state.t0);
-    if(state.audio && isFinite(state.audio.duration)){
-      state.audio.currentTime = state.t0 / 1000;
-    }
-    syncSeekBar();
-    draw();
-  }
-
-  function playPause(){
-    if(!state.audioName){
-      // sem áudio: “simula” play só pela linha do tempo
-      state.playing = !state.playing;
-      $("#btnPlay").textContent = state.playing ? "Pause" : "Play";
-      if(state.playing) startRAF();
-      return;
-    }
-    const a = ensureAudio();
-    if(!a.src) return;
-    state.playing = !state.playing;
-    $("#btnPlay").textContent = state.playing ? "Pause" : "Play";
-    if(state.playing){
-      a.play();
-      startRAF();
-    }else{
-      a.pause();
-      stopRAF();
-    }
-  }
-
-  function stop(){
-    state.playing = false;
-    $("#btnPlay").textContent = "Play";
-    if(state.audio){
-      state.audio.pause();
-      state.audio.currentTime = 0;
-    }
-    setTimeMs(0);
-    stopRAF();
-  }
-
-  function startRAF(){
-    stopRAF();
-    const step = (ts)=>{
-      if(!state.playing){ stopRAF(); return; }
-      // sem áudio: avança 16ms por frame aprox
-      if(!state.audioName){
-        state.t0 += 16;
-        syncSeekBar();
-      }
-      draw();
-      state.raf = requestAnimationFrame(step);
-    };
-    state.raf = requestAnimationFrame(step);
-  }
-
-  function stopRAF(){
-    if(state.raf) cancelAnimationFrame(state.raf);
-    state.raf = 0;
-  }
-
-  // ---------------------------
-  // Export ZIP
-  // ---------------------------
-  async function exportZip(){
-    if(!state.osuText){
-      alert("Carregue um .osu primeiro.");
-      return;
-    }
-    if(!window.JSZip){
-      alert("JSZip ainda carregando. Tente de novo em 1 segundo.");
-      return;
-    }
-
-    const packName = ($("#packName").value || "MeuPack_Mania").trim().replace(/[<>:"/\\|?*\x00-\x1F]/g,"_");
-    const zip = new JSZip();
-    const folder = zip.folder(packName);
-
-    // mapa
-    folder.file(state.osuName || "mapa.osu", state.osuText);
-
-    // áudio
-    if(state.audioBlob && state.audioName){
-      folder.file(state.audioName, state.audioBlob);
-    }
-
-    // bg
-    if(state.bgBlob && state.bgName){
-      folder.file(state.bgName, state.bgBlob);
-    }
-
-    // readme
-    const bpm = estimateBpm();
-    const readme =
-`Pack gerado pelo osu!mania Pack Builder (MVP)
-
-Arquivos incluídos:
-- ${state.osuName || "mapa.osu"}
-- áudio: ${state.audioName || "(nenhum)"}
-- bg: ${state.bgName || "(nenhum)"}
-
-Meta:
-- Keys: ${state.keys || "?"}
-- Objects: ${state.objects?.length || 0}
-- BPM (estimado): ${bpm ? bpm.toFixed(2) : "?"}
-`;
-    folder.file("readme.txt", readme);
-
-    const blob = await zip.generateAsync({type:"blob"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${packName}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
-  }
-
-  // ---------------------------
-  // Wire UI
-  // ---------------------------
-  $("#osuFile").addEventListener("change", async (e)=>{
-    const f = e.target.files?.[0];
-    if(!f) return;
-
-    const text = await f.text();
-    state.osuText = text;
-    state.osuName = f.name;
-
-    const parsed = parseOsu(text);
-    if(parsed.mode !== 3){
-      alert("Esse .osu não parece ser mania (Mode != 3). Ainda vou carregar, mas a preview pode ficar errada.");
-    }
-    state.keys = parsed.keys || 0;
-    state.objects = (parsed.objects || []).slice().sort((a,b)=>a.t-b.t);
-    state.timingPoints = (parsed.timingPoints || []).slice().sort((a,b)=>a.t-b.t);
-
-    $("#metaKeys").textContent = `Keys: ${state.keys || "?"}`;
-    $("#metaObjects").textContent = `Objects: ${state.objects.length}`;
-    const bpm = estimateBpm();
-    $("#metaBpm").textContent = `BPM: (estimado) ${bpm ? bpm.toFixed(2) : "-"}`;
-
-    // dica de BG
-    if(parsed.bgSuggested && !state.bgName){
-      $("#hint").textContent = `Dica: o mapa sugere BG "${parsed.bgSuggested}". Se você quiser, carregue esse arquivo em Background.`;
-    }else{
-      $("#hint").textContent = "";
-    }
-
-    // reset tempo e duração sem áudio
-    state.durationMs = state.objects.length ? (state.objects[state.objects.length-1].end || state.objects[state.objects.length-1].t) + 2000 : 0;
-    syncSeekBar();
-    setStatus();
-    draw();
-  });
-
-  $("#audioFile").addEventListener("change", async (e)=>{
-    const f = e.target.files?.[0];
-    if(!f) return;
-    state.audioBlob = f;
-    state.audioName = f.name;
-
-    const a = ensureAudio();
-    a.src = URL.createObjectURL(f);
-    a.load();
-
-    setStatus();
-  });
-
-  $("#bgFile").addEventListener("change", async (e)=>{
-    const f = e.target.files?.[0];
-    if(!f) return;
-    state.bgBlob = f;
-    state.bgName = f.name;
-    setStatus();
-  });
-
-  $("#btnPlay").addEventListener("click", playPause);
-  $("#btnStop").addEventListener("click", stop);
-
-  $("#seek").addEventListener("input", (e)=>{
-    const max = Number(e.target.max);
-    const v = Number(e.target.value);
-    const dur = state.durationMs || 1;
-    const ms = Math.floor((v/max) * dur);
-    setTimeMs(ms);
-  });
-
-  $("#windowMs").addEventListener("input", ()=> draw());
-  $("#exportZip").addEventListener("click", exportZip);
-
-  $("#resetAll").addEventListener("click", ()=>{
-    stop();
-    state.osuText=""; state.osuName="";
-    state.audioBlob=null; state.audioName="";
-    state.bgBlob=null; state.bgName="";
-    state.keys=0; state.objects=[]; state.timingPoints=[];
-    $("#osuFile").value=""; $("#audioFile").value=""; $("#bgFile").value="";
-    $("#metaKeys").textContent="Keys: -";
-    $("#metaObjects").textContent="Objects: -";
-    $("#metaBpm").textContent="BPM: (estimado) -";
-    $("#hint").textContent="Carregue um .osu mania para ver a preview.";
-    setStatus();
-    draw();
-  });
-
-  // atalhos
-  window.addEventListener("keydown", (e)=>{
-    if(e.target && (e.target.tagName==="INPUT" || e.target.tagName==="TEXTAREA")) return;
-    if(e.code==="Space"){ e.preventDefault(); playPause(); }
-    if(e.code==="ArrowLeft"){ e.preventDefault(); setTimeMs(state.t0 - 500); }
-    if(e.code==="ArrowRight"){ e.preventDefault(); setTimeMs(state.t0 + 500); }
-  });
-
-  // primeira render
-  setStatus();
-  draw();
+  init();
+})();
 </script>
 </body>
 </html>

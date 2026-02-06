@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mania Mapper (Quaver-like)</title>
+  <title>Mania Mapper (Quaver-like) — Improved</title>
   <style>
     :root{
       --bg:#0b0d12;
-      --panel:#101522;
-      --panel2:#0e1320;
       --fg:#e9eefc;
       --muted:#97a3c2;
       --accent:#7aa2ff;
       --accent2:#7affc7;
       --danger:#ff5d7a;
       --border:rgba(255,255,255,.08);
+      --panel:rgba(255,255,255,.035);
       --shadow:rgba(0,0,0,.45);
       --r:12px;
       --gap:12px;
@@ -63,7 +62,6 @@
     }
 
     .pad{ padding:14px 16px; }
-
     .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .row > *{ flex: 1; min-width: 0; }
 
@@ -75,7 +73,7 @@
       gap:6px;
     }
 
-    input[type="text"], input[type="number"], select{
+    input[type="text"], input[type="number"], select, textarea{
       width:100%;
       padding:10px 10px;
       border-radius:10px;
@@ -85,9 +83,7 @@
       outline:none;
     }
 
-    input[type="range"]{
-      width:100%;
-    }
+    input[type="range"]{ width:100%; }
 
     button{
       border:1px solid var(--border);
@@ -97,7 +93,7 @@
       border-radius:10px;
       cursor:pointer;
       transition: transform .05s ease, background .15s ease;
-      font-weight:600;
+      font-weight:700;
     }
     button:hover{ background: rgba(255,255,255,.08); }
     button:active{ transform: translateY(1px); }
@@ -105,9 +101,22 @@
       background: linear-gradient(180deg, rgba(122,162,255,.22), rgba(122,162,255,.10));
       border-color: rgba(122,162,255,.35);
     }
+    button.good{
+      background: linear-gradient(180deg, rgba(122,255,199,.20), rgba(122,255,199,.08));
+      border-color: rgba(122,255,199,.35);
+    }
     button.danger{
       background: linear-gradient(180deg, rgba(255,93,122,.22), rgba(255,93,122,.10));
       border-color: rgba(255,93,122,.35);
+    }
+    button.small{
+      padding:7px 9px;
+      font-size:12px;
+      border-radius:9px;
+    }
+    button.active{
+      outline:2px solid rgba(122,162,255,.35);
+      background: rgba(122,162,255,.14);
     }
 
     .tiny{
@@ -129,11 +138,7 @@
       background: rgba(0,0,0,.22);
       border-top:1px solid var(--border);
     }
-    canvas{
-      width:100%;
-      height:100%;
-      display:block;
-    }
+    canvas{ width:100%; height:100%; display:block; }
 
     .hud{
       position:absolute;
@@ -154,7 +159,7 @@
       color:var(--fg);
       backdrop-filter: blur(8px);
     }
-    .pill b{ color:var(--accent2); font-weight:800; }
+    .pill b{ color:var(--accent2); font-weight:900; }
 
     .timelineInfo{
       display:flex;
@@ -175,6 +180,8 @@
       display:inline-block;
     }
 
+    .divider{ height:1px; background: var(--border); margin:12px 0; }
+
     .list{
       border-top:1px solid var(--border);
       max-height: 220px;
@@ -191,31 +198,6 @@
       color:var(--muted);
     }
     .noteItem b{ color:var(--fg); }
-    .noteItem button{
-      padding:6px 8px;
-      border-radius:9px;
-      font-size:12px;
-    }
-
-    textarea{
-      width:100%;
-      min-height: 160px;
-      resize:vertical;
-      padding:10px;
-      border-radius:10px;
-      border:1px solid var(--border);
-      background: rgba(0,0,0,.22);
-      color:var(--fg);
-      outline:none;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size:12px;
-    }
-
-    .divider{
-      height:1px;
-      background: var(--border);
-      margin:12px 0;
-    }
   </style>
 </head>
 <body>
@@ -225,6 +207,17 @@
     <section class="card">
       <h2>Config</h2>
       <div class="pad" style="display:flex; flex-direction:column; gap:12px; min-height:0;">
+        <div class="row">
+          <label>
+            Tool
+            <div class="row">
+              <button id="toolSelect" class="small active">Select</button>
+              <button id="toolNote" class="small">Note</button>
+              <button id="toolHold" class="small">Hold</button>
+            </div>
+          </label>
+        </div>
+
         <div class="row">
           <label>
             Keymode
@@ -248,14 +241,8 @@
         </div>
 
         <div class="row">
-          <label>
-            BPM
-            <input id="bpm" type="number" value="180" min="1" step="1" />
-          </label>
-          <label>
-            Offset (ms)
-            <input id="offset" type="number" value="0" step="1" />
-          </label>
+          <label>BPM <input id="bpm" type="number" value="180" min="1" step="1" /></label>
+          <label>Offset (ms) <input id="offset" type="number" value="0" step="1" /></label>
         </div>
 
         <div class="row">
@@ -280,16 +267,13 @@
         </div>
 
         <div class="row">
-          <label>
-            Carregar áudio
-            <input id="audioFile" type="file" accept="audio/*" />
-          </label>
+          <label>Carregar áudio <input id="audioFile" type="file" accept="audio/*" /></label>
         </div>
 
         <div class="row">
           <button class="primary" id="playBtn">Play</button>
           <button id="stopBtn">Stop</button>
-          <button class="danger" id="clearBtn">Limpar notas</button>
+          <button class="danger" id="clearBtn">Limpar</button>
         </div>
 
         <label>
@@ -302,14 +286,14 @@
         </label>
 
         <div class="tiny">
-          Teclas (padrão):
+          Atalhos:
           <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
-            <span class="kbd">D</span><span class="kbd">F</span><span class="kbd">J</span><span class="kbd">K</span>
-            <span class="kbd">S</span><span class="kbd">L</span><span class="kbd">;</span>
+            <span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span> tools •
+            <span class="kbd">Space</span> play/pause • <span class="kbd">Del</span> apagar seleção •
+            <span class="kbd">Ctrl</span>+clique apagar
           </div>
           <div style="margin-top:8px;">
-            <span class="kbd">Space</span> Play/Pause • <span class="kbd">Backspace</span> Deletar nota mais próxima •
-            <span class="kbd">Ctrl</span> + clique = deletar nota
+            Mouse wheel = scrub • arrastar no timeline = pan (segurar <span class="kbd">Alt</span>)
           </div>
         </div>
       </div>
@@ -317,11 +301,11 @@
 
     <!-- CENTER: EDITOR TIMELINE -->
     <section class="card split">
-      <h2>Editor (timeline)</h2>
+      <h2>Editor (timeline + waveform)</h2>
       <div class="canvasWrap">
         <canvas id="editor"></canvas>
         <div class="hud">
-          <div class="pill">Modo: <b id="hudMode">Edit</b></div>
+          <div class="pill">Tool: <b id="hudTool">Select</b></div>
           <div class="pill">Notas: <b id="hudNotes">0</b></div>
           <div class="pill">Snap: <b id="hudSnap">1/4</b></div>
         </div>
@@ -330,8 +314,9 @@
       <div class="pad" style="border-top:1px solid var(--border); display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button id="zoomOut">- Zoom</button>
         <button id="zoomIn">+ Zoom</button>
+        <button id="toggleWave" class="good">Waveform: ON</button>
         <div class="tiny" style="flex:1;">
-          Clique para posicionar nota no tempo. Use o mouse para mirar a coluna.
+          Select: clique seleciona, arraste pra mover no tempo. Note: clique coloca. Hold: clique+arraste pra duração.
         </div>
       </div>
     </section>
@@ -342,8 +327,8 @@
       <div class="canvasWrap" style="flex:1; min-height:240px;">
         <canvas id="game"></canvas>
         <div class="hud">
-          <div class="pill">Hitline</div>
           <div class="pill">Tempo: <b id="hudTime">0</b> ms</div>
+          <div class="pill">Hitline</div>
         </div>
       </div>
 
@@ -351,11 +336,10 @@
 
       <div class="pad" style="display:flex; flex-direction:column; gap:10px;">
         <div class="row">
-          <button id="exportBtn" class="primary">Export .osu (mania)</button>
+          <button id="exportBtn" class="primary">Export .osu</button>
           <button id="importBtn">Import .osu</button>
         </div>
-        <textarea id="io" spellcheck="false" placeholder="Aqui aparece o .osu exportado (ou cole um .osu para importar)."></textarea>
-
+        <textarea id="io" spellcheck="false" placeholder="Export aparece aqui. Para importar: cole .osu e clique Import."></textarea>
         <div class="list" id="noteList"></div>
       </div>
     </section>
@@ -364,42 +348,52 @@
 
 <script>
 (() => {
-  // --------------------------
-  // State
-  // --------------------------
+  // ---------- State ----------
   const state = {
     keymode: 4,
     bpm: 180,
     offset: 0,
-    snap: 4, // 0 = free
-    scroll: 900, // px/s
+    snap: 4,
+    scroll: 900,
     rate: 1,
     vol: 0.9,
+
     playing: false,
 
-    // timeline scaling
-    msPerPixel: 2.5, // zoom (smaller => zoom in)
-    editorCenterMs: 0, // where center line points
+    msPerPixel: 2.5, // zoom
     durationMs: 0,
 
-    // audio
     audioEl: new Audio(),
     audioReady: false,
 
-    // notes: {t, lane} with t in ms (absolute in song time)
+    // Audio analysis (waveform)
+    audioCtx: null,
+    audioBuf: null,
+    waveform: null, // Float32Array peaks
+    waveformOn: true,
+
+    // notes:
+    // tap: {id, lane, t, type:"tap"}
+    // hold:{id, lane, t, end, type:"hold"}
     notes: [],
+    nextId: 1,
+
+    tool: "select", // select | note | hold
+
+    // selection
+    selectedId: null,
+
+    // interactions
+    dragging: null, // {mode, ...}
   };
 
-  // key bindings per keymode (simple + comfy)
   const keymaps = {
     4: ["d","f","j","k"],
     6: ["s","d","f","j","k","l"],
-    7: ["s","d","f","space","j","k","l"], // center = space (common-ish)
+    7: ["s","d","f","g","j","k","l"], // g = centro (pra não brigar com space)
   };
 
-  // --------------------------
-  // DOM
-  // --------------------------
+  // ---------- DOM ----------
   const $ = (id) => document.getElementById(id);
 
   const editor = $("editor");
@@ -417,8 +411,8 @@
   const volVal = $("volVal");
   const rateR = $("rate");
   const rateVal = $("rateVal");
-
   const audioFile = $("audioFile");
+
   const playBtn = $("playBtn");
   const stopBtn = $("stopBtn");
   const clearBtn = $("clearBtn");
@@ -427,23 +421,26 @@
   const timeNow = $("timeNow");
   const timeLen = $("timeLen");
 
-  const hudMode = $("hudMode");
+  const hudTool = $("hudTool");
   const hudNotes = $("hudNotes");
   const hudSnap = $("hudSnap");
   const hudTime = $("hudTime");
 
   const zoomOut = $("zoomOut");
   const zoomIn = $("zoomIn");
+  const toggleWave = $("toggleWave");
+
+  const toolSelect = $("toolSelect");
+  const toolNote = $("toolNote");
+  const toolHold = $("toolHold");
 
   const exportBtn = $("exportBtn");
   const importBtn = $("importBtn");
   const io = $("io");
   const noteList = $("noteList");
 
-  // --------------------------
-  // Helpers
-  // --------------------------
-  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+  // ---------- Helpers ----------
+  const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
 
   function resizeCanvasToDisplaySize(c){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -458,43 +455,44 @@
   }
 
   function songTimeMs(){
-    if (!state.audioReady) return state.editorCenterMs;
+    if (!state.audioReady) return Number(seekR.value||0);
     return Math.floor(state.audioEl.currentTime * 1000);
   }
 
   function setSongTimeMs(ms){
     ms = clamp(ms, 0, state.durationMs || ms);
-    state.editorCenterMs = ms;
-    if (state.audioReady){
-      state.audioEl.currentTime = ms / 1000;
-    }
-    syncSeekUI();
+    if (state.audioReady) state.audioEl.currentTime = ms/1000;
+    seekR.value = String(ms);
+    syncTimeUI(ms);
   }
 
-  function syncSeekUI(){
-    const now = songTimeMs();
+  function syncTimeUI(now){
     timeNow.textContent = now;
     hudTime.textContent = now;
-    seekR.value = String(clamp(now, 0, Number(seekR.max || 0)));
   }
 
-  function beatMs(){
-    return 60000 / Math.max(1, state.bpm);
-  }
-
-  function snapMs(){
-    if (state.snap === 0) return 0;
-    return beatMs() / state.snap;
-  }
+  function beatMs(){ return 60000 / Math.max(1, state.bpm); }
+  function snapMs(){ return state.snap===0 ? 0 : beatMs()/state.snap; }
 
   function quantizeMs(ms){
     const s = snapMs();
-    if (!s) return ms;
-    // apply offset as grid origin (like common mapping)
+    if (!s) return Math.floor(ms);
     const origin = state.offset;
     const rel = ms - origin;
     const q = Math.round(rel / s) * s + origin;
     return Math.max(0, Math.floor(q));
+  }
+
+  function updateHudSnap(){
+    hudSnap.textContent = state.snap===0 ? "Livre" : `1/${state.snap}`;
+  }
+
+  function setTool(t){
+    state.tool = t;
+    hudTool.textContent = t[0].toUpperCase()+t.slice(1);
+    toolSelect.classList.toggle("active", t==="select");
+    toolNote.classList.toggle("active", t==="note");
+    toolHold.classList.toggle("active", t==="hold");
   }
 
   function laneFromX(x, width){
@@ -503,81 +501,140 @@
     return clamp(Math.floor(x / laneW), 0, k-1);
   }
 
-  function sortNotes(){
-    state.notes.sort((a,b) => a.t - b.t || a.lane - b.lane);
+  function noteAtOrNear(t, lane, toleranceMs=20){
+    let best = null, bestD = Infinity;
+    for (const n of state.notes){
+      if (n.lane !== lane) continue;
+      const d = (n.type==="hold")
+        ? Math.min(Math.abs(n.t - t), Math.abs(n.end - t), (t>=n.t && t<=n.end)?0:Infinity)
+        : Math.abs(n.t - t);
+      if (d < bestD && d <= toleranceMs){
+        bestD = d; best = n;
+      }
+    }
+    return best;
   }
 
-  function addNote(t, lane){
-    t = Math.floor(t);
-    if (state.snap !== 0) t = quantizeMs(t);
-    // avoid duplicates same time+lane
-    if (state.notes.some(n => n.t === t && n.lane === lane)) return;
-    state.notes.push({t, lane});
+  function noteHitTestEditor(t, lane){
+    // bigger tolerance for editor selection
+    return noteAtOrNear(t, lane, 80);
+  }
+
+  function sortNotes(){
+    state.notes.sort((a,b) => (a.t - b.t) || (a.lane - b.lane) || (a.id - b.id));
+  }
+
+  function addTap(t, lane){
+    t = state.snap!==0 ? quantizeMs(t) : Math.floor(t);
+    if (state.notes.some(n => n.type==="tap" && n.t===t && n.lane===lane)) return;
+    const n = {id: state.nextId++, type:"tap", t, lane};
+    state.notes.push(n);
     sortNotes();
+    select(n.id);
     refreshNoteList();
   }
 
-  function deleteNearestNote(t, laneOrNull = null){
-    if (!state.notes.length) return;
-    let bestI = -1;
-    let bestD = Infinity;
-    for (let i=0; i<state.notes.length; i++){
-      const n = state.notes[i];
-      if (laneOrNull !== null && n.lane !== laneOrNull) continue;
-      const d = Math.abs(n.t - t);
-      if (d < bestD){
-        bestD = d; bestI = i;
-      }
-    }
-    if (bestI >= 0){
-      state.notes.splice(bestI, 1);
-      refreshNoteList();
-    }
+  function addHold(tStart, tEnd, lane){
+    let a = tStart, b = tEnd;
+    if (a>b) [a,b]=[b,a];
+    a = state.snap!==0 ? quantizeMs(a) : Math.floor(a);
+    b = state.snap!==0 ? quantizeMs(b) : Math.floor(b);
+    if (b <= a) b = a + Math.max(50, Math.floor(snapMs()||100)); // minimum
+    const n = {id: state.nextId++, type:"hold", t:a, end:b, lane};
+    state.notes.push(n);
+    sortNotes();
+    select(n.id);
+    refreshNoteList();
+  }
+
+  function deleteById(id){
+    const i = state.notes.findIndex(n=>n.id===id);
+    if (i>=0) state.notes.splice(i,1);
+    if (state.selectedId===id) state.selectedId=null;
+    refreshNoteList();
+  }
+
+  function select(id){
+    state.selectedId = id;
   }
 
   function refreshNoteList(){
     hudNotes.textContent = String(state.notes.length);
     noteList.innerHTML = "";
-    const maxShow = 120;
-    const slice = state.notes.slice(0, maxShow);
+    const maxShow = 140;
+    const slice = state.notes.slice(0,maxShow);
     for (const n of slice){
       const row = document.createElement("div");
       row.className = "noteItem";
+      const laneTxt = n.lane+1;
+      const typeTxt = n.type==="tap" ? "TAP" : `HOLD ${n.end-n.t}ms`;
+      const selected = n.id===state.selectedId ? " style='color:var(--accent2)'" : "";
       row.innerHTML = `
-        <div>t=<b>${n.t}</b> ms • lane=<b>${n.lane+1}</b></div>
-        <button data-jump="1">Ir</button>
-        <button data-del="1" class="danger">Del</button>
+        <div${selected}>${typeTxt} • t=<b>${n.t}</b>${n.type==="hold" ? ` → <b>${n.end}</b>` : ""} • lane=<b>${laneTxt}</b></div>
+        <button class="small" data-jump="1">Ir</button>
+        <button class="small danger" data-del="1">Del</button>
       `;
-      row.querySelector("[data-jump]").onclick = () => setSongTimeMs(n.t);
-      row.querySelector("[data-del]").onclick = () => { 
-        const idx = state.notes.findIndex(x => x.t===n.t && x.lane===n.lane);
-        if (idx>=0) state.notes.splice(idx,1);
+      row.querySelector("[data-jump]").onclick = () => { setSongTimeMs(n.t); select(n.id); };
+      row.querySelector("[data-del]").onclick = () => deleteById(n.id);
+      row.onclick = (ev) => {
+        if (ev.target.tagName.toLowerCase()==="button") return;
+        select(n.id);
         refreshNoteList();
       };
       noteList.appendChild(row);
     }
-    if (state.notes.length > maxShow){
+    if (state.notes.length>maxShow){
       const more = document.createElement("div");
-      more.className = "noteItem";
-      more.innerHTML = `<div>... mostrando ${maxShow} de ${state.notes.length}</div><div></div><div></div>`;
+      more.className="noteItem";
+      more.innerHTML=`<div>... mostrando ${maxShow} de ${state.notes.length}</div><div></div><div></div>`;
       noteList.appendChild(more);
     }
   }
 
-  function updateHudSnap(){
-    hudSnap.textContent = state.snap === 0 ? "Livre" : `1/${state.snap}`;
+  // ---------- Waveform ----------
+  async function buildWaveform(file){
+    try{
+      state.waveform = null;
+      state.audioBuf = null;
+
+      const arrayBuf = await file.arrayBuffer();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      state.audioCtx = state.audioCtx || new AudioCtx();
+      const buf = await state.audioCtx.decodeAudioData(arrayBuf.slice(0));
+      state.audioBuf = buf;
+
+      // Build peaks array (mono mix)
+      const len = buf.length;
+      const ch0 = buf.getChannelData(0);
+      const ch1 = buf.numberOfChannels > 1 ? buf.getChannelData(1) : null;
+
+      const buckets = 4000; // enough detail; we downsample per draw
+      const step = Math.max(1, Math.floor(len / buckets));
+      const peaks = new Float32Array(Math.ceil(len/step));
+      for (let i=0, p=0; i<len; i+=step, p++){
+        let mx = 0;
+        const end = Math.min(len, i+step);
+        for (let j=i; j<end; j++){
+          const v = ch1 ? (ch0[j]*0.5 + ch1[j]*0.5) : ch0[j];
+          const av = Math.abs(v);
+          if (av > mx) mx = av;
+        }
+        peaks[p] = mx;
+      }
+      state.waveform = peaks;
+    }catch(err){
+      console.warn("Waveform failed:", err);
+      state.waveform = null;
+    }
   }
 
-  // --------------------------
-  // Rendering: Editor timeline
-  // --------------------------
+  // ---------- Rendering: Editor ----------
   function drawEditor(){
     resizeCanvasToDisplaySize(editor);
     const w = editor.width, h = editor.height;
-
     ectx.clearRect(0,0,w,h);
 
-    // background
+    // bg
     ectx.fillStyle = "rgba(0,0,0,.18)";
     ectx.fillRect(0,0,w,h);
 
@@ -586,52 +643,71 @@
 
     // lanes
     for (let i=0;i<k;i++){
-      const x = i*laneW;
+      const x=i*laneW;
       ectx.fillStyle = i%2===0 ? "rgba(255,255,255,.03)" : "rgba(255,255,255,.02)";
       ectx.fillRect(x,0,laneW,h);
-      ectx.strokeStyle = "rgba(255,255,255,.08)";
-      ectx.beginPath();
-      ectx.moveTo(x,0);
-      ectx.lineTo(x,h);
-      ectx.stroke();
+      ectx.strokeStyle="rgba(255,255,255,.08)";
+      ectx.beginPath(); ectx.moveTo(x,0); ectx.lineTo(x,h); ectx.stroke();
     }
-    // right border
     ectx.strokeStyle="rgba(255,255,255,.10)";
     ectx.beginPath(); ectx.moveTo(w,0); ectx.lineTo(w,h); ectx.stroke();
 
-    // time mapping: center line at h*0.55 (more space ahead)
-    const centerY = h * 0.55;
+    const centerY = h*0.58;
     const centerT = songTimeMs();
 
-    // grid lines (beats)
-    const bms = beatMs();
-    const s = snapMs();
-    const gridStep = state.snap === 0 ? bms : s;
-
-    // pick a reasonable step for rendering density
-    let renderStep = gridStep;
-    while (renderStep / state.msPerPixel < 16) renderStep *= 2;
-
-    const visibleMs = h * state.msPerPixel;
     const tTop = centerT - centerY*state.msPerPixel;
     const tBot = centerT + (h-centerY)*state.msPerPixel;
 
-    // grid origin
+    // waveform behind lanes (single band)
+    if (state.waveformOn && state.waveform && state.durationMs>0){
+      const bandTop = 10;
+      const bandH = Math.min(120*(w/900+0.6), h*0.22);
+      const bandBottom = bandTop + bandH;
+
+      // semi panel
+      ectx.fillStyle = "rgba(0,0,0,.22)";
+      ectx.fillRect(0, bandTop, w, bandH);
+
+      const peaks = state.waveform;
+      // map time -> peak index
+      const peaksLen = peaks.length;
+      const tSpan = tBot - tTop;
+      const pxPerMs = 1/state.msPerPixel;
+
+      // draw vertical lines for waveform
+      ectx.strokeStyle = "rgba(122,162,255,.35)";
+      ectx.lineWidth = 1;
+      const stepPx = 2; // draw every 2px
+      for (let x=0; x<w; x+=stepPx){
+        const t = tTop + (x / pxPerMs); // ms
+        const idx = clamp(Math.floor((t/state.durationMs)*peaksLen), 0, peaksLen-1);
+        const p = peaks[idx];
+        const mid = (bandTop+bandBottom)/2;
+        const amp = p * (bandH/2) * 0.95;
+        ectx.beginPath();
+        ectx.moveTo(x, mid-amp);
+        ectx.lineTo(x, mid+amp);
+        ectx.stroke();
+      }
+    }
+
+    // grid
+    const bms = beatMs();
+    const gridBase = state.snap===0 ? bms : snapMs();
+    let renderStep = gridBase;
+    while (renderStep / state.msPerPixel < 14) renderStep *= 2;
+
     const origin = state.offset;
     const first = Math.floor((tTop - origin)/renderStep)*renderStep + origin;
 
-    for (let t = first; t <= tBot + renderStep; t += renderStep){
-      const y = centerY + (t - centerT) / state.msPerPixel;
-      const isBeat = Math.abs(((t - origin) / bms) - Math.round((t - origin) / bms)) < 1e-6;
+    for (let t=first; t<=tBot+renderStep; t+=renderStep){
+      const y = centerY + (t-centerT)/state.msPerPixel;
+      const isBeat = Math.abs(((t-origin)/bms) - Math.round((t-origin)/bms)) < 1e-6;
 
       ectx.strokeStyle = isBeat ? "rgba(122,162,255,.30)" : "rgba(255,255,255,.08)";
       ectx.lineWidth = isBeat ? 2 : 1;
-      ectx.beginPath();
-      ectx.moveTo(0, y);
-      ectx.lineTo(w, y);
-      ectx.stroke();
+      ectx.beginPath(); ectx.moveTo(0,y); ectx.lineTo(w,y); ectx.stroke();
 
-      // time label occasionally
       if (isBeat){
         ectx.fillStyle = "rgba(151,163,194,.9)";
         ectx.font = `${Math.floor(11*(w/900+0.6))}px ${getComputedStyle(document.body).fontFamily}`;
@@ -639,313 +715,412 @@
       }
     }
 
-    // notes as rectangles
-    const noteH = 10 * (w/900 + 0.7);
+    // notes
+    const noteH = 10*(w/900+0.7);
     for (const n of state.notes){
-      if (n.t < tTop-1000 || n.t > tBot+1000) continue;
-      const y = centerY + (n.t - centerT) / state.msPerPixel;
-      const x = n.lane * laneW;
-      ectx.fillStyle = "rgba(122,255,199,.75)";
-      ectx.fillRect(x+3, y - noteH/2, laneW-6, noteH);
-      ectx.strokeStyle = "rgba(0,0,0,.35)";
-      ectx.strokeRect(x+3, y - noteH/2, laneW-6, noteH);
+      const inView = (n.type==="tap")
+        ? (n.t>=tTop-1000 && n.t<=tBot+1000)
+        : (n.end>=tTop-1000 && n.t<=tBot+1000);
+      if (!inView) continue;
+
+      const x = n.lane*laneW;
+      const selected = n.id===state.selectedId;
+
+      if (n.type==="tap"){
+        const y = centerY + (n.t-centerT)/state.msPerPixel;
+        ectx.fillStyle = selected ? "rgba(122,255,199,.95)" : "rgba(122,255,199,.75)";
+        ectx.fillRect(x+3, y-noteH/2, laneW-6, noteH);
+        ectx.strokeStyle = selected ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.35)";
+        ectx.strokeRect(x+3, y-noteH/2, laneW-6, noteH);
+      } else {
+        const y1 = centerY + (n.t-centerT)/state.msPerPixel;
+        const y2 = centerY + (n.end-centerT)/state.msPerPixel;
+        const top = Math.min(y1,y2), bot = Math.max(y1,y2);
+        ectx.fillStyle = selected ? "rgba(122,255,199,.30)" : "rgba(122,255,199,.18)";
+        ectx.fillRect(x+6, top, laneW-12, bot-top);
+        // head
+        ectx.fillStyle = selected ? "rgba(122,255,199,.95)" : "rgba(122,255,199,.75)";
+        ectx.fillRect(x+3, y1-noteH/2, laneW-6, noteH);
+        // tail marker
+        ectx.fillStyle = selected ? "rgba(122,255,199,.75)" : "rgba(122,255,199,.55)";
+        ectx.fillRect(x+3, y2-noteH/2, laneW-6, noteH);
+        ectx.strokeStyle = selected ? "rgba(255,255,255,.35)" : "rgba(0,0,0,.35)";
+        ectx.strokeRect(x+6, top, laneW-12, bot-top);
+      }
     }
 
-    // center playhead
-    ectx.strokeStyle = "rgba(255,255,255,.55)";
-    ectx.lineWidth = 2;
-    ectx.beginPath();
-    ectx.moveTo(0, centerY);
-    ectx.lineTo(w, centerY);
-    ectx.stroke();
+    // playhead
+    ectx.strokeStyle="rgba(255,255,255,.55)";
+    ectx.lineWidth=2;
+    ectx.beginPath(); ectx.moveTo(0,centerY); ectx.lineTo(w,centerY); ectx.stroke();
 
-    // hint text
-    ectx.fillStyle = "rgba(233,238,252,.75)";
+    ectx.fillStyle="rgba(233,238,252,.75)";
     ectx.font = `${Math.floor(12*(w/900+0.6))}px ${getComputedStyle(document.body).fontFamily}`;
     ectx.fillText("PLAYHEAD", 10, centerY - 10);
+
+    // drag preview (hold placing)
+    if (state.dragging && state.dragging.mode==="placingHold"){
+      const {lane, tStart, tNow} = state.dragging;
+      const x = lane*laneW;
+      const y1 = centerY + (tStart-centerT)/state.msPerPixel;
+      const y2 = centerY + (tNow-centerT)/state.msPerPixel;
+      const top = Math.min(y1,y2), bot = Math.max(y1,y2);
+
+      ectx.fillStyle="rgba(122,162,255,.14)";
+      ectx.fillRect(x+6, top, laneW-12, bot-top);
+      ectx.strokeStyle="rgba(122,162,255,.45)";
+      ectx.strokeRect(x+6, top, laneW-12, bot-top);
+    }
   }
 
-  // --------------------------
-  // Rendering: Gameplay preview
-  // --------------------------
+  // ---------- Rendering: Gameplay ----------
   function drawGame(){
     resizeCanvasToDisplaySize(game);
     const w = game.width, h = game.height;
-
     gctx.clearRect(0,0,w,h);
-    gctx.fillStyle = "rgba(0,0,0,.18)";
+
+    gctx.fillStyle="rgba(0,0,0,.18)";
     gctx.fillRect(0,0,w,h);
 
     const k = state.keymode;
-    const laneW = w / k;
+    const laneW = w/k;
 
-    // lanes + borders
     for (let i=0;i<k;i++){
-      const x = i*laneW;
+      const x=i*laneW;
       gctx.fillStyle = i%2===0 ? "rgba(255,255,255,.035)" : "rgba(255,255,255,.02)";
       gctx.fillRect(x,0,laneW,h);
-
-      gctx.strokeStyle = "rgba(255,255,255,.09)";
-      gctx.beginPath();
-      gctx.moveTo(x,0);
-      gctx.lineTo(x,h);
-      gctx.stroke();
+      gctx.strokeStyle="rgba(255,255,255,.09)";
+      gctx.beginPath(); gctx.moveTo(x,0); gctx.lineTo(x,h); gctx.stroke();
     }
     gctx.strokeStyle="rgba(255,255,255,.12)";
     gctx.beginPath(); gctx.moveTo(w,0); gctx.lineTo(w,h); gctx.stroke();
 
-    // hitline at 80% height
-    const hitY = h * 0.82;
-    gctx.strokeStyle = "rgba(122,162,255,.55)";
-    gctx.lineWidth = 3;
-    gctx.beginPath();
-    gctx.moveTo(0, hitY);
-    gctx.lineTo(w, hitY);
-    gctx.stroke();
+    const hitY = h*0.82;
+    gctx.strokeStyle="rgba(122,162,255,.55)";
+    gctx.lineWidth=3;
+    gctx.beginPath(); gctx.moveTo(0,hitY); gctx.lineTo(w,hitY); gctx.stroke();
 
-    // draw notes that are within a window based on scroll speed
-    // scroll: px/s => px/ms = scroll/1000
-    const pxPerMs = state.scroll / 1000;
+    const pxPerMs = state.scroll/1000;
     const now = songTimeMs();
-
-    // show ~2s ahead and 1s behind
     const tMin = now - 1200;
-    const tMax = now + 2600;
+    const tMax = now + 3000;
 
-    const noteH = 12 * (w/900 + 0.7);
+    const noteH = 12*(w/900+0.7);
+
     for (const n of state.notes){
-      if (n.t < tMin || n.t > tMax) continue;
+      if (n.type==="tap"){
+        if (n.t<tMin || n.t>tMax) continue;
+        const dt=n.t-now;
+        const y = hitY - dt*pxPerMs;
+        const x=n.lane*laneW;
+        const a = clamp(1 - Math.abs(dt)/3000, 0.25, 1);
+        gctx.fillStyle=`rgba(122,255,199,${0.75*a})`;
+        gctx.fillRect(x+4,y-noteH/2,laneW-8,noteH);
+        gctx.strokeStyle=`rgba(0,0,0,${0.35*a})`;
+        gctx.strokeRect(x+4,y-noteH/2,laneW-8,noteH);
+      } else {
+        if (n.end<tMin || n.t>tMax) continue;
+        const x=n.lane*laneW;
 
-      const dt = n.t - now; // positive => future => above hitline
-      const y = hitY - dt * pxPerMs;
-      const x = n.lane * laneW;
+        const dtHead = n.t-now;
+        const dtTail = n.end-now;
+        const yHead = hitY - dtHead*pxPerMs;
+        const yTail = hitY - dtTail*pxPerMs;
 
-      // color based on dt
-      const a = clamp(1 - Math.abs(dt)/2600, 0.25, 1);
-      gctx.fillStyle = `rgba(122,255,199,${0.75*a})`;
-      gctx.fillRect(x+4, y - noteH/2, laneW-8, noteH);
-      gctx.strokeStyle = `rgba(0,0,0,${0.35*a})`;
-      gctx.strokeRect(x+4, y - noteH/2, laneW-8, noteH);
+        const top = Math.min(yHead,yTail), bot = Math.max(yHead,yTail);
+
+        // body
+        gctx.fillStyle="rgba(122,255,199,.18)";
+        gctx.fillRect(x+8, top, laneW-16, bot-top);
+
+        // head/tail
+        gctx.fillStyle="rgba(122,255,199,.75)";
+        gctx.fillRect(x+4, yHead-noteH/2, laneW-8, noteH);
+        gctx.fillStyle="rgba(122,255,199,.55)";
+        gctx.fillRect(x+4, yTail-noteH/2, laneW-8, noteH);
+        gctx.strokeStyle="rgba(0,0,0,.35)";
+        gctx.strokeRect(x+8, top, laneW-16, bot-top);
+      }
     }
 
     // receptors
-    gctx.fillStyle = "rgba(255,255,255,.10)";
+    gctx.fillStyle="rgba(255,255,255,.10)";
     for (let i=0;i<k;i++){
-      const x = i*laneW;
+      const x=i*laneW;
       gctx.fillRect(x+6, hitY+10, laneW-12, 10);
     }
   }
 
-  // --------------------------
-  // Main loop
-  // --------------------------
+  // ---------- Loop ----------
   function tick(){
-    // If playing, center follows audio
     if (state.playing && state.audioReady){
-      state.editorCenterMs = songTimeMs();
-      syncSeekUI();
+      const now = songTimeMs();
+      seekR.value = String(now);
+      syncTimeUI(now);
     }
     drawEditor();
     drawGame();
     requestAnimationFrame(tick);
   }
 
-  // --------------------------
-  // Controls wiring
-  // --------------------------
+  // ---------- Controls ----------
   function setPlaying(on){
-    if (!state.audioReady) on = false;
-    state.playing = on;
-    hudMode.textContent = on ? "Play" : "Edit";
-    playBtn.textContent = on ? "Pause" : "Play";
+    if (!state.audioReady) on=false;
+    state.playing=on;
+    playBtn.textContent=on?"Pause":"Play";
     if (state.audioReady){
       if (on) state.audioEl.play().catch(()=>{});
       else state.audioEl.pause();
     }
   }
 
-  keymodeSel.onchange = () => {
-    state.keymode = Number(keymodeSel.value);
+  keymodeSel.onchange=()=> state.keymode=Number(keymodeSel.value);
+  snapSel.onchange=()=> { state.snap=Number(snapSel.value); updateHudSnap(); };
+  bpmInp.oninput=()=> state.bpm=Number(bpmInp.value||180);
+  offsetInp.oninput=()=> state.offset=Number(offsetInp.value||0);
+
+  scrollR.oninput=()=>{ state.scroll=Number(scrollR.value); scrollVal.textContent=String(state.scroll); };
+  volR.oninput=()=>{ state.vol=Number(volR.value); volVal.textContent=state.vol.toFixed(2); state.audioEl.volume=state.vol; };
+  rateR.oninput=()=>{ state.rate=Number(rateR.value); rateVal.textContent=state.rate.toFixed(2); state.audioEl.playbackRate=state.rate; };
+
+  playBtn.onclick=()=> setPlaying(!state.playing);
+  stopBtn.onclick=()=>{ setPlaying(false); setSongTimeMs(0); };
+  clearBtn.onclick=()=>{ setPlaying(false); state.notes=[]; state.selectedId=null; refreshNoteList(); };
+
+  zoomIn.onclick=()=> state.msPerPixel=clamp(state.msPerPixel*0.80, 0.22, 25);
+  zoomOut.onclick=()=> state.msPerPixel=clamp(state.msPerPixel*1.25, 0.22, 25);
+
+  toggleWave.onclick=()=>{
+    state.waveformOn=!state.waveformOn;
+    toggleWave.textContent = `Waveform: ${state.waveformOn ? "ON" : "OFF"}`;
   };
 
-  snapSel.onchange = () => {
-    state.snap = Number(snapSel.value);
-    updateHudSnap();
-  };
+  toolSelect.onclick=()=> setTool("select");
+  toolNote.onclick=()=> setTool("note");
+  toolHold.onclick=()=> setTool("hold");
 
-  bpmInp.oninput = () => state.bpm = Number(bpmInp.value || 180);
-  offsetInp.oninput = () => state.offset = Number(offsetInp.value || 0);
-
-  scrollR.oninput = () => {
-    state.scroll = Number(scrollR.value);
-    scrollVal.textContent = String(state.scroll);
-  };
-
-  volR.oninput = () => {
-    state.vol = Number(volR.value);
-    volVal.textContent = state.vol.toFixed(2);
-    state.audioEl.volume = state.vol;
-  };
-
-  rateR.oninput = () => {
-    state.rate = Number(rateR.value);
-    rateVal.textContent = state.rate.toFixed(2);
-    state.audioEl.playbackRate = state.rate;
-  };
-
-  playBtn.onclick = () => setPlaying(!state.playing);
-
-  stopBtn.onclick = () => {
-    setPlaying(false);
-    setSongTimeMs(0);
-  };
-
-  clearBtn.onclick = () => {
-    setPlaying(false);
-    state.notes = [];
-    refreshNoteList();
-  };
-
-  zoomIn.onclick = () => {
-    state.msPerPixel = clamp(state.msPerPixel * 0.80, 0.25, 20);
-  };
-  zoomOut.onclick = () => {
-    state.msPerPixel = clamp(state.msPerPixel * 1.25, 0.25, 20);
-  };
-
-  seekR.oninput = () => {
-    setPlaying(false);
-    setSongTimeMs(Number(seekR.value));
-  };
+  seekR.oninput=()=>{ setPlaying(false); setSongTimeMs(Number(seekR.value)); };
 
   audioFile.onchange = async () => {
     const f = audioFile.files && audioFile.files[0];
     if (!f) return;
 
     setPlaying(false);
-    state.audioReady = false;
-    state.durationMs = 0;
+    state.audioReady=false;
+    state.durationMs=0;
+    state.waveform=null;
+
+    // waveform build (async, but finishes quickly)
+    buildWaveform(f);
 
     const url = URL.createObjectURL(f);
-    state.audioEl.src = url;
-    state.audioEl.volume = state.vol;
-    state.audioEl.playbackRate = state.rate;
+    state.audioEl.src=url;
+    state.audioEl.volume=state.vol;
+    state.audioEl.playbackRate=state.rate;
 
-    await new Promise((res) => {
-      state.audioEl.onloadedmetadata = () => res();
-      state.audioEl.onerror = () => res();
+    await new Promise((res)=>{
+      state.audioEl.onloadedmetadata=()=>res();
+      state.audioEl.onerror=()=>res();
     });
 
-    if (isFinite(state.audioEl.duration) && state.audioEl.duration > 0){
-      state.audioReady = true;
-      state.durationMs = Math.floor(state.audioEl.duration * 1000);
-      seekR.max = String(state.durationMs);
-      timeLen.textContent = state.durationMs;
+    if (isFinite(state.audioEl.duration) && state.audioEl.duration>0){
+      state.audioReady=true;
+      state.durationMs=Math.floor(state.audioEl.duration*1000);
+      seekR.max=String(state.durationMs);
+      timeLen.textContent=String(state.durationMs);
       setSongTimeMs(0);
-    } else {
-      state.audioReady = false;
-      timeLen.textContent = "0";
-      seekR.max = "1000";
-      alert("Não consegui ler a duração do áudio. Tenta outro formato (mp3/ogg/wav).");
+    }else{
+      alert("Não consegui ler a duração do áudio. Tenta mp3/ogg/wav.");
+      seekR.max="1000";
+      timeLen.textContent="0";
     }
   };
 
-  // --------------------------
-  // Editor interactions (click to place/delete)
-  // --------------------------
-  function editorPosToTimeAndLane(ev){
+  state.audioEl.onended=()=> setPlaying(false);
+
+  // ---------- Editor pointer math ----------
+  function editorToTL(ev){
     const rect = editor.getBoundingClientRect();
     const dpr = editor.width / rect.width;
-    const x = (ev.clientX - rect.left) * dpr;
-    const y = (ev.clientY - rect.top) * dpr;
+    const x = (ev.clientX - rect.left)*dpr;
+    const y = (ev.clientY - rect.top)*dpr;
 
-    const w = editor.width, h = editor.height;
-    const centerY = h * 0.55;
+    const w=editor.width, h=editor.height;
+    const centerY=h*0.58;
     const now = songTimeMs();
-    const t = now + (y - centerY) * state.msPerPixel;
-    const lane = laneFromX(x, w);
-    return {t: clamp(Math.floor(t), 0, state.durationMs || Math.floor(t)), lane};
+    const t = now + (y-centerY)*state.msPerPixel;
+    const lane = laneFromX(x,w);
+    return {x,y,t: clamp(t,0,state.durationMs||t), lane};
   }
 
-  editor.addEventListener("mousedown", (ev) => {
-    const {t, lane} = editorPosToTimeAndLane(ev);
-    if (ev.ctrlKey || ev.metaKey){
-      deleteNearestNote(t, lane);
-    } else {
-      addNote(t, lane);
-      // optional: snap editor center to that spot when paused
-      if (!state.playing) setSongTimeMs(t);
-    }
-  });
+  function pointerDown(ev){
+    const p = editorToTL(ev);
+    const t = state.snap!==0 ? quantizeMs(p.t) : Math.floor(p.t);
 
-  // wheel = scrub time
-  editor.addEventListener("wheel", (ev) => {
+    // alt-drag pan time (like quaver timeline pan)
+    if (ev.altKey){
+      state.dragging = {mode:"pan", startT: songTimeMs(), startY: p.y};
+      return;
+    }
+
+    // ctrl delete
+    if (ev.ctrlKey || ev.metaKey){
+      const hit = noteHitTestEditor(t, p.lane);
+      if (hit) deleteById(hit.id);
+      return;
+    }
+
+    if (state.tool==="note"){
+      addTap(t, p.lane);
+      setSongTimeMs(t);
+      return;
+    }
+
+    if (state.tool==="hold"){
+      // start placing hold
+      state.dragging = {mode:"placingHold", lane:p.lane, tStart:t, tNow:t};
+      return;
+    }
+
+    // select tool
+    const hit = noteHitTestEditor(t, p.lane);
+    if (hit){
+      select(hit.id);
+      refreshNoteList();
+
+      // start moving (time only) if drag
+      state.dragging = {mode:"moveNote", id: hit.id, startT: hit.t, startY: p.y, startNow: songTimeMs()};
+      return;
+    }else{
+      state.selectedId=null;
+      refreshNoteList();
+      // click empty => set playhead time
+      setPlaying(false);
+      setSongTimeMs(t);
+    }
+  }
+
+  function pointerMove(ev){
+    if (!state.dragging) return;
+    const p = editorToTL(ev);
+
+    if (state.dragging.mode==="pan"){
+      // move current time based on vertical delta
+      const dy = p.y - state.dragging.startY;
+      const deltaMs = dy * state.msPerPixel;
+      setPlaying(false);
+      setSongTimeMs(state.dragging.startT + deltaMs);
+      return;
+    }
+
+    if (state.dragging.mode==="placingHold"){
+      const t = state.snap!==0 ? quantizeMs(p.t) : Math.floor(p.t);
+      state.dragging.tNow = t;
+      return;
+    }
+
+    if (state.dragging.mode==="moveNote"){
+      const n = state.notes.find(x=>x.id===state.dragging.id);
+      if (!n) return;
+      // drag vertical => time shift
+      const dy = p.y - state.dragging.startY;
+      const deltaMs = dy * state.msPerPixel;
+      let newT = state.dragging.startT + deltaMs;
+      newT = state.snap!==0 ? quantizeMs(newT) : Math.floor(newT);
+      newT = clamp(newT, 0, state.durationMs || newT);
+
+      if (n.type==="tap"){
+        n.t = newT;
+      }else{
+        const len = n.end - n.t;
+        n.t = newT;
+        n.end = newT + Math.max(50, len);
+      }
+      sortNotes();
+      refreshNoteList();
+      return;
+    }
+  }
+
+  function pointerUp(ev){
+    if (!state.dragging) return;
+
+    if (state.dragging.mode==="placingHold"){
+      const {lane, tStart, tNow} = state.dragging;
+      addHold(tStart, tNow, lane);
+    }
+
+    state.dragging=null;
+  }
+
+  editor.addEventListener("mousedown", (ev)=>{ editor.setPointerCapture?.(ev.pointerId); pointerDown(ev); });
+  editor.addEventListener("mousemove", pointerMove);
+  window.addEventListener("mouseup", pointerUp);
+
+  editor.addEventListener("wheel", (ev)=>{
     ev.preventDefault();
     const delta = Math.sign(ev.deltaY);
     setPlaying(false);
-    setSongTimeMs(songTimeMs() + delta * 60); // 60ms steps
+    setSongTimeMs(songTimeMs() + delta*50);
   }, {passive:false});
 
-  // --------------------------
-  // Keyboard mapping (place notes at playhead)
-  // --------------------------
-  window.addEventListener("keydown", (ev) => {
+  // ---------- Keyboard ----------
+  window.addEventListener("keydown", (ev)=>{
     if (ev.repeat) return;
 
-    // avoid typing into inputs
     const tag = (document.activeElement && document.activeElement.tagName || "").toLowerCase();
-    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    if (tag==="input" || tag==="textarea" || tag==="select") return;
 
-    if (ev.code === "Space"){
+    if (ev.key==="1") { setTool("select"); return; }
+    if (ev.key==="2") { setTool("note"); return; }
+    if (ev.key==="3") { setTool("hold"); return; }
+
+    if (ev.code==="Space"){
       ev.preventDefault();
-      // In 7K we also use space as a lane key, but play/pause is more important.
-      // If you want space to place a note for 7K center, change this behavior.
       setPlaying(!state.playing);
       return;
     }
 
-    if (ev.code === "Backspace"){
-      ev.preventDefault();
-      deleteNearestNote(songTimeMs(), null);
-      return;
+    if (ev.key==="Delete" || ev.key==="Backspace"){
+      if (state.selectedId!=null){
+        ev.preventDefault();
+        deleteById(state.selectedId);
+        return;
+      }
     }
 
+    // place notes by keys when tool is note (or always, you decide)
     const km = keymaps[state.keymode] || keymaps[4];
     const key = ev.key.toLowerCase();
-
-    // 7K: we avoid using actual space here because Space is play/pause
-    // We'll interpret "g" as center-lane placement for 7K to keep a full mapping option.
-    if (state.keymode === 7 && key === "g"){
-      addNote(songTimeMs(), 3);
-      return;
-    }
-
     const idx = km.indexOf(key);
-    if (idx >= 0){
-      addNote(songTimeMs(), idx);
+    if (idx>=0){
+      const t = songTimeMs();
+      addTap(t, idx);
     }
   });
 
-  // --------------------------
-  // Import/Export .osu (mania) basic
-  // --------------------------
+  // ---------- Import/Export .osu (mania taps + holds) ----------
   function exportOsu(){
-    // Minimal mania format:
-    // HitObjects: x,y,time,type,hitSound,objectParams,hitSample
-    // For normal notes: type=1
-    // x mapped by lane: (lane + 0.5) * (512/keymode)
     const k = state.keymode;
     const laneW = 512 / k;
 
-    const hitObjects = state.notes.map(n => {
-      const x = Math.floor((n.lane + 0.5) * laneW);
-      const y = 192; // mania uses fixed y often
-      const time = Math.max(0, Math.floor(n.t));
-      const type = 1; // normal hitcircle
+    // type bits: 1 = circle, 128 = hold
+    const lines = state.notes.map(n=>{
+      const x = Math.floor((n.lane + 0.5)*laneW);
+      const y = 192;
       const hitSound = 0;
-      const objectParams = "0:0:0:0:";
-      const hitSample = "0:0:0:0:";
-      return `${x},${y},${time},${type},${hitSound},${objectParams},${hitSample}`;
+      const sample = "0:0:0:0:";
+      if (n.type==="tap"){
+        const type = 1;
+        return `${x},${y},${Math.floor(n.t)},${type},${hitSound},0:0:0:0:,${sample}`;
+      }else{
+        const type = 128; // hold
+        // hold format: ...,type,hitSound,endTime:...
+        // objectParams = endTime:hitSample
+        const endTime = Math.floor(n.end);
+        const obj = `${endTime}:0:0:0:0:`;
+        return `${x},${y},${Math.floor(n.t)},${type},${hitSound},${obj},${sample}`;
+      }
     });
 
     const content =
@@ -963,18 +1138,13 @@ LetterboxInBreaks: 0
 WidescreenStoryboard: 0
 
 [Editor]
-DistanceSpacing: 1.0
-BeatDivisor: ${state.snap === 0 ? 4 : state.snap}
-GridSize: 4
-TimelineZoom: 1
+BeatDivisor: ${state.snap===0 ? 4 : state.snap}
 
 [Metadata]
 Title: Untitled
 Artist: Unknown
 Creator: ManiaMapper
 Version: Edit
-Source:
-Tags:
 
 [Difficulty]
 HPDrainRate: 5
@@ -985,10 +1155,10 @@ SliderMultiplier: 1.4
 SliderTickRate: 1
 
 [TimingPoints]
-${state.offset},${(60000/Math.max(1,state.bpm)).toFixed(6)},4,2,0,100,1,0
+${Math.floor(state.offset)},${(60000/Math.max(1,state.bpm)).toFixed(6)},4,2,0,100,1,0
 
 [HitObjects]
-${hitObjects.join("\n")}
+${lines.join("\n")}
 `;
     io.value = content;
   }
@@ -1015,102 +1185,94 @@ ${hitObjects.join("\n")}
       }
 
       if (!inTiming && !inHit){
-        if (line.toLowerCase().startsWith("mode:")){
-          mode = Number(line.split(":")[1].trim());
-        }
-        if (line.toLowerCase().startsWith("circlesize:")){
-          cs = Number(line.split(":")[1].trim());
-        }
+        if (line.toLowerCase().startsWith("mode:")) mode = Number(line.split(":")[1].trim());
+        if (line.toLowerCase().startsWith("circlesize:")) cs = Number(line.split(":")[1].trim());
       }
 
       if (inTiming){
-        // first uninherited timing point
-        // format: offset,msPerBeat,...
         const parts = line.split(",");
-        if (parts.length >= 2){
+        if (parts.length>=2){
           const off = Number(parts[0]);
           const mpb = Number(parts[1]);
-          if (isFinite(off) && isFinite(mpb) && mpb > 0){
+          if (isFinite(off) && isFinite(mpb) && mpb>0){
             timingOffset = off;
-            bpm = 60000 / mpb;
-            inTiming = false; // take first
+            bpm = 60000/mpb;
+            inTiming = false; // take first timing point
           }
         }
       }
 
       if (inHit){
-        // mania x,y,time,type,...
         const parts = line.split(",");
-        if (parts.length >= 5){
+        if (parts.length>=6){
           const x = Number(parts[0]);
           const t = Number(parts[2]);
           const type = Number(parts[3]);
+          if (!isFinite(x)||!isFinite(t)||!isFinite(type)) continue;
 
-          if (!isFinite(x) || !isFinite(t) || !isFinite(type)) continue;
-
-          // ignore holds for now (type 128). You can extend later.
-          const isHold = (type & 128) === 128;
-          if (isHold) continue;
-
-          // infer lane
           const k = cs || state.keymode;
-          const lane = clamp(Math.floor((x / 512) * k), 0, k-1);
-          notes.push({t: Math.floor(t), lane});
+          const lane = clamp(Math.floor((x/512)*k), 0, k-1);
+
+          const isHold = (type & 128) === 128;
+          if (isHold){
+            // endTime in parts[5] like "end:..."
+            const obj = parts[5];
+            const endStr = (obj.split(":")[0]||"").trim();
+            const end = Number(endStr);
+            if (isFinite(end)){
+              notes.push({id:0, type:"hold", t:Math.floor(t), end:Math.floor(end), lane});
+            }
+          } else {
+            notes.push({id:0, type:"tap", t:Math.floor(t), lane});
+          }
         }
       }
     }
 
-    // only accept mania
     if (mode !== 3){
       alert("Esse .osu não parece ser osu!mania (Mode:3).");
       return null;
     }
-    return {cs: cs || 4, bpm, offset: timingOffset, notes};
+    return {cs: cs||4, bpm, offset: timingOffset, notes};
   }
 
   exportBtn.onclick = exportOsu;
 
   importBtn.onclick = () => {
-    const parsed = parseOsu(io.value || "");
+    const parsed = parseOsu(io.value||"");
     if (!parsed) return;
 
     setPlaying(false);
-    state.keymode = clamp(parsed.cs, 4, 10);
-    if (![4,6,7].includes(state.keymode)) state.keymode = 4; // keep supported modes
+    state.keymode = [4,6,7].includes(parsed.cs) ? parsed.cs : 4;
     keymodeSel.value = String(state.keymode);
 
     state.bpm = Math.max(1, Math.round(parsed.bpm));
     bpmInp.value = String(state.bpm);
 
-    state.offset = Math.floor(parsed.offset || 0);
+    state.offset = Math.floor(parsed.offset||0);
     offsetInp.value = String(state.offset);
 
-    state.notes = parsed.notes || [];
+    state.notes = (parsed.notes||[]).map(n => ({...n, id: state.nextId++}));
     sortNotes();
+    state.selectedId = null;
     refreshNoteList();
     updateHudSnap();
     setSongTimeMs(0);
   };
 
-  // --------------------------
-  // Init
-  // --------------------------
+  // ---------- Init ----------
   function init(){
-    state.audioEl.preload = "metadata";
     scrollVal.textContent = String(state.scroll);
     volVal.textContent = state.vol.toFixed(2);
     rateVal.textContent = state.rate.toFixed(2);
     updateHudSnap();
     refreshNoteList();
+    setTool("select");
 
-    // set seek defaults
     seekR.max = "1000";
     timeLen.textContent = "0";
 
-    // stop audio when ended
-    state.audioEl.onended = () => setPlaying(false);
-
-    window.addEventListener("resize", () => {
+    window.addEventListener("resize", ()=>{
       resizeCanvasToDisplaySize(editor);
       resizeCanvasToDisplaySize(game);
     });

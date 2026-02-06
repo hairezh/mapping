@@ -3,14 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Web Mania Editor (4K–7K) — MVP</title>
+  <title>Web Mania Editor V2 (4K–7K)</title>
   <style>
     :root{
       --bg:#0b0c0f; --panel:#11141a; --fg:#eaeef6; --muted:#9aa4b2;
       --border:rgba(255,255,255,.10);
-      --lane:rgba(255,255,255,.06);
-      --grid:rgba(255,255,255,.07);
-      --gridStrong:rgba(255,255,255,.14);
       --accent:#7dd3fc;
       --danger:#fb7185;
       --ok:#86efac;
@@ -23,11 +20,14 @@
       display:flex; flex-direction:column;
     }
     header{
-      padding:14px 16px; border-bottom:1px solid var(--border);
-      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
       background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
     }
-    .group{display:flex; gap:10px; align-items:center; background:var(--panel); border:1px solid var(--border); padding:10px; border-radius:var(--r)}
+    .group{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      background:var(--panel); border:1px solid var(--border); padding:10px; border-radius:var(--r)
+    }
     label{font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:6px}
     input[type="number"], select, button, input[type="text"]{
       background:#0e1117; color:var(--fg); border:1px solid var(--border);
@@ -38,9 +38,11 @@
     button{cursor:pointer}
     button.primary{border-color:rgba(125,211,252,.45)}
     button.danger{border-color:rgba(251,113,133,.5); color:#ffd7df}
+    button.ok{border-color:rgba(134,239,172,.5); color:#d1fae5}
     button:disabled{opacity:.55; cursor:not-allowed}
-    main{flex:1; display:flex; gap:14px; padding:14px}
-    .left{flex:1; min-width:320px; display:flex; flex-direction:column; gap:12px}
+
+    main{flex:1; display:flex; gap:12px; padding:12px}
+    .left{flex:1; min-width:340px; display:flex; flex-direction:column; gap:10px}
     .canvasWrap{
       position:relative; flex:1; border:1px solid var(--border); border-radius:16px;
       overflow:hidden; background:#07090d;
@@ -51,40 +53,67 @@
       color:var(--muted); background:rgba(255,255,255,.03); font-size:13px; line-height:1.45;
     }
     .right{
-      width:340px; max-width:40vw;
-      display:flex; flex-direction:column; gap:12px;
+      width:420px; max-width:45vw;
+      display:flex; flex-direction:column; gap:10px;
     }
     .panel{
       background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:12px;
     }
     .panel h3{margin:0 0 8px 0; font-size:14px; color:#dbe5f5}
-    .list{
-      max-height:38vh; overflow:auto; border:1px solid var(--border);
-      border-radius:12px; background:#0e1117;
-    }
     .row{
       display:flex; justify-content:space-between; gap:10px;
-      padding:10px 10px; border-bottom:1px solid rgba(255,255,255,.06);
+      padding:9px 10px; border-bottom:1px solid rgba(255,255,255,.06);
       font-size:13px; color:var(--muted);
     }
     .row b{color:var(--fg); font-weight:600}
     .row:last-child{border-bottom:none}
-    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px;
+
+    .list{
+      max-height:30vh; overflow:auto; border:1px solid var(--border);
+      border-radius:12px; background:#0e1117;
+    }
+    .list .item{
+      padding:9px 10px; border-bottom:1px solid rgba(255,255,255,.06);
+      font-size:13px; color:var(--muted);
+      display:flex; justify-content:space-between; gap:10px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .list .item:last-child{border-bottom:none}
+    .list .item.sel{background:rgba(125,211,252,.10)}
+    .list .item b{color:var(--fg)}
+    .kbd{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px;
       background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
-      padding:2px 6px; border-radius:8px; color:#dbe5f5}
+      padding:2px 6px; border-radius:8px; color:#dbe5f5
+    }
     .badge{font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); color:var(--muted)}
+
+    .grid2{
+      display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    }
+    .grid3{
+      display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;
+    }
+    .tpRow{
+      display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center;
+      padding:8px; border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .tpRow:last-child{border-bottom:none}
+    .small{font-size:12px; color:var(--muted)}
+    .muted{color:var(--muted)}
   </style>
 </head>
 <body>
 <header>
   <div class="group">
-    <label>
-      Áudio
+    <label>Áudio
       <input id="audioFile" type="file" accept="audio/*">
     </label>
     <button id="playBtn" class="primary" disabled>Play</button>
     <button id="stopBtn" disabled>Stop</button>
     <button id="exportBtn" class="primary" disabled>Exportar .osu</button>
+    <span class="badge">Waveform: <span id="wfLbl">—</span></span>
   </div>
 
   <div class="group">
@@ -92,12 +121,6 @@
       <select id="keys">
         <option>4</option><option>5</option><option>6</option><option>7</option>
       </select>
-    </label>
-    <label>BPM
-      <input id="bpm" type="number" min="30" max="400" step="0.001" value="180">
-    </label>
-    <label>Offset (ms)
-      <input id="offset" type="number" step="1" value="0">
     </label>
     <label>Snap
       <select id="snap">
@@ -112,13 +135,16 @@
       </select>
     </label>
     <label>Zoom (px/s)
-      <input id="zoom" type="number" min="200" max="6000" step="50" value="1400">
+      <input id="zoom" type="number" min="200" max="8000" step="50" value="1600">
+    </label>
+    <label>Grid Opacity
+      <input id="gridOp" type="number" min="0" max="1" step="0.05" value="1">
     </label>
   </div>
 
   <div class="group">
     <button id="undoBtn" disabled>Undo</button>
-    <button id="delBtn" class="danger" disabled>Deletar selecionada</button>
+    <button id="delBtn" class="danger" disabled>Deletar seleção</button>
     <span class="badge">Seleção: <span id="selInfo">—</span></span>
   </div>
 </header>
@@ -128,19 +154,21 @@
     <div class="canvasWrap" id="wrap">
       <canvas id="cv"></canvas>
     </div>
+
     <div class="hint">
-      <div><b>Controles</b>:
+      <div><b>Mouse / Teclado</b>:
         <span class="kbd">Espaço</span> play/pausa,
         <span class="kbd">Clique</span> cria tap,
         <span class="kbd">Shift + arrastar</span> cria hold,
-        <span class="kbd">Clique na nota</span> seleciona,
+        <span class="kbd">Arrastar vazio</span> seleção box,
+        <span class="kbd">Arrastar nota selecionada</span> move bloco,
+        <span class="kbd">Ctrl+Clique</span> adiciona/remove da seleção,
         <span class="kbd">Delete</span> apaga,
         <span class="kbd">Ctrl+Z</span> undo,
-        <span class="kbd">Mouse wheel</span> scroll (tempo).
+        <span class="kbd">Wheel</span> scroll tempo.
       </div>
-      <div style="margin-top:6px">
-        <b>Obs:</b> Esse MVP exporta um .osu de mania com 1 timing point (BPM/Offset).
-        Dá pra evoluir pra múltiplos BPM, SV, metronome, etc.
+      <div style="margin-top:6px" class="small">
+        <b>Recording:</b> ative o toggle e toque as teclas (binds editáveis). Segurar tecla cria hold.
       </div>
     </div>
   </section>
@@ -150,47 +178,91 @@
       <h3>Status</h3>
       <div class="row"><span>Tempo</span><b><span id="timeLbl">0</span> ms</b></div>
       <div class="row"><span>Notas</span><b><span id="countLbl">0</span></b></div>
-      <div class="row"><span>Modo</span><b><span id="modeLbl">tap</span></b></div>
+      <div class="row"><span>Timing ativo</span><b><span id="tpLbl">—</span></b></div>
     </div>
 
     <div class="panel">
-      <h3>Lista de notas (mais recente em cima)</h3>
-      <div class="list" id="list"></div>
+      <h3>Metadata (.osu)</h3>
+      <div class="grid2">
+        <label>Title <input id="metaTitle" type="text" value="WebManiaEditor"/></label>
+        <label>Artist <input id="metaArtist" type="text" value="Unknown"/></label>
+        <label>Creator <input id="metaCreator" type="text" value="reze"/></label>
+        <label>Version <input id="metaVersion" type="text" value="Easy"/></label>
+      </div>
+      <div class="small muted" style="margin-top:8px">AudioFilename será o nome do arquivo que você carregou.</div>
+    </div>
+
+    <div class="panel">
+      <h3>Timing Points (BPM changes)</h3>
+      <div class="grid3" style="margin-bottom:10px">
+        <button id="addTpBtn" class="ok" disabled>Add TP @ tempo</button>
+        <button id="normTpBtn" disabled>Ordenar/Normalizar</button>
+        <button id="clearTpBtn" class="danger" disabled>Reset TPs</button>
+      </div>
+      <div id="tpList" class="list" style="max-height:22vh"></div>
+      <div class="small" style="margin-top:8px">
+        Snap/Grid usa o timing point ativo para o tempo atual (e para quantização da nota).
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Key Recording</h3>
+      <div class="grid2">
+        <label>Recording
+          <select id="recMode" disabled>
+            <option value="off" selected>Off</option>
+            <option value="on">On (tap + hold)</option>
+          </select>
+        </label>
+        <label>Quantize (record)
+          <select id="recQuant" disabled>
+            <option value="on" selected>On</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid2" style="margin-top:10px">
+        <label>Keybinds (separe por espaço)
+          <input id="binds" type="text" disabled value="d f j k">
+        </label>
+        <label class="small" style="gap:6px">
+          Dica
+          <div class="muted">4K: d f j k • 5K: d f space j k • 6K: s d f j k l • 7K: s d f space j k l</div>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Projeto (JSON / Local)</h3>
+      <div class="grid3">
+        <button id="saveLocalBtn" disabled class="ok">Salvar Local</button>
+        <button id="loadLocalBtn" disabled>Carregar Local</button>
+        <button id="exportJsonBtn" disabled>Export JSON</button>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <label>Import JSON
+          <input id="importJsonFile" type="file" accept="application/json" disabled>
+        </label>
+        <button id="clearAllBtn" class="danger" disabled style="align-self:end">Limpar tudo</button>
+      </div>
+      <div class="small muted" style="margin-top:8px">
+        “Salvar Local” guarda no navegador (localStorage). Export/Import serve como backup.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Notas (recentes)</h3>
+      <div class="list" id="noteList"></div>
     </div>
   </aside>
 </main>
 
 <script>
 (() => {
-  // ---------- State ----------
-  const state = {
-    keys: 4,
-    bpm: 180,
-    offset: 0, // ms
-    snap: 4, // denominator
-    zoomPxPerSec: 1400,
-    timeMs: 0,
-    isPlaying: false,
-
-    // audio
-    ac: null,
-    buffer: null,
-    source: null,
-    startedAt: 0, // ac.currentTime
-    startOffsetSec: 0,
-
-    // editor
-    notes: [], // {id, lane, t, type:'tap'|'hold', end}
-    undo: [],
-    selectedId: null,
-
-    // drag
-    isHoldDrag: false,
-    holdLane: 0,
-    holdStartMs: 0,
-  };
-
   const $ = (id) => document.getElementById(id);
+
+  // ---------- Elements ----------
   const cv = $("cv");
   const wrap = $("wrap");
   const ctx = cv.getContext("2d");
@@ -199,127 +271,226 @@
   const playBtn = $("playBtn");
   const stopBtn = $("stopBtn");
   const exportBtn = $("exportBtn");
-  const keysSel = $("keys");
-  const bpmIn = $("bpm");
-  const offsetIn = $("offset");
-  const snapSel = $("snap");
-  const zoomIn = $("zoom");
   const undoBtn = $("undoBtn");
   const delBtn = $("delBtn");
 
+  const keysSel = $("keys");
+  const snapSel = $("snap");
+  const zoomIn = $("zoom");
+  const gridOpIn = $("gridOp");
+
   const timeLbl = $("timeLbl");
   const countLbl = $("countLbl");
-  const listEl = $("list");
+  const tpLbl = $("tpLbl");
+  const wfLbl = $("wfLbl");
   const selInfo = $("selInfo");
-  const modeLbl = $("modeLbl");
 
-  // ---------- Helpers ----------
-  const uid = () => Math.random().toString(36).slice(2, 10);
+  const metaTitle = $("metaTitle");
+  const metaArtist = $("metaArtist");
+  const metaCreator = $("metaCreator");
+  const metaVersion = $("metaVersion");
 
-  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+  const addTpBtn = $("addTpBtn");
+  const normTpBtn = $("normTpBtn");
+  const clearTpBtn = $("clearTpBtn");
+  const tpList = $("tpList");
 
-  function beatLenMs(){
-    return 60000 / state.bpm;
+  const recMode = $("recMode");
+  const recQuant = $("recQuant");
+  const bindsIn = $("binds");
+
+  const saveLocalBtn = $("saveLocalBtn");
+  const loadLocalBtn = $("loadLocalBtn");
+  const exportJsonBtn = $("exportJsonBtn");
+  const importJsonFile = $("importJsonFile");
+  const clearAllBtn = $("clearAllBtn");
+
+  const noteList = $("noteList");
+
+  // ---------- State ----------
+  const state = {
+    keys: 4,
+    snap: 4,
+    zoomPxPerSec: 1600,
+    gridOpacity: 1,
+    timeMs: 0,
+    isPlaying: false,
+
+    // audio
+    ac: null,
+    buffer: null,
+    source: null,
+    startedAt: 0,
+    startOffsetSec: 0,
+
+    // waveform
+    wf: {
+      ready: false,
+      peaks: null,      // Float32Array
+      blockSize: 2048,
+      sampleRate: 44100,
+      blockSec: 0,
+      max: 1,
+      progress: 0,      // 0..1
+    },
+
+    // editor
+    notes: [], // {id, lane, t, type:'tap'|'hold', end}
+    undo: [],
+
+    // selection
+    selected: new Set(),   // ids
+    hoverId: null,
+
+    // interactions
+    drag: {
+      mode: "none", // none | holdCreate | boxSelect | moveSelection
+      downX: 0, downY: 0,
+      lane: 0,
+      holdStartMs: 0,
+      box: null, // {x0,y0,x1,y1}
+      move: null, // {anchorMs, anchorLane, baseNotesSnapshot}
+    },
+
+    // timing points: {id, t(ms), bpm, meter}
+    timing: [
+      { id: cryptoId(), t: 0, bpm: 180, meter: 4 }
+    ],
+
+    // recording
+    rec: {
+      mode: "off", // off | on
+      quantize: true,
+      // binds: array of arrays (keys string per lane)
+      binds: ["d","f","j","k"],
+      downMap: new Map(), // key -> {lane, startMs, noteId}
+    }
+  };
+
+  // ---------- Utils ----------
+  function cryptoId(){
+    return Math.random().toString(36).slice(2,10);
+  }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+
+  function pushUndo(){
+    state.undo.push(JSON.stringify({
+      notes: state.notes,
+      timing: state.timing,
+      keys: state.keys,
+      snap: state.snap,
+      zoom: state.zoomPxPerSec,
+      meta: getMeta(),
+      rec: { binds: state.rec.binds }
+    }));
+    if(state.undo.length > 200) state.undo.shift();
+    undoBtn.disabled = state.undo.length === 0;
+  }
+  function doUndo(){
+    const prev = state.undo.pop();
+    if(!prev) return;
+    const obj = JSON.parse(prev);
+    state.notes = obj.notes || [];
+    state.timing = obj.timing || state.timing;
+    state.keys = obj.keys ?? state.keys;
+    state.snap = obj.snap ?? state.snap;
+    state.zoomPxPerSec = obj.zoom ?? state.zoomPxPerSec;
+    if(obj.meta) setMeta(obj.meta);
+    if(obj.rec?.binds) state.rec.binds = obj.rec.binds;
+
+    keysSel.value = String(state.keys);
+    snapSel.value = String(state.snap);
+    zoomIn.value = String(state.zoomPxPerSec);
+    bindsIn.value = state.rec.binds.join(" ");
+
+    state.selected.clear();
+    updateSelectionUI();
+    renderTimingUI();
+    renderNoteList();
+    undoBtn.disabled = state.undo.length === 0;
   }
 
-  function snapMs(){
-    // 1/snap of a beat
-    return beatLenMs() / state.snap;
+  function getMeta(){
+    return {
+      title: metaTitle.value,
+      artist: metaArtist.value,
+      creator: metaCreator.value,
+      version: metaVersion.value
+    };
+  }
+  function setMeta(m){
+    metaTitle.value = m.title ?? metaTitle.value;
+    metaArtist.value = m.artist ?? metaArtist.value;
+    metaCreator.value = m.creator ?? metaCreator.value;
+    metaVersion.value = m.version ?? metaVersion.value;
   }
 
-  function quantize(ms){
-    const s = snapMs();
+  function sortNotes(){
+    state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
+  }
+
+  function normalizeTiming(){
+    // remove duplicates by time (keep last)
+    state.timing.sort((a,b)=>a.t-b.t);
+    const out = [];
+    for(const tp of state.timing){
+      if(out.length && out[out.length-1].t === tp.t){
+        out[out.length-1] = tp;
+      } else {
+        out.push(tp);
+      }
+    }
+    state.timing = out;
+  }
+
+  function activeTimingAt(ms){
+    const arr = state.timing;
+    if(arr.length === 0) return {t:0,bpm:180,meter:4};
+    let best = arr[0];
+    for(const tp of arr){
+      if(tp.t <= ms) best = tp;
+      else break;
+    }
+    return best;
+  }
+
+  function beatLenMsAt(ms){
+    const tp = activeTimingAt(ms);
+    return 60000 / tp.bpm;
+  }
+
+  function snapMsAt(ms){
+    return beatLenMsAt(ms) / state.snap;
+  }
+
+  function quantizeAt(ms){
+    const s = snapMsAt(ms);
     return Math.round(ms / s) * s;
   }
 
   function laneFromX(x){
-    const w = cv.width;
+    const w = getW();
     const laneW = w / state.keys;
-    return clamp(Math.floor(x / laneW), 0, state.keys - 1);
+    return clamp(Math.floor(x / laneW), 0, state.keys-1);
+  }
+  function xFromLane(lane){
+    const w = getW();
+    return lane * (w / state.keys);
   }
 
-  function xFromLane(lane){
-    const laneW = cv.width / state.keys;
-    return lane * laneW;
+  function getW(){ return cv.width / devicePixelRatio; }
+  function getH(){ return cv.height / devicePixelRatio; }
+
+  function centerY(){
+    return Math.floor(getH() * 0.55);
   }
+  function pxPerMs(){ return state.zoomPxPerSec / 1000; }
 
   function yFromTime(tMs){
-    // playhead centered
-    const h = cv.height;
-    const centerY = Math.floor(h * 0.55);
-    const pxPerMs = state.zoomPxPerSec / 1000;
-    return centerY - (tMs - state.timeMs) * pxPerMs;
+    return centerY() - (tMs - state.timeMs) * pxPerMs();
   }
-
   function timeFromY(y){
-    const h = cv.height;
-    const centerY = Math.floor(h * 0.55);
-    const pxPerMs = state.zoomPxPerSec / 1000;
-    return state.timeMs + (centerY - y) / pxPerMs;
-  }
-
-  function setSelected(id){
-    state.selectedId = id;
-    const n = state.notes.find(n => n.id === id);
-    selInfo.textContent = n ? `lane ${n.lane+1} @ ${Math.round(n.t)}ms` : "—";
-    delBtn.disabled = !n;
-    renderList();
-  }
-
-  function pushUndo(){
-    state.undo.push(JSON.stringify(state.notes));
-    if(state.undo.length > 200) state.undo.shift();
-    undoBtn.disabled = state.undo.length === 0;
-  }
-
-  function doUndo(){
-    const prev = state.undo.pop();
-    if(!prev) return;
-    state.notes = JSON.parse(prev);
-    state.selectedId = null;
-    undoBtn.disabled = state.undo.length === 0;
-    delBtn.disabled = true;
-    renderList();
-  }
-
-  function deleteSelected(){
-    const id = state.selectedId;
-    if(!id) return;
-    pushUndo();
-    state.notes = state.notes.filter(n => n.id !== id);
-    setSelected(null);
-  }
-
-  function addNote(note){
-    pushUndo();
-    state.notes.push(note);
-    state.notes.sort((a,b)=>a.t-b.t);
-    setSelected(note.id);
-  }
-
-  function findNoteAt(mx, my){
-    const lane = laneFromX(mx);
-    const laneW = cv.width / state.keys;
-    const x0 = xFromLane(lane);
-    // hitbox: near note rects
-    for(let i=state.notes.length-1;i>=0;i--){
-      const n = state.notes[i];
-      if(n.lane !== lane) continue;
-      const y = yFromTime(n.t);
-      const w = laneW;
-      const h = 10;
-      const rx = x0 + 6, ry = y - 6, rw = w - 12, rh = h + 6;
-      if(mx >= rx && mx <= rx+rw && my >= ry && my <= ry+rh) return n;
-
-      if(n.type === "hold"){
-        const y2 = yFromTime(n.end);
-        const top = Math.min(y, y2);
-        const bot = Math.max(y, y2);
-        const barX = x0 + w/2 - 3;
-        if(mx >= barX-6 && mx <= barX+12 && my >= top-6 && my <= bot+6) return n;
-      }
-    }
-    return null;
+    return state.timeMs + (centerY() - y) / pxPerMs();
   }
 
   // ---------- Audio ----------
@@ -327,6 +498,11 @@
     if(state.ac) return state.ac;
     state.ac = new (window.AudioContext || window.webkitAudioContext)();
     return state.ac;
+  }
+
+  function cleanupSource(){
+    try{ if(state.source) state.source.stop(); }catch(e){}
+    state.source = null;
   }
 
   async function loadAudio(file){
@@ -337,19 +513,40 @@
     state.startOffsetSec = 0;
     state.isPlaying = false;
     cleanupSource();
+
+    // enable UI
     playBtn.disabled = false;
     stopBtn.disabled = false;
     exportBtn.disabled = false;
-  }
+    addTpBtn.disabled = false;
+    normTpBtn.disabled = false;
+    clearTpBtn.disabled = false;
 
-  function cleanupSource(){
-    try{ if(state.source) state.source.stop(); }catch(e){}
-    state.source = null;
+    recMode.disabled = false;
+    recQuant.disabled = false;
+    bindsIn.disabled = false;
+
+    saveLocalBtn.disabled = false;
+    loadLocalBtn.disabled = false;
+    exportJsonBtn.disabled = false;
+    importJsonFile.disabled = false;
+    clearAllBtn.disabled = false;
+
+    // reset waveform + build
+    state.wf.ready = false;
+    state.wf.peaks = null;
+    wfLbl.textContent = "gerando…";
+    buildWaveformPeaks();
+
+    // default timing if only one
+    if(state.timing.length === 0) state.timing = [{id:cryptoId(), t:0, bpm:180, meter:4}];
+    renderTimingUI();
   }
 
   function play(){
     if(!state.buffer) return;
-    ensureAC().then(ac => {
+    ensureAC().then(async ac => {
+      if(ac.state === "suspended") await ac.resume();
       cleanupSource();
       const src = ac.createBufferSource();
       src.buffer = state.buffer;
@@ -358,25 +555,21 @@
       src.start(0, state.startOffsetSec);
       state.source = src;
       state.isPlaying = true;
-
+      playBtn.textContent = "Pause";
       src.onended = () => {
-        // If ended naturally
         if(state.isPlaying){
           state.isPlaying = false;
           playBtn.textContent = "Play";
         }
       };
-
-      playBtn.textContent = "Pause";
     });
   }
 
   function pause(){
     if(!state.ac) return;
-    // compute current offset
     const ac = state.ac;
     const playedSec = ac.currentTime - state.startedAt;
-    state.startOffsetSec = state.startOffsetSec + playedSec;
+    state.startOffsetSec += playedSec;
     cleanupSource();
     state.isPlaying = false;
     playBtn.textContent = "Play";
@@ -388,32 +581,277 @@
     state.timeMs = 0;
   }
 
+  function seekMs(ms){
+    state.timeMs = clamp(ms, 0, state.buffer ? state.buffer.duration*1000 : 1e12);
+    state.startOffsetSec = state.timeMs / 1000;
+    if(state.isPlaying){
+      pause();
+      play();
+    }
+  }
+
   function updateTimeFromAudio(){
     if(!state.isPlaying || !state.ac) return;
     const ac = state.ac;
     const playedSec = ac.currentTime - state.startedAt;
     const tSec = state.startOffsetSec + playedSec;
-    state.timeMs = clamp(tSec * 1000, 0, state.buffer.duration * 1000);
+    state.timeMs = clamp(tSec*1000, 0, state.buffer.duration*1000);
   }
 
-  // ---------- Export .osu (mania) ----------
+  // ---------- Waveform peaks ----------
+  function buildWaveformPeaks(){
+    const buf = state.buffer;
+    if(!buf) return;
+
+    const wf = state.wf;
+    wf.progress = 0;
+    wf.ready = false;
+
+    const channels = buf.numberOfChannels;
+    const len = buf.length;
+    wf.sampleRate = buf.sampleRate;
+
+    // choose block size based on duration (tradeoff)
+    const dur = buf.duration;
+    wf.blockSize = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
+    const block = wf.blockSize;
+
+    const blocks = Math.ceil(len / block);
+    wf.peaks = new Float32Array(blocks);
+    wf.blockSec = block / wf.sampleRate;
+
+    const chData = [];
+    for(let c=0;c<channels;c++) chData.push(buf.getChannelData(c));
+
+    let i = 0;
+    let maxPeak = 0;
+
+    function step(){
+      const t0 = performance.now();
+      const budgetMs = 12; // keep UI responsive
+
+      while(i < blocks && performance.now() - t0 < budgetMs){
+        const start = i * block;
+        const end = Math.min(len, start + block);
+
+        let peak = 0;
+        for(let s=start; s<end; s++){
+          let v = 0;
+          for(let c=0;c<channels;c++) v += chData[c][s];
+          v /= channels;
+          const a = Math.abs(v);
+          if(a > peak) peak = a;
+        }
+        wf.peaks[i] = peak;
+        if(peak > maxPeak) maxPeak = peak;
+
+        i++;
+      }
+
+      wf.progress = i / blocks;
+      wfLbl.textContent = wf.progress >= 1 ? "ok" : Math.round(wf.progress*100) + "%";
+
+      if(i < blocks){
+        requestAnimationFrame(step);
+      } else {
+        wf.max = maxPeak || 1;
+        wf.ready = true;
+        wfLbl.textContent = "ok";
+      }
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  function ampAtTimeMs(ms){
+    const wf = state.wf;
+    if(!wf.ready || !wf.peaks) return 0;
+    const sec = ms / 1000;
+    const idx = Math.floor(sec / wf.blockSec);
+    if(idx < 0 || idx >= wf.peaks.length) return 0;
+    return wf.peaks[idx] / wf.max;
+  }
+
+  // ---------- Notes & selection ----------
+  function addNote(note){
+    pushUndo();
+    state.notes.push(note);
+    sortNotes();
+    state.selected.clear();
+    state.selected.add(note.id);
+    updateSelectionUI();
+    renderNoteList();
+  }
+
+  function deleteSelection(){
+    if(state.selected.size === 0) return;
+    pushUndo();
+    const s = state.selected;
+    state.notes = state.notes.filter(n => !s.has(n.id));
+    state.selected.clear();
+    updateSelectionUI();
+    renderNoteList();
+  }
+
+  function updateSelectionUI(){
+    if(state.selected.size === 0){
+      selInfo.textContent = "—";
+      delBtn.disabled = true;
+      return;
+    }
+    delBtn.disabled = false;
+    if(state.selected.size === 1){
+      const id = [...state.selected][0];
+      const n = state.notes.find(x => x.id === id);
+      selInfo.textContent = n ? `lane ${n.lane+1} @ ${Math.round(n.t)}ms` : `${state.selected.size} notas`;
+    } else {
+      selInfo.textContent = `${state.selected.size} notas`;
+    }
+  }
+
+  function findNoteAt(mx, my){
+    const w = getW();
+    const laneW = w / state.keys;
+    const lane = laneFromX(mx);
+    const x0 = xFromLane(lane);
+
+    for(let i=state.notes.length-1;i>=0;i--){
+      const n = state.notes[i];
+      if(n.lane !== lane) continue;
+
+      const y = yFromTime(n.t);
+      const pad = 7;
+      const rectW = laneW - pad*2;
+      const rectH = 12;
+
+      // head
+      const rx = x0 + pad, ry = y - rectH/2, rw = rectW, rh = rectH;
+      if(mx >= rx && mx <= rx+rw && my >= ry && my <= ry+rh) return n;
+
+      // hold body / end
+      if(n.type === "hold"){
+        const y2 = yFromTime(n.end);
+        const top = Math.min(y,y2);
+        const bot = Math.max(y,y2);
+        const barX = x0 + laneW/2 - 3;
+        if(mx >= barX-7 && mx <= barX+13 && my >= top-7 && my <= bot+7) return n;
+      }
+    }
+    return null;
+  }
+
+  function rectNorm(x0,y0,x1,y1){
+    return {x0:Math.min(x0,x1), y0:Math.min(y0,y1), x1:Math.max(x0,x1), y1:Math.max(y0,y1)};
+  }
+
+  function selectByBox(box, additive=false){
+    const r = rectNorm(box.x0, box.y0, box.x1, box.y1);
+    const tA = timeFromY(r.y1);
+    const tB = timeFromY(r.y0);
+    const tMin = Math.min(tA,tB), tMax = Math.max(tA,tB);
+
+    const laneMin = laneFromX(r.x0);
+    const laneMax = laneFromX(r.x1);
+
+    if(!additive) state.selected.clear();
+
+    for(const n of state.notes){
+      if(n.lane < laneMin || n.lane > laneMax) continue;
+      const insideTime =
+        (n.type === "tap" && n.t >= tMin && n.t <= tMax) ||
+        (n.type === "hold" && !(n.end < tMin || n.t > tMax));
+      if(insideTime) state.selected.add(n.id);
+    }
+    updateSelectionUI();
+    renderNoteList();
+  }
+
+  function beginMoveSelection(anchorLane, anchorMs){
+    const snapshot = new Map();
+    for(const n of state.notes){
+      if(state.selected.has(n.id)){
+        snapshot.set(n.id, { t:n.t, end:n.end, lane:n.lane });
+      }
+    }
+    state.drag.move = { anchorLane, anchorMs, snapshot };
+  }
+
+  function applyMoveSelection(deltaLane, deltaMs){
+    const mv = state.drag.move;
+    if(!mv) return;
+    for(const n of state.notes){
+      if(!state.selected.has(n.id)) continue;
+      const base = mv.snapshot.get(n.id);
+      if(!base) continue;
+
+      const lane = clamp(base.lane + deltaLane, 0, state.keys-1);
+      let t = base.t + deltaMs;
+      let end = base.end + deltaMs;
+
+      // quantize to current grid at target time (optional but makes it stable)
+      t = quantizeAt(t);
+      if(n.type === "hold") end = Math.max(t+1, quantizeAt(end));
+      else end = t;
+
+      n.lane = lane;
+      n.t = t;
+      n.end = end;
+    }
+    sortNotes();
+  }
+
+  // ---------- Timing UI ----------
+  function renderTimingUI(){
+    normalizeTiming();
+    if(state.timing.length === 0){
+      tpList.innerHTML = `<div class="row"><span>—</span><span>Sem timing points</span></div>`;
+      return;
+    }
+    tpList.innerHTML = state.timing.map(tp => {
+      return `
+        <div class="tpRow" data-tpid="${tp.id}">
+          <input type="number" step="1" value="${Math.round(tp.t)}" data-k="t" title="time (ms)">
+          <input type="number" step="0.001" value="${tp.bpm}" data-k="bpm" title="bpm">
+          <button class="danger" data-act="del">X</button>
+        </div>
+      `;
+    }).join("");
+
+    tpList.querySelectorAll(".tpRow").forEach(row => {
+      const id = row.getAttribute("data-tpid");
+      row.querySelectorAll("input").forEach(inp => {
+        inp.addEventListener("change", () => {
+          const k = inp.getAttribute("data-k");
+          const tp = state.timing.find(x => x.id === id);
+          if(!tp) return;
+          pushUndo();
+          if(k === "t") tp.t = Math.max(0, Math.round(Number(inp.value)||0));
+          if(k === "bpm") tp.bpm = clamp(Number(inp.value)||180, 30, 400);
+          normalizeTiming();
+          renderTimingUI();
+        });
+      });
+      const del = row.querySelector('button[data-act="del"]');
+      del.addEventListener("click", () => {
+        if(state.timing.length <= 1) return;
+        pushUndo();
+        state.timing = state.timing.filter(x => x.id !== id);
+        normalizeTiming();
+        renderTimingUI();
+      });
+    });
+  }
+
+  // ---------- Export .osu ----------
   function laneToOsuX(lane){
-    // 0..511
-    const keys = state.keys;
-    const x = Math.floor((lane + 0.5) * 512 / keys);
+    const x = Math.floor((lane + 0.5) * 512 / state.keys);
     return clamp(x, 0, 511);
   }
 
   function exportOsu(){
     const keys = state.keys;
     const audioName = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\", "/");
-    const title = "WebManiaEditor";
-    const artist = "Unknown";
-    const creator = "reze";
-    const version = `${keys}K`;
-
-    const beatLen = 60000 / state.bpm;
-    const offset = Math.round(state.offset);
+    const meta = getMeta();
 
     const header =
 `osu file format v14
@@ -437,10 +875,10 @@ GridSize: 4
 TimelineZoom: 1.0
 
 [Metadata]
-Title:${title}
-Artist:${artist}
-Creator:${creator}
-Version:${version}
+Title:${meta.title}
+Artist:${meta.artist}
+Creator:${meta.creator}
+Version:${meta.version}
 Source:
 Tags:
 
@@ -463,7 +901,18 @@ SliderTickRate:1
 //Storyboard Sound Samples
 
 [TimingPoints]
-${offset},${beatLen.toFixed(15)},4,2,0,100,1,0
+`;
+
+    const tps = state.timing
+      .slice()
+      .sort((a,b)=>a.t-b.t)
+      .map(tp => {
+        const beatLen = (60000 / tp.bpm);
+        // offset, beatLength, meter, sampleSet, sampleIndex, volume, uninherited, effects
+        return `${Math.round(tp.t)},${beatLen.toFixed(15)},${tp.meter||4},2,0,100,1,0`;
+      }).join("\n");
+
+    const hitHeader = `
 
 [HitObjects]
 `;
@@ -476,22 +925,160 @@ ${offset},${beatLen.toFixed(15)},4,2,0,100,1,0
         const y = 192;
         const t = Math.round(n.t);
         if(n.type === "tap"){
-          const type = 1;
-          return `${x},${y},${t},${type},0,0:0:0:0:`;
+          return `${x},${y},${t},1,0,0:0:0:0:`;
         } else {
-          const type = 128;
           const end = Math.max(t+1, Math.round(n.end));
-          return `${x},${y},${t},${type},0,${end}:0:0:0:0:`;
+          return `${x},${y},${t},128,0,${end}:0:0:0:0:`;
         }
-      });
+      }).join("\n");
 
-    const out = header + lines.join("\n") + "\n";
+    const out = header + tps + hitHeader + lines + "\n";
     const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${title} - ${artist} (${creator}) [${version}].osu`;
+    a.download = `${meta.title} - ${meta.artist} (${meta.creator}) [${keys}K ${meta.version}].osu`;
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+
+  // ---------- Project JSON ----------
+  function projectObj(){
+    return {
+      v: 2,
+      keys: state.keys,
+      snap: state.snap,
+      zoomPxPerSec: state.zoomPxPerSec,
+      gridOpacity: state.gridOpacity,
+      timing: state.timing,
+      notes: state.notes,
+      meta: getMeta(),
+      binds: state.rec.binds
+    };
+  }
+
+  function loadProject(obj){
+    if(!obj) return;
+    pushUndo();
+    state.keys = clamp(Number(obj.keys)||4, 4, 7);
+    state.snap = clamp(Number(obj.snap)||4, 1, 16);
+    state.zoomPxPerSec = clamp(Number(obj.zoomPxPerSec)||1600, 200, 8000);
+    state.gridOpacity = clamp(Number(obj.gridOpacity)||1, 0, 1);
+    state.timing = Array.isArray(obj.timing) && obj.timing.length ? obj.timing : state.timing;
+    state.notes = Array.isArray(obj.notes) ? obj.notes : [];
+    if(obj.meta) setMeta(obj.meta);
+    if(Array.isArray(obj.binds) && obj.binds.length) state.rec.binds = obj.binds;
+
+    keysSel.value = String(state.keys);
+    snapSel.value = String(state.snap);
+    zoomIn.value = String(state.zoomPxPerSec);
+    gridOpIn.value = String(state.gridOpacity);
+    bindsIn.value = state.rec.binds.join(" ");
+
+    normalizeTiming();
+    sortNotes();
+    state.selected.clear();
+    updateSelectionUI();
+    renderTimingUI();
+    renderNoteList();
+  }
+
+  function saveLocal(){
+    const key = "web_mania_editor_v2_project";
+    localStorage.setItem(key, JSON.stringify(projectObj()));
+  }
+  function loadLocal(){
+    const key = "web_mania_editor_v2_project";
+    const raw = localStorage.getItem(key);
+    if(!raw) return;
+    try{
+      const obj = JSON.parse(raw);
+      loadProject(obj);
+    }catch(e){}
+  }
+
+  function exportJson(){
+    const out = JSON.stringify(projectObj(), null, 2);
+    const blob = new Blob([out], {type:"application/json;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "mania_project.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ---------- Recording ----------
+  function defaultBindsForKeys(k){
+    if(k===4) return ["d","f","j","k"];
+    if(k===5) return ["d","f","space","j","k"];
+    if(k===6) return ["s","d","f","j","k","l"];
+    return ["s","d","f","space","j","k","l"]; // 7
+  }
+  function parseBinds(str){
+    const parts = (str||"").trim().split(/\s+/).filter(Boolean);
+    return parts;
+  }
+  function keyToNormalized(e){
+    // unify Space
+    if(e.code === "Space") return "space";
+    return (e.key || "").toLowerCase();
+  }
+
+  function recordKeyDown(e){
+    if(state.rec.mode !== "on") return;
+    if(!state.isPlaying) return;
+    if(e.repeat) return;
+
+    const key = keyToNormalized(e);
+    const binds = state.rec.binds;
+    const lane = binds.indexOf(key);
+    if(lane < 0 || lane >= state.keys) return;
+
+    // avoid capturing shortcuts
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const msRaw = state.timeMs;
+    const t = state.rec.quantize ? quantizeAt(msRaw) : msRaw;
+
+    if(state.rec.downMap.has(key)) return;
+
+    pushUndo();
+    const id = cryptoId();
+    const note = { id, lane, t, type:"hold", end: t + snapMsAt(t) };
+    state.notes.push(note);
+    sortNotes();
+    state.rec.downMap.set(key, { lane, startMs: t, noteId: id });
+    state.selected.clear();
+    state.selected.add(id);
+    updateSelectionUI();
+    renderNoteList();
+    e.preventDefault();
+  }
+
+  function recordKeyUp(e){
+    if(state.rec.mode !== "on") return;
+    const key = keyToNormalized(e);
+    const info = state.rec.downMap.get(key);
+    if(!info) return;
+    const n = state.notes.find(x => x.id === info.noteId);
+    if(!n) { state.rec.downMap.delete(key); return; }
+
+    const msRaw = state.timeMs;
+    const end = state.rec.quantize ? quantizeAt(msRaw) : msRaw;
+
+    // if too short => tap
+    const minHold = snapMsAt(n.t) * 0.6;
+    if(end - n.t < minHold){
+      n.type = "tap";
+      n.end = n.t;
+    } else {
+      n.type = "hold";
+      n.end = Math.max(n.t + 1, end);
+    }
+
+    sortNotes();
+    state.rec.downMap.delete(key);
+    renderNoteList();
+    e.preventDefault();
   }
 
   // ---------- Rendering ----------
@@ -502,16 +1089,34 @@ ${offset},${beatLen.toFixed(15)},4,2,0,100,1,0
     ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   }
 
-  function draw(){
-    updateTimeFromAudio();
+  function drawWaveform(){
+    const w = getW(), h = getH();
+    if(!state.wf.ready) return;
 
-    const w = cv.width / devicePixelRatio;
-    const h = cv.height / devicePixelRatio;
+    // draw as vertical waveform around center line
+    const midX = w * 0.5;
+    const maxAmpX = w * 0.47;
 
-    // background
-    ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = "#07090d";
-    ctx.fillRect(0,0,w,h);
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = "rgba(125,211,252,.9)";
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    const stepY = 2; // px
+    for(let y=0; y<=h; y+=stepY){
+      const t = timeFromY(y);
+      const a = ampAtTimeMs(t);
+      const x = midX + (a * maxAmpX) * (a >= 0 ? 1 : -1);
+      if(y === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawGrid(){
+    const w = getW(), h = getH();
+    const op = state.gridOpacity;
 
     // lanes
     const laneW = w / state.keys;
@@ -524,85 +1129,168 @@ ${offset},${beatLen.toFixed(15)},4,2,0,100,1,0
     ctx.fillStyle = "rgba(255,255,255,.10)";
     ctx.fillRect(w-1,0,1,h);
 
-    // grid lines
-    const pxPerMs = state.zoomPxPerSec / 1000;
-    const s = snapMs();
-    const viewMs = h / pxPerMs;
-    const tMin = state.timeMs - viewMs * 0.6;
-    const tMax = state.timeMs + viewMs * 0.4;
+    if(op <= 0) return;
 
-    const start = Math.floor(tMin / s) * s;
-    for(let t = start; t <= tMax; t += s){
-      const y = yFromTime(t);
-      if(y < -50 || y > h+50) continue;
+    // time grid by timing segments
+    const viewMs = h / pxPerMs();
+    const tMin = state.timeMs - viewMs * 0.65;
+    const tMax = state.timeMs + viewMs * 0.45;
 
-      const isBeat = Math.abs((t - state.offset) % beatLenMs()) < 1e-6 || Math.abs(((t - state.offset) % beatLenMs()) - beatLenMs()) < 1e-6;
-      ctx.strokeStyle = isBeat ? "rgba(255,255,255,.16)" : "rgba(255,255,255,.08)";
-      ctx.lineWidth = isBeat ? 1.5 : 1;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
+    const tps = state.timing.slice().sort((a,b)=>a.t-b.t);
+    const segs = [];
+    for(let i=0;i<tps.length;i++){
+      const a = tps[i];
+      const b = tps[i+1];
+      segs.push({ tp:a, start:a.t, end: b ? b.t : Infinity });
+    }
+
+    for(const seg of segs){
+      const segStart = Math.max(tMin, seg.start);
+      const segEnd = Math.min(tMax, seg.end);
+      if(segEnd <= segStart) continue;
+
+      const beatLen = 60000 / seg.tp.bpm;
+      const meter = seg.tp.meter || 4;
+      const step = beatLen / state.snap;
+
+      // find first tick >= segStart aligned to seg.tp.t
+      const base = seg.tp.t;
+      const n0 = Math.ceil((segStart - base) / step);
+      let t = base + n0 * step;
+
+      for(; t <= segEnd; t += step){
+        const y = yFromTime(t);
+        if(y < -50 || y > h+50) continue;
+
+        const rel = t - base;
+        const beatIndex = Math.round(rel / beatLen);
+        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+        const isBar = isBeat && (beatIndex % meter === 0);
+
+        ctx.strokeStyle = isBar
+          ? `rgba(255,255,255,${0.18*op})`
+          : isBeat ? `rgba(255,255,255,${0.13*op})`
+                   : `rgba(255,255,255,${0.07*op})`;
+        ctx.lineWidth = isBar ? 1.7 : (isBeat ? 1.2 : 1);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
     }
 
     // playhead
-    const centerY = Math.floor(h * 0.55);
     ctx.strokeStyle = "rgba(125,211,252,.85)";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(0, centerY);
-    ctx.lineTo(w, centerY);
+    ctx.moveTo(0, centerY());
+    ctx.lineTo(w, centerY());
     ctx.stroke();
+  }
 
-    // notes
+  function drawNotes(){
+    const w = getW(), h = getH();
+    const laneW = w / state.keys;
+
     for(const n of state.notes){
       const x0 = xFromLane(n.lane);
       const y = yFromTime(n.t);
+      if(y < -120 || y > h+120) continue;
 
-      if(y < -80 || y > h+80) continue;
-
-      const pad = 8;
+      const pad = 7;
       const rectW = laneW - pad*2;
       const rectH = 12;
 
-      // hold body
+      const isSel = state.selected.has(n.id);
+
+      // hold body + end
       if(n.type === "hold"){
         const y2 = yFromTime(n.end);
         const top = Math.min(y,y2);
         const bot = Math.max(y,y2);
-        ctx.fillStyle = (n.id === state.selectedId) ? "rgba(125,211,252,.45)" : "rgba(255,255,255,.18)";
+
+        ctx.fillStyle = isSel ? "rgba(125,211,252,.40)" : "rgba(255,255,255,.16)";
         ctx.fillRect(x0 + laneW/2 - 3, top, 6, bot-top);
-        // end cap
-        ctx.fillStyle = (n.id === state.selectedId) ? "rgba(125,211,252,.90)" : "rgba(255,255,255,.70)";
+
+        ctx.fillStyle = isSel ? "rgba(125,211,252,.92)" : "rgba(255,255,255,.70)";
         ctx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
       }
 
       // head
-      ctx.fillStyle = (n.id === state.selectedId) ? "rgba(125,211,252,.90)" : "rgba(255,255,255,.70)";
+      ctx.fillStyle = isSel ? "rgba(125,211,252,.92)" : "rgba(255,255,255,.70)";
       ctx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
+
+      // outline for selection
+      if(isSel){
+        ctx.strokeStyle = "rgba(125,211,252,.95)";
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
+      }
     }
 
-    // HUD text
+    // box select overlay
+    if(state.drag.mode === "boxSelect" && state.drag.box){
+      const b = rectNorm(state.drag.box.x0, state.drag.box.y0, state.drag.box.x1, state.drag.box.y1);
+      ctx.fillStyle = "rgba(125,211,252,.12)";
+      ctx.strokeStyle = "rgba(125,211,252,.7)";
+      ctx.lineWidth = 1.4;
+      ctx.fillRect(b.x0, b.y0, b.x1-b.x0, b.y1-b.y0);
+      ctx.strokeRect(b.x0, b.y0, b.x1-b.x0, b.y1-b.y0);
+    }
+  }
+
+  function render(){
+    updateTimeFromAudio();
+
+    const w = getW(), h = getH();
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = "#07090d";
+    ctx.fillRect(0,0,w,h);
+
+    drawWaveform();
+    drawGrid();
+    drawNotes();
+
+    // HUD labels
     timeLbl.textContent = Math.round(state.timeMs);
     countLbl.textContent = state.notes.length;
 
-    requestAnimationFrame(draw);
+    const tp = activeTimingAt(state.timeMs);
+    tpLbl.textContent = `${tp.bpm.toFixed(3)} BPM @ ${Math.round(tp.t)}ms`;
+
+    requestAnimationFrame(render);
   }
 
-  function renderList(){
-    const items = state.notes.slice().sort((a,b)=>b.t-a.t).slice(0, 80);
-    listEl.innerHTML = items.map(n => {
-      const sel = (n.id === state.selectedId);
+  // ---------- Note list ----------
+  function renderNoteList(){
+    const items = state.notes.slice().sort((a,b)=>b.t-a.t).slice(0, 120);
+    noteList.innerHTML = items.map(n => {
+      const sel = state.selected.has(n.id);
       const t = Math.round(n.t);
       const extra = n.type === "hold" ? ` → ${Math.round(n.end)}ms` : "";
-      return `<div class="row" style="background:${sel ? "rgba(125,211,252,.10)" : "transparent"}">
+      return `<div class="item ${sel ? "sel":""}" data-id="${n.id}">
         <span><b>${n.type.toUpperCase()}</b> lane ${n.lane+1}</span>
         <span>${t}ms${extra}</span>
       </div>`;
     }).join("") || `<div class="row"><span>—</span><span>Sem notas ainda</span></div>`;
+
+    noteList.querySelectorAll(".item").forEach(el => {
+      el.addEventListener("click", (e) => {
+        const id = el.getAttribute("data-id");
+        if(e.ctrlKey || e.metaKey){
+          if(state.selected.has(id)) state.selected.delete(id);
+          else state.selected.add(id);
+        } else {
+          state.selected.clear();
+          state.selected.add(id);
+        }
+        updateSelectionUI();
+        renderNoteList();
+      });
+    });
   }
 
-  // ---------- Input / Events ----------
+  // ---------- Events ----------
   audioFile.addEventListener("change", async () => {
     const f = audioFile.files[0];
     if(!f) return;
@@ -612,123 +1300,262 @@ ${offset},${beatLen.toFixed(15)},4,2,0,100,1,0
   playBtn.addEventListener("click", async () => {
     if(!state.buffer) return;
     if(!state.ac) await ensureAC();
-    if(state.ac.state === "suspended") await state.ac.resume();
     if(state.isPlaying) pause(); else play();
   });
 
   stopBtn.addEventListener("click", stop);
-
   exportBtn.addEventListener("click", exportOsu);
+  undoBtn.addEventListener("click", doUndo);
+  delBtn.addEventListener("click", deleteSelection);
 
   keysSel.addEventListener("change", () => {
     state.keys = parseInt(keysSel.value, 10);
     // clamp notes lanes
+    pushUndo();
     for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
-    setSelected(null);
+    // adjust binds
+    state.rec.binds = defaultBindsForKeys(state.keys);
+    bindsIn.value = state.rec.binds.join(" ");
+    renderNoteList();
   });
 
-  bpmIn.addEventListener("change", () => state.bpm = parseFloat(bpmIn.value));
-  offsetIn.addEventListener("change", () => state.offset = parseInt(offsetIn.value, 10) || 0);
-  snapSel.addEventListener("change", () => state.snap = parseInt(snapSel.value, 10));
-  zoomIn.addEventListener("change", () => state.zoomPxPerSec = parseInt(zoomIn.value, 10));
+  snapSel.addEventListener("change", () => state.snap = parseInt(snapSel.value,10));
+  zoomIn.addEventListener("change", () => state.zoomPxPerSec = parseInt(zoomIn.value,10));
+  gridOpIn.addEventListener("change", () => state.gridOpacity = clamp(parseFloat(gridOpIn.value), 0, 1));
 
-  undoBtn.addEventListener("click", doUndo);
-  delBtn.addEventListener("click", deleteSelected);
+  addTpBtn.addEventListener("click", () => {
+    pushUndo();
+    const ms = Math.round(state.timeMs);
+    const curr = activeTimingAt(ms);
+    state.timing.push({ id: cryptoId(), t: ms, bpm: curr.bpm, meter: curr.meter || 4 });
+    normalizeTiming();
+    renderTimingUI();
+  });
 
-  // Mouse wheel = scroll time
+  normTpBtn.addEventListener("click", () => {
+    pushUndo();
+    normalizeTiming();
+    renderTimingUI();
+  });
+
+  clearTpBtn.addEventListener("click", () => {
+    pushUndo();
+    state.timing = [{ id: cryptoId(), t: 0, bpm: 180, meter: 4 }];
+    renderTimingUI();
+  });
+
+  recMode.addEventListener("change", () => state.rec.mode = recMode.value);
+  recQuant.addEventListener("change", () => state.rec.quantize = recQuant.value === "on");
+  bindsIn.addEventListener("change", () => {
+    const arr = parseBinds(bindsIn.value);
+    if(arr.length >= state.keys){
+      state.rec.binds = arr.slice(0, state.keys);
+    } else {
+      // if too few, auto-fill to keep usable
+      const def = defaultBindsForKeys(state.keys);
+      state.rec.binds = arr.concat(def.slice(arr.length)).slice(0, state.keys);
+    }
+    bindsIn.value = state.rec.binds.join(" ");
+  });
+
+  // wheel scroll = seek (keeps playing if already playing)
   wrap.addEventListener("wheel", (e) => {
     e.preventDefault();
+    if(!state.buffer) return;
     const delta = e.deltaY;
-    state.timeMs = clamp(state.timeMs + delta * 2.2, 0, state.buffer ? state.buffer.duration*1000 : 1e12);
-    state.startOffsetSec = state.timeMs / 1000;
-    if(state.isPlaying){
-      // keep playing with new seek
-      pause();
-      play();
-    }
+    seekMs(state.timeMs + delta * 2.2);
   }, {passive:false});
 
-  // Place notes
-  let isMouseDown = false;
+  // mouse interactions (create, box select, move selection)
+  let mouseDown = false;
+
+  function getMouse(e){
+    const r = wrap.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
 
   wrap.addEventListener("mousedown", (e) => {
-    const r = wrap.getBoundingClientRect();
-    const mx = e.clientX - r.left;
-    const my = e.clientY - r.top;
-    isMouseDown = true;
+    if(!state.buffer) return;
+    mouseDown = true;
+    const m = getMouse(e);
+    state.drag.downX = m.x; state.drag.downY = m.y;
 
-    // check hit existing note first
-    const hit = findNoteAt(mx, my);
+    const hit = findNoteAt(m.x, m.y);
+    const additive = e.ctrlKey || e.metaKey;
+
     if(hit){
-      setSelected(hit.id);
+      // selection logic
+      if(additive){
+        if(state.selected.has(hit.id)) state.selected.delete(hit.id);
+        else state.selected.add(hit.id);
+      } else {
+        if(!state.selected.has(hit.id)){
+          state.selected.clear();
+          state.selected.add(hit.id);
+        }
+      }
+      updateSelectionUI();
+      renderNoteList();
+
+      // if clicked a selected note => start move selection (drag)
+      const lane = hit.lane;
+      const t = hit.t;
+      state.drag.mode = "moveSelection";
+      state.drag.move = null;
+      beginMoveSelection(lane, t);
       return;
     }
 
-    const lane = laneFromX(mx);
-    const t = quantize(timeFromY(my));
+    // empty area
     if(e.shiftKey){
-      state.isHoldDrag = true;
-      state.holdLane = lane;
-      state.holdStartMs = t;
-      modeLbl.textContent = "hold";
-      const id = uid();
-      addNote({id, lane, t, type:"hold", end: t + snapMs()});
-      // select it
-      setSelected(id);
-    } else {
-      modeLbl.textContent = "tap";
-      addNote({id: uid(), lane, t, type:"tap", end: t});
+      // create hold by dragging
+      const lane = laneFromX(m.x);
+      const t = quantizeAt(timeFromY(m.y));
+      state.drag.mode = "holdCreate";
+      state.drag.lane = lane;
+      state.drag.holdStartMs = t;
+
+      const id = cryptoId();
+      addNote({ id, lane, t, type:"hold", end: t + snapMsAt(t) });
+      // keep only this selected
+      state.selected.clear();
+      state.selected.add(id);
+      updateSelectionUI();
+      renderNoteList();
+      return;
+    }
+
+    // start box selection
+    state.drag.mode = "boxSelect";
+    state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
+
+    if(!additive){
+      state.selected.clear();
+      updateSelectionUI();
+      renderNoteList();
     }
   });
 
   wrap.addEventListener("mousemove", (e) => {
-    if(!isMouseDown) return;
-    if(!state.isHoldDrag) return;
-    const id = state.selectedId;
-    const n = state.notes.find(x => x.id === id);
-    if(!n || n.type !== "hold") return;
+    if(!mouseDown) return;
+    const m = getMouse(e);
 
-    const r = wrap.getBoundingClientRect();
-    const my = e.clientY - r.top;
-    const tNow = quantize(timeFromY(my));
-    n.end = Math.max(n.t + 1, tNow);
-    renderList();
+    if(state.drag.mode === "holdCreate"){
+      const id = [...state.selected][0];
+      const n = state.notes.find(x => x.id === id);
+      if(!n) return;
+      const end = quantizeAt(timeFromY(m.y));
+      n.end = Math.max(n.t + 1, end);
+      renderNoteList();
+      return;
+    }
+
+    if(state.drag.mode === "boxSelect" && state.drag.box){
+      state.drag.box.x1 = m.x;
+      state.drag.box.y1 = m.y;
+      // live preview selection
+      const additive = e.ctrlKey || e.metaKey;
+      selectByBox(state.drag.box, additive);
+      return;
+    }
+
+    if(state.drag.mode === "moveSelection" && state.drag.move){
+      const deltaLane = laneFromX(m.x) - state.drag.move.anchorLane;
+      const deltaMs = quantizeAt(timeFromY(m.y)) - quantizeAt(state.drag.move.anchorMs);
+      applyMoveSelection(deltaLane, deltaMs);
+      renderNoteList();
+      return;
+    }
   });
 
-  window.addEventListener("mouseup", () => {
-    isMouseDown = false;
-    state.isHoldDrag = false;
-    modeLbl.textContent = "tap";
+  window.addEventListener("mouseup", (e) => {
+    mouseDown = false;
+
+    if(state.drag.mode === "boxSelect" && state.drag.box){
+      const additive = e.ctrlKey || e.metaKey;
+      selectByBox(state.drag.box, additive);
+    }
+
+    if(state.drag.mode === "moveSelection" && state.drag.move){
+      // commit move
+      pushUndo();
+    }
+
+    state.drag.mode = "none";
+    state.drag.box = null;
+    state.drag.move = null;
   });
 
-  // Keyboard shortcuts
+  // keyboard shortcuts + recording
   window.addEventListener("keydown", (e) => {
     if(e.code === "Space"){
       e.preventDefault();
       playBtn.click();
-    }
-    if(e.code === "Delete"){
-      deleteSelected();
+      return;
     }
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z"){
       e.preventDefault();
       doUndo();
+      return;
     }
+    if(e.code === "Delete"){
+      deleteSelection();
+      return;
+    }
+
+    recordKeyDown(e);
   });
 
-  function updateUI(){
-    renderList();
-    exportBtn.disabled = !state.buffer;
-    stopBtn.disabled = !state.buffer;
-    undoBtn.disabled = state.undo.length === 0;
-  }
+  window.addEventListener("keyup", (e) => {
+    recordKeyUp(e);
+  });
+
+  // Project buttons
+  saveLocalBtn.addEventListener("click", saveLocal);
+  loadLocalBtn.addEventListener("click", loadLocal);
+  exportJsonBtn.addEventListener("click", exportJson);
+  clearAllBtn.addEventListener("click", () => {
+    pushUndo();
+    state.notes = [];
+    state.selected.clear();
+    updateSelectionUI();
+    renderNoteList();
+  });
+
+  importJsonFile.addEventListener("change", async () => {
+    const f = importJsonFile.files[0];
+    if(!f) return;
+    try{
+      const txt = await f.text();
+      const obj = JSON.parse(txt);
+      loadProject(obj);
+    }catch(e){}
+    importJsonFile.value = "";
+  });
 
   // ---------- Init ----------
-  const ro = new ResizeObserver(() => { resize(); });
-  ro.observe(wrap);
-  resize();
-  updateUI();
-  requestAnimationFrame(draw);
+  function init(){
+    // defaults
+    keysSel.value = String(state.keys);
+    snapSel.value = String(state.snap);
+    zoomIn.value = String(state.zoomPxPerSec);
+    gridOpIn.value = String(state.gridOpacity);
+
+    state.rec.binds = defaultBindsForKeys(state.keys);
+    bindsIn.value = state.rec.binds.join(" ");
+
+    // timing UI
+    renderTimingUI();
+
+    // resize
+    const ro = new ResizeObserver(() => resize());
+    ro.observe(wrap);
+    resize();
+
+    // start render loop
+    requestAnimationFrame(render);
+  }
+  init();
 })();
 </script>
 </body>

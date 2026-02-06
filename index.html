@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Web Mania Editor V4 — osu-like layout (4K–7K)</title>
+  <title>Web Mania Editor V5 — edit menor + preview in-game</title>
   <style>
     :root{
       --bg:#0b0c0f;
@@ -31,7 +31,6 @@
       display:flex; flex-direction:column; overflow:hidden;
     }
 
-    /* Faux menu bar */
     .menubar{
       height:28px;
       display:flex; align-items:center; gap:18px;
@@ -44,7 +43,6 @@
     }
     .menubar span{cursor:default}
 
-    /* Tabs (Compose / Design / Timing / Song setup) */
     .tabs{
       display:flex; align-items:center; gap:10px;
       padding:10px 12px;
@@ -67,7 +65,6 @@
       background:rgba(125,211,252,.10);
     }
 
-    /* Main layout */
     .app{
       flex:1;
       display:grid;
@@ -94,7 +91,6 @@
     .panel .bd{ padding:12px; min-height:0; }
     .divider{ height:1px; background:var(--border2); margin:10px 0; }
 
-    /* Left: toolbox + minimap */
     .left{
       display:flex;
       flex-direction:column;
@@ -148,13 +144,14 @@
       background:#07090d;
     }
 
-    /* Center: stage + timeline */
     .center{
       display:flex;
       flex-direction:column;
       gap:10px;
       min-height:0;
     }
+
+    /* ======= STAGE (edit menor + preview ao lado) ======= */
     .stageWrap{
       position:relative;
       flex:1;
@@ -164,6 +161,24 @@
       overflow:hidden;
       min-height:0;
     }
+    .stageInner{
+      position:absolute; inset:0;
+      padding:12px;
+      display:grid;
+      grid-template-columns: minmax(520px, 720px) 340px;
+      gap:12px;
+      align-content:stretch;
+      justify-content:start;
+    }
+    .pane{
+      position:relative;
+      border-radius:var(--r2);
+      border:1px solid var(--border);
+      overflow:hidden;
+      background:#07090d;
+      min-height:0;
+    }
+
     canvas{display:block; width:100%; height:100%}
 
     .hud{
@@ -184,6 +199,20 @@
     }
     .badge b{color:var(--fg); font-weight:600}
 
+    .previewLabel{
+      position:absolute;
+      top:10px; left:10px;
+      z-index:6;
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid var(--border2);
+      background:rgba(0,0,0,.35);
+      color:var(--muted);
+      pointer-events:none;
+      backdrop-filter: blur(6px);
+    }
+
     .timelineWrap{
       height:145px;
       border-radius:var(--r2);
@@ -200,7 +229,6 @@
       pointer-events:none;
     }
 
-    /* Right */
     .right{
       display:flex;
       flex-direction:column;
@@ -208,7 +236,6 @@
       min-height:0;
     }
 
-    /* Inputs */
     label{
       display:flex; flex-direction:column; gap:6px;
       font-size:12px; color:var(--muted);
@@ -280,7 +307,6 @@
       line-height:1.45;
     }
 
-    /* Footer transport */
     .transport{
       height:58px;
       border-top:1px solid var(--border);
@@ -320,7 +346,10 @@
       background:rgba(125,211,252,.10);
     }
 
-    /* Responsive */
+    @media (max-width: 1200px){
+      .stageInner{ grid-template-columns: 1fr; }
+      .pane.preview{ display:none; }
+    }
     @media (max-width: 1100px){
       .app{ grid-template-columns: 84px 1fr; }
       .right{ display:none; }
@@ -405,13 +434,24 @@
     <!-- CENTER -->
     <section class="center">
       <div class="stageWrap" id="stageWrap">
-        <div class="hud">
-          <span class="badge">Time: <b class="mono" id="hudTime">0</b> ms</span>
-          <span class="badge">Notes: <b class="mono" id="hudCount">0</b></span>
-          <span class="badge">TP: <b class="mono" id="hudTP">—</b></span>
-          <span class="badge">Snap: <b class="mono" id="hudSnap">1/4</b> <span class="mono" id="hudSnapOn">(on)</span></span>
+        <div class="stageInner">
+          <!-- EDIT PANE (menor, estilo osu) -->
+          <div class="pane edit" id="editWrap">
+            <div class="hud">
+              <span class="badge">Time: <b class="mono" id="hudTime">0</b> ms</span>
+              <span class="badge">Notes: <b class="mono" id="hudCount">0</b></span>
+              <span class="badge">TP: <b class="mono" id="hudTP">—</b></span>
+              <span class="badge">Snap: <b class="mono" id="hudSnap">1/4</b> <span class="mono" id="hudSnapOn">(on)</span></span>
+            </div>
+            <canvas id="stageCanvas"></canvas>
+          </div>
+
+          <!-- PREVIEW PANE (in-game) -->
+          <div class="pane preview" id="previewWrap">
+            <div class="previewLabel">In-game preview</div>
+            <canvas id="previewCanvas"></canvas>
+          </div>
         </div>
-        <canvas id="stageCanvas"></canvas>
       </div>
 
       <div class="timelineWrap" id="timelineWrap">
@@ -426,7 +466,6 @@
 
     <!-- RIGHT -->
     <section class="right">
-      <!-- Compose / global -->
       <div class="panel" id="panelGlobal">
         <div class="hd">Projeto</div>
         <div class="bd">
@@ -468,7 +507,6 @@
         </div>
       </div>
 
-      <!-- Snap + break -->
       <div class="panel" id="panelSnap">
         <div class="hd">Grid / Snap</div>
         <div class="bd">
@@ -493,7 +531,6 @@
         </div>
       </div>
 
-      <!-- Note props -->
       <div class="panel" id="panelProps">
         <div class="hd">Selected note</div>
         <div class="bd">
@@ -535,12 +572,11 @@
           </div>
 
           <div class="hint" style="margin-top:10px">
-            Dica: hitsound flags típicos: whistle=2, finish=4, clap=8 (combináveis somando).
+            Dica: whistle=2, finish=4, clap=8 (combináveis somando).
           </div>
         </div>
       </div>
 
-      <!-- Timing -->
       <div class="panel" id="panelTiming">
         <div class="hd">Timing points</div>
         <div class="bd">
@@ -554,7 +590,6 @@
         </div>
       </div>
 
-      <!-- Song setup -->
       <div class="panel" id="panelMeta">
         <div class="hd">Song setup</div>
         <div class="bd">
@@ -615,10 +650,10 @@
 
 <script>
 (() => {
-  // ---------- DOM ----------
   const $ = (id) => document.getElementById(id);
   const qsa = (sel) => Array.from(document.querySelectorAll(sel));
 
+  // Tabs / tools
   const tabs = qsa(".tab");
   const tools = qsa(".tool");
 
@@ -626,6 +661,7 @@
   const pillSnap = $("pillSnap");
   const pillTool = $("pillTool");
 
+  // Project controls
   const audioFile = $("audioFile");
   const keysSel = $("keysSel");
   const snapOnSel = $("snapOnSel");
@@ -648,6 +684,7 @@
   const tpReset = $("tpReset");
   const tpList = $("tpList");
 
+  // Note props / hitsounds
   const propTime = $("propTime");
   const propLane = $("propLane");
   const propType = $("propType");
@@ -659,21 +696,27 @@
   const hsFlags = $("hsFlags");
   const selLine = $("selLine");
 
+  // Meta + BG
   const mTitle = $("mTitle");
   const mArtist = $("mArtist");
   const mCreator = $("mCreator");
   const mVersion = $("mVersion");
-
   const bgFile = $("bgFile");
   const bgOpacity = $("bgOpacity");
   const laneOpacity = $("laneOpacity");
 
+  // Recording
   const recToggle = $("recToggle");
   const recQuantToggle = $("recQuantToggle");
 
-  const stageWrap = $("stageWrap");
+  // Canvases / wraps
+  const editWrap = $("editWrap");
   const stageCanvas = $("stageCanvas");
   const sctx = stageCanvas.getContext("2d");
+
+  const previewWrap = $("previewWrap");
+  const previewCanvas = $("previewCanvas");
+  const prctx = previewCanvas.getContext("2d");
 
   const timelineWrap = $("timelineWrap");
   const timelineCanvas = $("timelineCanvas");
@@ -683,6 +726,7 @@
   const mctx = miniCanvas.getContext("2d");
   const miniLbl = $("miniLbl");
 
+  // HUD
   const hudTime = $("hudTime");
   const hudCount = $("hudCount");
   const hudTP = $("hudTP");
@@ -692,6 +736,7 @@
   const tlWf = $("tlWf");
   const brkStatus = $("brkStatus");
 
+  // Transport
   const playBtn = $("playBtn");
   const stopBtn = $("stopBtn");
   const volRange = $("volRange");
@@ -702,7 +747,6 @@
   const noteStr = $("noteStr");
   const selStr = $("selStr");
 
-  // ---------- State ----------
   const SNAP_OPTS = [1,2,3,4,6,8,12,16];
 
   const state = {
@@ -710,7 +754,7 @@
     tool: "select",
 
     keys: 4,
-    snap: 4,        // divisor value, one of SNAP_OPTS
+    snap: 4,
     snapOn: true,
 
     scrollPxPerSec: 1700,
@@ -727,51 +771,27 @@
     timeMs: 0,
     rate: 1,
 
-    // waveform peaks
-    wf: {
-      ready:false,
-      peaks:null,
-      blockSize:2048,
-      blockSec:0,
-      max:1,
-      progress:0
-    },
-
-    // minimap helper
-    mini: { ready:false },
+    // waveform
+    wf: { ready:false, peaks:null, blockSize:2048, blockSec:0, max:1, progress:0 },
 
     // assets
     bgImg: null,
     bgOpacity: 0.35,
     laneOpacity: 0.08,
 
-    // timing points
     timing: [{ id: uid(), t:0, bpm:180, meter:4 }],
 
-    // breaks
-    breaks: [], // {id, start, end}
+    breaks: [],
     breakArming: false,
     breakStart: null,
 
-    // notes
-    notes: [], // {id, lane, t, type, end, hs, vol}
+    notes: [],
     selected: new Set(),
     undo: [],
 
-    // drag
-    drag: {
-      down:false,
-      mode:"none", // none | box | move | holdCreate
-      x0:0, y0:0,
-      box:null,
-      moveSnap:null, // Map id -> base
-      holdId:null
-    },
-
-    // timeline drag
+    drag: { down:false, mode:"none", x0:0, y0:0, box:null, moveSnap:null, holdId:null },
     tlDrag:false,
 
-    // recording
     rec: {
       on:false,
       quantize:true,
@@ -781,14 +801,21 @@
         6:["s","d","f","j","k","l"],
         7:["s","d","f","space","j","k","l"],
       },
-      downMap: new Map(), // key -> {noteId}
+      downMap: new Map(),
     },
+
+    // preview config
+    preview: {
+      lookAheadMs: 2200,
+      lookBackMs: 250,
+      hitLinePad: 70,
+      speedFactor: 0.70, // usa scrollPxPerSec * fator (ajusta o "feel" da queda)
+    }
   };
 
   function uid(){ return Math.random().toString(36).slice(2,10); }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
-  // ---------- Resize ----------
   function resizeCanvas(canvas, wrap){
     const r = wrap.getBoundingClientRect();
     canvas.width = Math.floor(r.width * devicePixelRatio);
@@ -796,23 +823,32 @@
     const ctx = canvas.getContext("2d");
     ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   }
-  const roStage = new ResizeObserver(()=> resizeCanvas(stageCanvas, stageWrap));
-  const roTl = new ResizeObserver(()=> resizeCanvas(timelineCanvas, timelineWrap));
-  const roMini = new ResizeObserver(()=> resizeCanvas(miniCanvas, miniCanvas.parentElement));
-  roStage.observe(stageWrap);
+
+  const roStage = new ResizeObserver(()=> resizeCanvas(stageCanvas, editWrap));
+  const roPrev  = new ResizeObserver(()=> resizeCanvas(previewCanvas, previewWrap));
+  const roTl    = new ResizeObserver(()=> resizeCanvas(timelineCanvas, timelineWrap));
+  const roMini  = new ResizeObserver(()=> resizeCanvas(miniCanvas, miniCanvas.parentElement));
+
+  roStage.observe(editWrap);
+  roPrev.observe(previewWrap);
   roTl.observe(timelineWrap);
   roMini.observe(miniCanvas.parentElement);
-  resizeCanvas(stageCanvas, stageWrap);
+
+  resizeCanvas(stageCanvas, editWrap);
+  resizeCanvas(previewCanvas, previewWrap);
   resizeCanvas(timelineCanvas, timelineWrap);
   resizeCanvas(miniCanvas, miniCanvas.parentElement);
 
   const SW = ()=> stageCanvas.width / devicePixelRatio;
   const SH = ()=> stageCanvas.height / devicePixelRatio;
+  const PW = ()=> previewCanvas.width / devicePixelRatio;
+  const PH = ()=> previewCanvas.height / devicePixelRatio;
   const TW = ()=> timelineCanvas.width / devicePixelRatio;
   const TH = ()=> timelineCanvas.height / devicePixelRatio;
   const MW = ()=> miniCanvas.width / devicePixelRatio;
   const MH = ()=> miniCanvas.height / devicePixelRatio;
 
+  // Editor playfield geometry
   const centerY = ()=> Math.floor(SH()*0.55);
   const pxPerMs = ()=> state.scrollPxPerSec / 1000;
   const laneW = ()=> SW() / state.keys;
@@ -823,7 +859,7 @@
   const yFromTime = (tMs)=> centerY() - (tMs - state.timeMs) * pxPerMs();
   const timeFromY = (y)=> state.timeMs + (centerY() - y) / pxPerMs();
 
-  // ---------- Timing helpers ----------
+  // Timing
   function normalizeTiming(){
     state.timing.sort((a,b)=>a.t-b.t);
     const out=[];
@@ -857,24 +893,19 @@
     return base + n*step;
   }
 
-  // ---------- Audio ----------
+  // Audio
   async function ensureAC(){
     if(state.ac) return state.ac;
     state.ac = new (window.AudioContext || window.webkitAudioContext)();
-
-    // gain node for volume
     state.gain = state.ac.createGain();
     state.gain.gain.value = parseFloat(volRange.value) || 1;
     state.gain.connect(state.ac.destination);
-
     return state.ac;
   }
-
   function cleanupSource(){
     try{ if(state.source) state.source.stop(); }catch(e){}
     state.source = null;
   }
-
   async function loadAudio(file){
     const ac = await ensureAC();
     const arr = await file.arrayBuffer();
@@ -886,8 +917,6 @@
     cleanupSource();
 
     exportBtn.disabled = false;
-    undoBtn.disabled = state.undo.length===0;
-    deleteBtn.disabled = state.selected.size===0;
     clearNotesBtn.disabled = false;
     breakBtn.disabled = false;
     tpAdd.disabled = false;
@@ -900,7 +929,6 @@
     tlWf.textContent = "gerando…";
     buildPeaks();
   }
-
   async function play(){
     if(!state.buffer) return;
     const ac = await ensureAC();
@@ -911,7 +939,6 @@
     const src = ac.createBufferSource();
     src.buffer = state.buffer;
     src.playbackRate.value = state.rate;
-
     src.connect(state.gain);
 
     state.startedAt = ac.currentTime;
@@ -921,12 +948,9 @@
     state.isPlaying = true;
 
     src.onended = ()=>{
-      if(state.isPlaying){
-        state.isPlaying=false;
-      }
+      if(state.isPlaying){ state.isPlaying=false; }
     };
   }
-
   function pause(){
     if(!state.ac) return;
     const ac = state.ac;
@@ -935,13 +959,11 @@
     cleanupSource();
     state.isPlaying = false;
   }
-
   function stop(){
     pause();
     state.startOffsetSec = 0;
     state.timeMs = 0;
   }
-
   function seekMs(ms){
     if(!state.buffer) return;
     const max = state.buffer.duration * 1000;
@@ -953,17 +975,15 @@
       play();
     }
   }
-
   function updateTimeFromAudio(){
     if(!state.isPlaying || !state.ac) return;
     const ac = state.ac;
-
     const playedSec = (ac.currentTime - state.startedAt) * state.rate;
     const tSec = state.startOffsetSec + playedSec;
     state.timeMs = clamp(tSec*1000, 0, state.buffer.duration*1000);
   }
 
-  // ---------- Waveform peaks ----------
+  // Waveform peaks
   function buildPeaks(){
     const buf = state.buffer;
     if(!buf) return;
@@ -984,7 +1004,6 @@
     for(let c=0;c<channels;c++) ch.push(buf.getChannelData(c));
 
     let i=0, max=0;
-
     function step(){
       const t0 = performance.now();
       const budget = 12;
@@ -1020,7 +1039,6 @@
     }
     requestAnimationFrame(step);
   }
-
   function ampAtMs(ms){
     const wf = state.wf;
     if(!wf.ready || !wf.peaks) return 0;
@@ -1030,7 +1048,7 @@
     return wf.peaks[idx] / wf.max;
   }
 
-  // ---------- Undo ----------
+  // Undo
   function pushUndo(){
     state.undo.push(JSON.stringify({
       keys: state.keys,
@@ -1048,7 +1066,6 @@
     if(state.undo.length > 200) state.undo.shift();
     undoBtn.disabled = state.undo.length === 0;
   }
-
   function doUndo(){
     const raw = state.undo.pop();
     if(!raw) return;
@@ -1066,7 +1083,6 @@
     state.bgOpacity = s.bgOpacity ?? state.bgOpacity;
     state.laneOpacity = s.laneOpacity ?? state.laneOpacity;
 
-    // sync UI
     keysSel.value = String(state.keys);
     scrollIn.value = String(state.scrollPxPerSec);
     tlWinIn.value = String(state.tlWinSec);
@@ -1074,7 +1090,6 @@
     bgOpacity.value = String(state.bgOpacity);
     laneOpacity.value = String(state.laneOpacity);
 
-    // snap slider index
     const idx = SNAP_OPTS.indexOf(state.snap);
     snapRange.value = String(Math.max(0, idx));
 
@@ -1085,10 +1100,8 @@
     undoBtn.disabled = state.undo.length===0;
   }
 
-  // ---------- Notes ----------
-  function sortNotes(){
-    state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
-  }
+  // Notes
+  function sortNotes(){ state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane); }
 
   function addNote(note){
     pushUndo();
@@ -1097,7 +1110,6 @@
     state.selected.clear();
     state.selected.add(note.id);
     updateSelectionUI();
-    deleteBtn.disabled = false;
   }
 
   function deleteSelection(){
@@ -1106,7 +1118,6 @@
     state.notes = state.notes.filter(n => !state.selected.has(n.id));
     state.selected.clear();
     updateSelectionUI();
-    deleteBtn.disabled = true;
   }
 
   function clearNotes(){
@@ -1151,11 +1162,8 @@
     }
 
     const n = getSelectedOne();
-    if(!n){
-      selLine.textContent = "—";
-      setPropsEnabled(false);
-      return;
-    }
+    if(!n){ selLine.textContent="—"; setPropsEnabled(false); return; }
+
     selLine.textContent = `lane ${n.lane+1} @ ${Math.round(n.t)}ms`;
     setPropsEnabled(true);
 
@@ -1166,7 +1174,6 @@
     hsVol.value = String(n.vol ?? 0);
     hsFlags.value = String(n.hs ?? 0);
 
-    // button highlight
     const hs = n.hs ?? 0;
     hsWhistle.classList.toggle("active", (hs & 2) !== 0);
     hsFinish.classList.toggle("active", (hs & 4) !== 0);
@@ -1213,7 +1220,7 @@
     updateSelectionUI();
   }
 
-  // ---------- Hit testing ----------
+  // Hit test (editor)
   function findNoteAt(mx, my){
     const lw = laneW();
     const lane = laneFromX(mx);
@@ -1228,7 +1235,6 @@
       const rectW = lw - pad*2;
       const rectH = 12;
 
-      // head
       const rx = x0+pad, ry = y-rectH/2, rw = rectW, rh=rectH;
       if(mx>=rx && mx<=rx+rw && my>=ry && my<=ry+rh) return n;
 
@@ -1243,17 +1249,11 @@
     return null;
   }
 
-  // ---------- Breaks ----------
+  // Breaks
   function setBreakStatus(){
-    if(!state.breakArming){
-      brkStatus.textContent = "—";
-      return;
-    }
-    if(state.breakStart == null){
-      brkStatus.textContent = "click p/ start";
-    } else {
-      brkStatus.textContent = `start ${Math.round(state.breakStart)}ms`;
-    }
+    if(!state.breakArming){ brkStatus.textContent = "—"; return; }
+    if(state.breakStart == null) brkStatus.textContent = "click p/ start";
+    else brkStatus.textContent = `start ${Math.round(state.breakStart)}ms`;
   }
 
   function toggleBreakMode(){
@@ -1274,7 +1274,6 @@
     const a = Math.round(Math.min(state.breakStart, ms));
     const b = Math.round(Math.max(state.breakStart, ms));
     if(b - a < 10){
-      // too short -> cancel
       state.breakStart = null;
       setBreakStatus();
       return;
@@ -1309,7 +1308,7 @@
     });
   }
 
-  // ---------- Timing list ----------
+  // Timing list
   function renderTPList(){
     normalizeTiming();
     tpList.innerHTML = state.timing.map(tp => {
@@ -1354,7 +1353,7 @@
     });
   }
 
-  // ---------- Export .osu ----------
+  // Export .osu
   function getMeta(){
     return {
       title: mTitle.value || "WebManiaEditor",
@@ -1369,12 +1368,10 @@
     mCreator.value = m.creator ?? mCreator.value;
     mVersion.value = m.version ?? mVersion.value;
   }
-
   function laneToOsuX(lane){
     const x = Math.floor((lane + 0.5) * 512 / state.keys);
     return clamp(x, 0, 511);
   }
-
   function exportOsu(){
     if(!state.buffer) return;
     normalizeTiming();
@@ -1472,18 +1469,24 @@ SliderTickRate:1
     URL.revokeObjectURL(a.href);
   }
 
-  // ---------- Rendering ----------
+  // Rendering helpers
   function fmtTime(ms){
     ms = Math.max(0, Math.floor(ms));
     const m = Math.floor(ms / 60000);
     const s = Math.floor((ms % 60000) / 1000);
     const t = ms % 1000;
-    const mm = String(m).padStart(2,"0");
-    const ss = String(s).padStart(2,"0");
-    const tt = String(t).padStart(3,"0");
-    return `${mm}:${ss}:${tt}`;
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}:${String(t).padStart(3,"0")}`;
+  }
+  function rectNorm(box){
+    return {
+      x0: Math.min(box.x0, box.x1),
+      y0: Math.min(box.y0, box.y1),
+      x1: Math.max(box.x0, box.x1),
+      y1: Math.max(box.y0, box.y1),
+    };
   }
 
+  // ======= EDIT VIEW (menor) =======
   function drawStage(){
     const w = SW(), h = SH();
     sctx.clearRect(0,0,w,h);
@@ -1492,7 +1495,6 @@ SliderTickRate:1
     if(state.bgImg){
       sctx.globalAlpha = state.bgOpacity;
       const img = state.bgImg;
-      // cover
       const scale = Math.max(w/img.width, h/img.height);
       const iw = img.width*scale, ih = img.height*scale;
       const ix = (w-iw)/2, iy=(h-ih)/2;
@@ -1503,7 +1505,7 @@ SliderTickRate:1
       sctx.fillRect(0,0,w,h);
     }
 
-    // lanes background
+    // lanes
     const lw = laneW();
     for(let i=0;i<state.keys;i++){
       sctx.fillStyle = `rgba(255,255,255,${state.laneOpacity})`;
@@ -1514,14 +1516,13 @@ SliderTickRate:1
     sctx.fillStyle = "rgba(255,255,255,.12)";
     sctx.fillRect(w-1,0,1,h);
 
-    // grid lines (per timing segments)
+    // grid
     const viewMs = h / pxPerMs();
     const tMin = state.timeMs - viewMs*0.65;
     const tMax = state.timeMs + viewMs*0.45;
 
     normalizeTiming();
     const tps = state.timing.slice();
-
     for(let i=0;i<tps.length;i++){
       const tp = tps[i];
       const next = tps[i+1];
@@ -1533,7 +1534,6 @@ SliderTickRate:1
       const meter = tp.meter || 4;
       const step = beatLen / state.snap;
 
-      // first tick
       const base = tp.t;
       const n0 = Math.ceil((segStart - base) / step);
       for(let t = base + n0*step; t <= segEnd; t += step){
@@ -1563,7 +1563,7 @@ SliderTickRate:1
     sctx.lineTo(w, centerY());
     sctx.stroke();
 
-    // draw breaks region overlay (optional subtle)
+    // breaks overlay
     if(state.breaks.length){
       sctx.globalAlpha = 0.10;
       sctx.fillStyle = "rgba(134,239,172,1)";
@@ -1610,7 +1610,7 @@ SliderTickRate:1
       }
     }
 
-    // box select overlay
+    // box select
     if(state.drag.mode === "box" && state.drag.box){
       const b = rectNorm(state.drag.box);
       sctx.fillStyle = "rgba(125,211,252,.12)";
@@ -1621,16 +1621,142 @@ SliderTickRate:1
     }
   }
 
-  function rectNorm(box){
-    return {
-      x0: Math.min(box.x0, box.x1),
-      y0: Math.min(box.y0, box.y1),
-      x1: Math.max(box.x0, box.x1),
-      y1: Math.max(box.y0, box.y1),
-    };
+  // ======= IN-GAME PREVIEW =======
+  function drawPreview(){
+    const w = PW(), h = PH();
+    prctx.clearRect(0,0,w,h);
+
+    // background (bem sutil pra lembrar in-game)
+    prctx.fillStyle = "#07090d";
+    prctx.fillRect(0,0,w,h);
+
+    if(state.bgImg){
+      prctx.globalAlpha = Math.min(0.18, state.bgOpacity*0.45);
+      const img = state.bgImg;
+      const scale = Math.max(w/img.width, h/img.height);
+      const iw = img.width*scale, ih = img.height*scale;
+      const ix = (w-iw)/2, iy=(h-ih)/2;
+      prctx.drawImage(img, ix, iy, iw, ih);
+      prctx.globalAlpha = 1;
+    }
+
+    // playfield frame
+    prctx.fillStyle = "rgba(0,0,0,.25)";
+    prctx.fillRect(10, 10, w-20, h-20);
+    prctx.strokeStyle = "rgba(255,255,255,.10)";
+    prctx.lineWidth = 1;
+    prctx.strokeRect(10, 10, w-20, h-20);
+
+    const padX = 18;
+    const topY = 18;
+    const botY = h-18;
+    const playW = w - padX*2;
+    const playH = botY - topY;
+
+    const keys = state.keys;
+    const lw = playW / keys;
+
+    // lanes
+    for(let i=0;i<keys;i++){
+      prctx.fillStyle = "rgba(255,255,255,.04)";
+      prctx.fillRect(padX + i*lw, topY, lw-1, playH);
+      prctx.fillStyle = "rgba(255,255,255,.08)";
+      prctx.fillRect(padX + i*lw, topY, 1, playH);
+    }
+    prctx.fillStyle = "rgba(255,255,255,.12)";
+    prctx.fillRect(padX + playW - 1, topY, 1, playH);
+
+    // hitline + receptors
+    const hitY = botY - state.preview.hitLinePad;
+    prctx.strokeStyle = "rgba(125,211,252,.95)";
+    prctx.lineWidth = 2;
+    prctx.beginPath();
+    prctx.moveTo(padX, hitY);
+    prctx.lineTo(padX + playW, hitY);
+    prctx.stroke();
+
+    // receptors (retângulos)
+    const recH = 16;
+    for(let i=0;i<keys;i++){
+      const x0 = padX + i*lw;
+      prctx.fillStyle = "rgba(255,255,255,.14)";
+      prctx.fillRect(x0 + 6, hitY + 10, lw-12, recH);
+      prctx.strokeStyle = "rgba(255,255,255,.18)";
+      prctx.lineWidth = 1;
+      prctx.strokeRect(x0 + 6, hitY + 10, lw-12, recH);
+    }
+
+    // preview speed
+    const pxPerMsPrev = (state.scrollPxPerSec * state.preview.speedFactor) / 1000;
+
+    // window
+    const t0 = state.timeMs - state.preview.lookBackMs;
+    const t1 = state.timeMs + state.preview.lookAheadMs;
+
+    // breaks overlay (preview)
+    if(state.breaks.length){
+      prctx.globalAlpha = 0.10;
+      prctx.fillStyle = "rgba(134,239,172,1)";
+      for(const b of state.breaks){
+        if(b.end < t0 || b.start > t1) continue;
+        const yA = hitY - (b.start - state.timeMs) * pxPerMsPrev;
+        const yB = hitY - (b.end   - state.timeMs) * pxPerMsPrev;
+        const top = Math.min(yA,yB);
+        const bot = Math.max(yA,yB);
+        prctx.fillRect(padX, top, playW, bot-top);
+      }
+      prctx.globalAlpha = 1;
+    }
+
+    // notes falling
+    for(const n of state.notes){
+      if(n.t > t1 || (n.type === "hold" ? n.end < t0 : n.t < t0)) continue;
+
+      const lane = n.lane;
+      const x0 = padX + lane*lw;
+
+      const isSel = state.selected.has(n.id);
+
+      const headY = hitY - (n.t - state.timeMs) * pxPerMsPrev;
+      const rectH = 12;
+      const rectW = lw - 12;
+
+      // hold body
+      if(n.type === "hold"){
+        const tailY = hitY - (n.end - state.timeMs) * pxPerMsPrev;
+        const top = Math.min(headY, tailY);
+        const bot = Math.max(headY, tailY);
+
+        prctx.fillStyle = isSel ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.14)";
+        prctx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
+
+        // tail cap
+        prctx.fillStyle = isSel ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.70)";
+        prctx.fillRect(x0 + 6, tailY - rectH/2, rectW, rectH);
+      }
+
+      // head
+      prctx.fillStyle = isSel ? "rgba(125,211,252,.95)" : "rgba(255,255,255,.78)";
+      prctx.fillRect(x0 + 6, headY - rectH/2, rectW, rectH);
+
+      if(isSel){
+        prctx.strokeStyle = "rgba(125,211,252,.95)";
+        prctx.lineWidth = 1.2;
+        prctx.strokeRect(x0 + 6, headY - rectH/2, rectW, rectH);
+      }
+    }
+
+    // vignette for “game feel”
+    const grd = prctx.createLinearGradient(0, topY, 0, botY);
+    grd.addColorStop(0, "rgba(0,0,0,.55)");
+    grd.addColorStop(0.20, "rgba(0,0,0,.00)");
+    grd.addColorStop(0.85, "rgba(0,0,0,.10)");
+    grd.addColorStop(1, "rgba(0,0,0,.55)");
+    prctx.fillStyle = grd;
+    prctx.fillRect(padX, topY, playW, playH);
   }
 
-  // Timeline window around playhead
+  // Timeline
   function tlRange(){
     const half = (state.tlWinSec*1000)/2;
     return { start: state.timeMs - half, end: state.timeMs + half };
@@ -1638,14 +1764,12 @@ SliderTickRate:1
   function xFromTime(ms){
     const {start,end} = tlRange();
     const w = TW();
-    const t = (ms - start) / (end - start);
-    return t * w;
+    return ((ms - start) / (end - start)) * w;
   }
   function timeFromX(x){
     const {start,end} = tlRange();
     const w = TW();
-    const t = x / w;
-    return start + t*(end-start);
+    return start + (x / w) * (end - start);
   }
 
   function drawTimeline(){
@@ -1656,7 +1780,6 @@ SliderTickRate:1
 
     const {start,end} = tlRange();
 
-    // waveform
     if(state.wf.ready){
       tctx.globalAlpha = 0.35;
       tctx.strokeStyle = "rgba(125,211,252,.85)";
@@ -1674,7 +1797,6 @@ SliderTickRate:1
       tctx.globalAlpha = 1;
     }
 
-    // breaks overlay
     if(state.breaks.length){
       tctx.globalAlpha = 0.10;
       tctx.fillStyle = "rgba(134,239,172,1)";
@@ -1687,7 +1809,6 @@ SliderTickRate:1
       tctx.globalAlpha = 1;
     }
 
-    // beat lines (active TP only for simplicity here)
     const tp = activeTP(state.timeMs);
     const beatLen = 60000 / tp.bpm;
     const step = beatLen / state.snap;
@@ -1710,7 +1831,6 @@ SliderTickRate:1
       tctx.stroke();
     }
 
-    // notes markers per lane
     const laneH = h / state.keys;
     for(const n of state.notes){
       if(n.t < start || n.t > end) continue;
@@ -1727,7 +1847,6 @@ SliderTickRate:1
       }
     }
 
-    // playhead
     const xPH = xFromTime(state.timeMs);
     tctx.strokeStyle = "rgba(125,211,252,.95)";
     tctx.lineWidth = 2;
@@ -1737,7 +1856,7 @@ SliderTickRate:1
     tctx.stroke();
   }
 
-  // Minimap: whole song waveform + note density + playhead
+  // Minimap
   function drawMinimap(){
     const w = MW(), h = MH();
     mctx.clearRect(0,0,w,h);
@@ -1752,7 +1871,6 @@ SliderTickRate:1
 
     const durMs = state.buffer.duration*1000;
 
-    // waveform vertical strip
     mctx.globalAlpha = 0.35;
     mctx.strokeStyle = "rgba(125,211,252,.85)";
     mctx.lineWidth = 1;
@@ -1768,7 +1886,6 @@ SliderTickRate:1
     mctx.stroke();
     mctx.globalAlpha = 1;
 
-    // breaks overlay
     if(state.breaks.length){
       mctx.globalAlpha = 0.10;
       mctx.fillStyle = "rgba(134,239,172,1)";
@@ -1780,7 +1897,6 @@ SliderTickRate:1
       mctx.globalAlpha = 1;
     }
 
-    // density of notes (simple)
     mctx.globalAlpha = 0.18;
     mctx.fillStyle = "rgba(255,255,255,1)";
     const bins = 140;
@@ -1799,7 +1915,6 @@ SliderTickRate:1
     }
     mctx.globalAlpha = 1;
 
-    // playhead
     const py = (state.timeMs/durMs)*h;
     mctx.strokeStyle = "rgba(125,211,252,.95)";
     mctx.lineWidth = 2;
@@ -1809,29 +1924,22 @@ SliderTickRate:1
     mctx.stroke();
   }
 
-  // ---------- Input handling ----------
+  // Tools / tabs / snap / keys
   function setTool(tool){
     state.tool = tool;
     tools.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
     pillTool.textContent = tool[0].toUpperCase()+tool.slice(1);
   }
-
   function setTab(tab){
     state.tab = tab;
     tabs.forEach(t => t.classList.toggle("active", t.getAttribute("data-tab")===tab));
-
-    // (layout já está sempre visível; tab é mais “estado” por enquanto)
-    // Você pode depois esconder/mostrar painéis por tab se quiser.
   }
-
   function setKeys(k){
     state.keys = clamp(k,4,7);
     pillKeys.textContent = String(state.keys);
-    // clamp lanes
     for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
     updateSelectionUI();
   }
-
   function setSnapByIndex(idx){
     idx = clamp(idx,0,SNAP_OPTS.length-1);
     state.snap = SNAP_OPTS[idx];
@@ -1839,9 +1947,7 @@ SliderTickRate:1
     snapLabel.textContent = label;
     pillSnap.textContent = label;
     hudSnap.textContent = label;
-    state.snapOn = (snapOnSel.value === "on");
   }
-
   function setSnapOn(on){
     state.snapOn = on;
     hudSnapOn.textContent = on ? "(on)" : "(off)";
@@ -1852,6 +1958,7 @@ SliderTickRate:1
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
+  // Box select
   function selectByBox(box, additive=false){
     const b = rectNorm(box);
     const tA = state.snapOn ? quantizeAt(timeFromY(b.y1)) : timeFromY(b.y1);
@@ -1912,20 +2019,20 @@ SliderTickRate:1
     updateSelectionUI();
   }
 
-  // Stage interactions
-  stageWrap.addEventListener("wheel", (e)=>{
+  // Editor interactions (no editWrap, não no preview)
+  editWrap.addEventListener("wheel", (e)=>{
     e.preventDefault();
     if(!state.buffer) return;
     seekMs(state.timeMs + e.deltaY * 2.2);
   }, {passive:false});
 
-  stageWrap.addEventListener("mousedown", (e)=>{
+  editWrap.addEventListener("mousedown", (e)=>{
     if(!state.buffer) return;
-    const m = mousePos(e, stageWrap);
+    const m = mousePos(e, editWrap);
     state.drag.down = true;
     state.drag.x0 = m.x; state.drag.y0 = m.y;
 
-    // if break mode armed: clicking stage commits break start/end at current playhead
+    // break mode uses playhead
     if(state.breakArming){
       commitBreakAt(state.timeMs);
       return;
@@ -1947,11 +2054,9 @@ SliderTickRate:1
         }
         updateSelectionUI();
 
-        // start move
         state.drag.mode = "move";
         beginMoveSelection();
       } else {
-        // start box
         state.drag.mode = "box";
         state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
         if(!additive) state.selected.clear();
@@ -1990,9 +2095,9 @@ SliderTickRate:1
     }
   });
 
-  stageWrap.addEventListener("mousemove", (e)=>{
+  editWrap.addEventListener("mousemove", (e)=>{
     if(!state.drag.down) return;
-    const m = mousePos(e, stageWrap);
+    const m = mousePos(e, editWrap);
 
     if(state.tool === "select" && state.drag.mode === "box" && state.drag.box){
       state.drag.box.x1 = m.x;
@@ -2024,7 +2129,6 @@ SliderTickRate:1
   window.addEventListener("mouseup", ()=>{
     if(state.drag.down){
       if(state.drag.mode === "move" || state.drag.mode === "holdCreate" || state.drag.mode === "box"){
-        // commit drag
         pushUndo();
       }
     }
@@ -2035,10 +2139,8 @@ SliderTickRate:1
     state.drag.holdId=null;
   });
 
-  // Timeline interactions
-  function timelineSeekAtX(x){
-    seekMs(timeFromX(x));
-  }
+  // Timeline drag seek
+  function timelineSeekAtX(x){ seekMs(timeFromX(x)); }
 
   timelineWrap.addEventListener("mousedown", (e)=>{
     if(!state.buffer) return;
@@ -2053,7 +2155,7 @@ SliderTickRate:1
   });
   window.addEventListener("mouseup", ()=> state.tlDrag=false);
 
-  // Minimap click seek
+  // Minimap seek
   miniCanvas.addEventListener("mousedown", (e)=>{
     if(!state.buffer) return;
     const r = miniCanvas.getBoundingClientRect();
@@ -2062,12 +2164,11 @@ SliderTickRate:1
     seekMs((y / r.height) * durMs);
   });
 
-  // ---------- Recording ----------
+  // Recording
   function normalizeKey(e){
     if(e.code === "Space") return "space";
     return (e.key || "").toLowerCase();
   }
-
   function recKeyDown(e){
     if(!state.rec.on) return;
     if(!state.isPlaying) return;
@@ -2078,7 +2179,6 @@ SliderTickRate:1
     const binds = state.rec.bindsByKeys[state.keys];
     const lane = binds.indexOf(key);
     if(lane < 0) return;
-
     if(state.rec.downMap.has(key)) return;
 
     pushUndo();
@@ -2098,7 +2198,6 @@ SliderTickRate:1
 
     e.preventDefault();
   }
-
   function recKeyUp(e){
     if(!state.rec.on) return;
     const key = normalizeKey(e);
@@ -2124,9 +2223,7 @@ SliderTickRate:1
     updateSelectionUI();
     e.preventDefault();
   }
-
   window.addEventListener("keydown", (e)=>{
-    // shortcuts
     if(e.code === "Space"){
       e.preventDefault();
       if(state.isPlaying) pause(); else play();
@@ -2146,12 +2243,11 @@ SliderTickRate:1
     if(e.key === "3") setTool("hold");
     if(e.key === "4") setTool("erase");
 
-    // record
     recKeyDown(e);
   });
   window.addEventListener("keyup", (e)=> recKeyUp(e));
 
-  // ---------- UI wiring ----------
+  // UI wiring
   tabs.forEach(t => t.addEventListener("click", ()=> setTab(t.getAttribute("data-tab"))));
   tools.forEach(b => b.addEventListener("click", ()=> setTool(b.getAttribute("data-tool"))));
 
@@ -2184,9 +2280,7 @@ SliderTickRate:1
     setSnapByIndex(idx);
   });
 
-  breakBtn.addEventListener("click", ()=>{
-    toggleBreakMode();
-  });
+  breakBtn.addEventListener("click", toggleBreakMode);
 
   tpAdd.addEventListener("click", ()=>{
     pushUndo();
@@ -2196,13 +2290,11 @@ SliderTickRate:1
     normalizeTiming();
     renderTPList();
   });
-
   tpSort.addEventListener("click", ()=>{
     pushUndo();
     normalizeTiming();
     renderTPList();
   });
-
   tpReset.addEventListener("click", ()=>{
     pushUndo();
     state.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
@@ -2214,7 +2306,6 @@ SliderTickRate:1
   deleteBtn.addEventListener("click", deleteSelection);
   clearNotesBtn.addEventListener("click", clearNotes);
 
-  // props
   [propTime, propLane, propType, propEnd, hsVol, hsFlags].forEach(el=>{
     el.addEventListener("change", applyProps);
   });
@@ -2222,48 +2313,34 @@ SliderTickRate:1
   hsFinish.addEventListener("click", ()=> toggleHs(4));
   hsClap.addEventListener("click", ()=> toggleHs(8));
 
-  // bg
   bgFile.addEventListener("change", async ()=>{
     const f = bgFile.files[0];
     if(!f) return;
     const url = URL.createObjectURL(f);
     const img = new Image();
-    img.onload = ()=>{
-      state.bgImg = img;
-      URL.revokeObjectURL(url);
-    };
+    img.onload = ()=>{ state.bgImg = img; URL.revokeObjectURL(url); };
     img.src = url;
   });
   bgOpacity.addEventListener("change", ()=> state.bgOpacity = clamp(parseFloat(bgOpacity.value)||0.35, 0, 1));
   laneOpacity.addEventListener("change", ()=> state.laneOpacity = clamp(parseFloat(laneOpacity.value)||0.08, 0, 1));
 
-  // rec
-  recToggle.addEventListener("change", ()=>{
-    state.rec.on = !!recToggle.checked;
-  });
-  recQuantToggle.addEventListener("change", ()=>{
-    state.rec.quantize = !!recQuantToggle.checked;
-  });
+  recToggle.addEventListener("change", ()=>{ state.rec.on = !!recToggle.checked; });
+  recQuantToggle.addEventListener("change", ()=>{ state.rec.quantize = !!recQuantToggle.checked; });
 
-  // transport
   playBtn.addEventListener("click", ()=> { if(state.isPlaying) pause(); else play(); });
   stopBtn.addEventListener("click", stop);
-  volRange.addEventListener("input", ()=>{
-    if(state.gain) state.gain.gain.value = parseFloat(volRange.value)||1;
-  });
+  volRange.addEventListener("input", ()=>{ if(state.gain) state.gain.gain.value = parseFloat(volRange.value)||1; });
+
   rateBtns.forEach(btn=>{
     btn.addEventListener("click", ()=>{
       rateBtns.forEach(b=>b.classList.remove("active"));
       btn.classList.add("active");
       state.rate = parseFloat(btn.getAttribute("data-rate"));
-      if(state.isPlaying){
-        pause();
-        play();
-      }
+      if(state.isPlaying){ pause(); play(); }
     });
   });
 
-  // ---------- Loop ----------
+  // HUD
   function renderHUD(){
     const tp = activeTP(state.timeMs);
     hudTime.textContent = String(Math.round(state.timeMs));
@@ -2293,28 +2370,27 @@ SliderTickRate:1
     renderHUD();
 
     drawStage();
+    drawPreview();
     drawTimeline();
     drawMinimap();
 
     requestAnimationFrame(loop);
   }
 
-  // ---------- Init ----------
+  // Init
   setTab("compose");
   setTool("select");
   setKeys(4);
 
-  // snap default index for 1/4
   snapRange.value = String(SNAP_OPTS.indexOf(4));
   setSnapByIndex(SNAP_OPTS.indexOf(4));
-
   setSnapOn(true);
+
   renderTPList();
   renderBreakList();
   setBreakStatus();
   updateSelectionUI();
 
-  // disable buttons until audio loaded
   exportBtn.disabled = true;
   undoBtn.disabled = true;
   deleteBtn.disabled = true;

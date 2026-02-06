@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Web Mania Editor V3 — osu-like (4K–7K)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Web Mania Editor V4 — osu-like layout (4K–7K)</title>
   <style>
     :root{
       --bg:#0b0c0f;
@@ -12,72 +12,66 @@
       --fg:#eaeef6;
       --muted:#9aa4b2;
       --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.06);
       --accent:#7dd3fc;
       --accent2:#a78bfa;
       --danger:#fb7185;
       --ok:#86efac;
-      --r:12px;
+
+      --r1:10px;
+      --r2:14px;
+
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
+    *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0; background:var(--bg); color:var(--fg); font-family:var(--font);
-      display:flex; flex-direction:column;
+      display:flex; flex-direction:column; overflow:hidden;
     }
-    header{
+
+    /* Faux menu bar */
+    .menubar{
+      height:28px;
+      display:flex; align-items:center; gap:18px;
+      padding:0 12px;
+      border-bottom:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+      font-size:12px;
+      user-select:none;
+    }
+    .menubar span{cursor:default}
+
+    /* Tabs (Compose / Design / Timing / Song setup) */
+    .tabs{
+      display:flex; align-items:center; gap:10px;
       padding:10px 12px;
       border-bottom:1px solid var(--border);
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
       background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
     }
-    .group{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      background:var(--panel); border:1px solid var(--border);
-      padding:10px; border-radius:var(--r);
-    }
-    label{
-      font-size:12px; color:var(--muted);
-      display:flex; flex-direction:column; gap:6px;
-    }
-    input[type="number"], select, button, input[type="text"]{
-      background:var(--panel2); color:var(--fg);
-      border:1px solid var(--border);
-      border-radius:10px; padding:8px 10px;
-      font-size:14px; outline:none;
-    }
-    input[type="file"]{color:var(--muted); font-size:13px}
-    button{cursor:pointer; user-select:none}
-    button.primary{border-color:rgba(125,211,252,.45)}
-    button.ok{border-color:rgba(134,239,172,.5); color:#d1fae5}
-    button.danger{border-color:rgba(251,113,133,.5); color:#ffd7df}
-    button:disabled{opacity:.55; cursor:not-allowed}
-
-    .tabs{
-      display:flex; gap:8px; align-items:center;
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:999px;
-      padding:6px;
-    }
     .tab{
-      border-radius:999px;
-      padding:8px 12px;
       border:1px solid transparent;
       background:transparent;
       color:var(--muted);
+      padding:8px 12px;
+      border-radius:999px;
       font-size:13px;
+      cursor:pointer;
+      user-select:none;
     }
     .tab.active{
-      background:rgba(125,211,252,.12);
-      border-color:rgba(125,211,252,.30);
       color:var(--fg);
+      border-color:rgba(125,211,252,.30);
+      background:rgba(125,211,252,.10);
     }
 
-    main{
+    /* Main layout */
+    .app{
       flex:1;
       display:grid;
-      grid-template-columns: 240px 1fr 360px;
+      grid-template-columns: 84px 1fr 360px;
       gap:12px;
       padding:12px;
       min-height:0;
@@ -86,435 +80,715 @@
     .panel{
       background:var(--panel);
       border:1px solid var(--border);
-      border-radius:16px;
-      padding:12px;
+      border-radius:var(--r2);
+      overflow:hidden;
       min-height:0;
     }
-    .panel h3{
-      margin:0 0 10px 0;
-      font-size:14px;
-      color:#dbe5f5;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
+    .panel .hd{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border2);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size:12px; color:var(--muted);
+      user-select:none;
     }
-    .small{font-size:12px; color:var(--muted); line-height:1.45}
-    .kbd{
-      font-family:var(--mono); font-size:12px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.10);
-      padding:2px 6px; border-radius:8px; color:#dbe5f5;
-    }
+    .panel .bd{ padding:12px; min-height:0; }
+    .divider{ height:1px; background:var(--border2); margin:10px 0; }
 
-    /* Left tools */
-    .toolGrid{display:grid; grid-template-columns:1fr; gap:8px}
-    .toolBtn{
-      display:flex; justify-content:space-between; align-items:center; gap:8px;
-      padding:10px 10px;
+    /* Left: toolbox + minimap */
+    .left{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
+    }
+    .toolbox{
+      padding:8px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .tool{
+      width:100%;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px;
+      padding:10px 6px;
       border-radius:12px;
       border:1px solid var(--border);
       background:var(--panel2);
-      color:var(--fg);
-      font-size:13px;
+      color:var(--muted);
+      cursor:pointer;
+      user-select:none;
+      font-size:11px;
+      line-height:1;
     }
-    .toolBtn.active{
-      border-color:rgba(125,211,252,.45);
+    .tool.active{
+      color:var(--fg);
+      border-color:rgba(125,211,252,.35);
       background:rgba(125,211,252,.10);
     }
+    .tool svg{width:18px; height:18px; opacity:.9}
+    .tool .kbd{
+      font-family:var(--mono);
+      font-size:10px;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+    }
 
-    /* Center area: compose view with playfield + timeline */
+    .minimapWrap{
+      flex:1;
+      display:flex; flex-direction:column;
+      min-height:0;
+    }
+    .minimapCanvas{
+      flex:1;
+      border-top:1px solid var(--border2);
+      background:#07090d;
+    }
+
+    /* Center: stage + timeline */
     .center{
       display:flex;
       flex-direction:column;
       gap:10px;
       min-height:0;
     }
-    .canvasWrap{
+    .stageWrap{
       position:relative;
       flex:1;
+      border-radius:var(--r2);
       border:1px solid var(--border);
-      border-radius:16px;
-      overflow:hidden;
       background:#07090d;
+      overflow:hidden;
       min-height:0;
     }
     canvas{display:block; width:100%; height:100%}
-    .timelineWrap{
-      height:140px;
-      border:1px solid var(--border);
-      border-radius:16px;
-      overflow:hidden;
-      background:#07090d;
-      position:relative;
-    }
-    .overlayBar{
-      position:absolute; top:10px; left:10px;
+
+    .hud{
+      position:absolute;
+      top:10px; left:10px;
       display:flex; gap:8px; flex-wrap:wrap;
       z-index:5;
+      pointer-events:none;
     }
     .badge{
       font-size:11px;
       padding:3px 8px;
       border-radius:999px;
-      border:1px solid var(--border);
+      border:1px solid var(--border2);
+      background:rgba(0,0,0,.35);
       color:var(--muted);
-      background:rgba(255,255,255,.03);
+      backdrop-filter: blur(6px);
+    }
+    .badge b{color:var(--fg); font-weight:600}
+
+    .timelineWrap{
+      height:145px;
+      border-radius:var(--r2);
+      border:1px solid var(--border);
+      overflow:hidden;
+      background:#07090d;
+      position:relative;
+    }
+    .timelineHud{
+      position:absolute;
+      top:10px; left:10px;
+      display:flex; gap:8px; flex-wrap:wrap;
+      z-index:5;
+      pointer-events:none;
     }
 
-    /* Right panel lists */
-    .row{
-      display:flex; justify-content:space-between; gap:10px;
-      padding:9px 10px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      font-size:13px; color:var(--muted);
+    /* Right */
+    .right{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
     }
-    .row b{color:var(--fg); font-weight:600}
-    .row:last-child{border-bottom:none}
-    .list{
+
+    /* Inputs */
+    label{
+      display:flex; flex-direction:column; gap:6px;
+      font-size:12px; color:var(--muted);
+    }
+    input[type="text"], input[type="number"], select, button{
       border:1px solid var(--border);
-      border-radius:12px;
       background:var(--panel2);
-      overflow:auto;
-      max-height:26vh;
-    }
-    .item{
+      color:var(--fg);
+      border-radius:var(--r1);
       padding:9px 10px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      font-size:13px; color:var(--muted);
-      display:flex; justify-content:space-between; gap:10px;
-      cursor:pointer;
-      user-select:none;
+      font-size:14px;
+      outline:none;
     }
-    .item:last-child{border-bottom:none}
-    .item.sel{background:rgba(125,211,252,.10)}
-    .item b{color:var(--fg)}
+    input[type="range"]{ width:100% }
+    input[type="file"]{ color:var(--muted); font-size:13px }
+    button{ cursor:pointer; user-select:none }
+    button.primary{ border-color:rgba(125,211,252,.45) }
+    button.ok{ border-color:rgba(134,239,172,.50); color:#d1fae5 }
+    button.danger{ border-color:rgba(251,113,133,.55); color:#ffd7df }
+    button:disabled{ opacity:.55; cursor:not-allowed }
 
     .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
     .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
 
-    .hint{
-      margin-top:10px;
-      padding:10px 12px;
-      border:1px solid var(--border);
-      border-radius:14px;
-      color:var(--muted);
+    .list{
+      border:1px solid var(--border2);
+      border-radius:12px;
       background:rgba(255,255,255,.03);
-      font-size:13px;
+      overflow:auto;
+      max-height:22vh;
+    }
+    .item{
+      padding:9px 10px;
+      border-bottom:1px solid var(--border2);
+      display:flex; justify-content:space-between; gap:10px;
+      font-size:12px; color:var(--muted);
+      cursor:pointer;
+    }
+    .item:last-child{border-bottom:none}
+    .item.sel{background:rgba(125,211,252,.10)}
+    .item b{color:var(--fg); font-weight:600}
+    .small{font-size:12px; color:var(--muted); line-height:1.45}
+    .mono{font-family:var(--mono)}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+      font-size:12px;
+    }
+    .pill b{color:var(--fg)}
+    .toggleRow{
+      display:flex; gap:8px; align-items:center; justify-content:space-between;
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:8px 10px;
+    }
+    .toggleRow input{transform:scale(1.05)}
+    .hint{
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:10px;
+      font-size:12px;
+      color:var(--muted);
       line-height:1.45;
     }
-    .hidden{display:none !important;}
+
+    /* Footer transport */
+    .transport{
+      height:58px;
+      border-top:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      gap:10px;
+    }
+    .transport .leftInfo{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      color:var(--muted); font-size:12px;
+    }
+    .transport .controls{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    }
+    .iconBtn{
+      width:38px; height:38px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+    }
+    .iconBtn svg{width:18px; height:18px}
+    .rateBtns{
+      display:flex; gap:6px; align-items:center;
+    }
+    .rateBtns button{
+      padding:8px 10px;
+      border-radius:10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .rateBtns button.active{
+      color:var(--fg);
+      border-color:rgba(125,211,252,.45);
+      background:rgba(125,211,252,.10);
+    }
+
+    /* Responsive */
+    @media (max-width: 1100px){
+      .app{ grid-template-columns: 84px 1fr; }
+      .right{ display:none; }
+    }
   </style>
 </head>
 
 <body>
-<header>
-  <div class="tabs" role="tablist" aria-label="Editor Tabs">
-    <button class="tab active" id="tabCompose" data-tab="compose">Compose</button>
-    <button class="tab" id="tabTiming" data-tab="timing">Timing</button>
-    <button class="tab" id="tabSong" data-tab="song">Song setup</button>
+  <div class="menubar">
+    <span>File</span><span>Edit</span><span>View</span><span>Compose</span><span>Design</span><span>Timing</span><span>Web</span><span>Help</span>
   </div>
 
-  <div class="group">
-    <label>Áudio
-      <input id="audioFile" type="file" accept="audio/*">
-    </label>
-    <button id="playBtn" class="primary" disabled>Play</button>
-    <button id="stopBtn" disabled>Stop</button>
-    <button id="exportBtn" class="primary" disabled>Exportar .osu</button>
+  <div class="tabs">
+    <button class="tab active" data-tab="compose">compose</button>
+    <button class="tab" data-tab="design">design</button>
+    <button class="tab" data-tab="timing">timing</button>
+    <button class="tab" data-tab="song">song setup</button>
+
+    <div style="flex:1"></div>
+
+    <div class="pill">
+      Keys: <b id="pillKeys">4</b>
+    </div>
+    <div class="pill">
+      Snap: <b id="pillSnap">1/4</b>
+    </div>
+    <div class="pill">
+      Tool: <b id="pillTool">Select</b>
+    </div>
   </div>
 
-  <div class="group">
-    <label>Keys
-      <select id="keys">
-        <option>4</option><option>5</option><option>6</option><option>7</option>
-      </select>
-    </label>
-    <label>Beat snap (divisor)
-      <select id="snap">
-        <option value="1">1/1</option>
-        <option value="2">1/2</option>
-        <option value="3">1/3</option>
-        <option value="4" selected>1/4</option>
-        <option value="6">1/6</option>
-        <option value="8">1/8</option>
-        <option value="12">1/12</option>
-        <option value="16">1/16</option>
-      </select>
-    </label>
-    <label>Snap
-      <select id="snapOn">
-        <option value="on" selected>On</option>
-        <option value="off">Off</option>
-      </select>
-    </label>
-    <label>Scroll speed (px/s)
-      <input id="zoom" type="number" min="200" max="9000" step="50" value="1700">
-    </label>
+  <div class="app">
+    <!-- LEFT -->
+    <section class="left">
+      <div class="panel">
+        <div class="hd">Tools</div>
+        <div class="toolbox">
+          <button class="tool active" data-tool="select" title="Select (1)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 17 2-7 7-2L4 4z"/></svg>
+            <div>Select</div>
+            <div class="kbd">1</div>
+          </button>
+          <button class="tool" data-tool="tap" title="Tap (2)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-8"/><path d="M8 12h8"/><circle cx="12" cy="6" r="3"/></svg>
+            <div>Tap</div>
+            <div class="kbd">2</div>
+          </button>
+          <button class="tool" data-tool="hold" title="Hold (3)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M12 8v8"/></svg>
+            <div>Hold</div>
+            <div class="kbd">3</div>
+          </button>
+          <button class="tool" data-tool="erase" title="Erase (4)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H8l-4-4L14 6l6 6-8 8"/><path d="M13 7l6 6"/></svg>
+            <div>Erase</div>
+            <div class="kbd">4</div>
+          </button>
+
+          <div class="divider"></div>
+
+          <div class="toggleRow" title="Key recording (tocar e gravar)">
+            <div class="small"><b class="mono">REC</b> Key recording</div>
+            <input id="recToggle" type="checkbox" />
+          </div>
+
+          <div class="toggleRow" title="Quantize durante gravação">
+            <div class="small">Quantize REC</div>
+            <input id="recQuantToggle" type="checkbox" checked/>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel minimapWrap">
+        <div class="hd">
+          Minimap
+          <span class="small mono" id="miniLbl">—</span>
+        </div>
+        <canvas id="miniCanvas" class="minimapCanvas"></canvas>
+      </div>
+    </section>
+
+    <!-- CENTER -->
+    <section class="center">
+      <div class="stageWrap" id="stageWrap">
+        <div class="hud">
+          <span class="badge">Time: <b class="mono" id="hudTime">0</b> ms</span>
+          <span class="badge">Notes: <b class="mono" id="hudCount">0</b></span>
+          <span class="badge">TP: <b class="mono" id="hudTP">—</b></span>
+          <span class="badge">Snap: <b class="mono" id="hudSnap">1/4</b> <span class="mono" id="hudSnapOn">(on)</span></span>
+        </div>
+        <canvas id="stageCanvas"></canvas>
+      </div>
+
+      <div class="timelineWrap" id="timelineWrap">
+        <div class="timelineHud">
+          <span class="badge">Timeline window: <b class="mono" id="tlWin">8</b>s</span>
+          <span class="badge">Waveform: <b class="mono" id="tlWf">—</b></span>
+          <span class="badge">Break: <b class="mono" id="brkStatus">—</b></span>
+        </div>
+        <canvas id="timelineCanvas"></canvas>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="right">
+      <!-- Compose / global -->
+      <div class="panel" id="panelGlobal">
+        <div class="hd">Projeto</div>
+        <div class="bd">
+          <label>Áudio
+            <input id="audioFile" type="file" accept="audio/*">
+          </label>
+
+          <div class="grid2" style="margin-top:10px">
+            <label>Keys (4–7)
+              <select id="keysSel">
+                <option>4</option><option>5</option><option>6</option><option>7</option>
+              </select>
+            </label>
+            <label>Snap On/Off
+              <select id="snapOnSel">
+                <option value="on" selected>On</option>
+                <option value="off">Off</option>
+              </select>
+            </label>
+            <label>Scroll speed (px/s)
+              <input id="scrollIn" type="number" min="250" max="9000" step="50" value="1700">
+            </label>
+            <label>Timeline window (s)
+              <input id="tlWinIn" type="number" min="3" max="30" step="1" value="8">
+            </label>
+          </div>
+
+          <div class="grid2" style="margin-top:10px">
+            <button id="exportBtn" class="primary" disabled>Exportar .osu</button>
+            <button id="undoBtn" disabled>Undo</button>
+            <button id="deleteBtn" class="danger" disabled>Delete sel.</button>
+            <button id="clearNotesBtn" class="danger" disabled>Clear notes</button>
+          </div>
+
+          <div class="hint" style="margin-top:10px">
+            <div><b>Atalhos</b>: <span class="mono">Space</span> play/pause • <span class="mono">Wheel</span> scroll tempo • <span class="mono">Ctrl+Z</span> undo • <span class="mono">Delete</span> apagar</div>
+            <div>Minimap: clique para seek rápido. Timeline: clique e arraste para navegar.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Snap + break -->
+      <div class="panel" id="panelSnap">
+        <div class="hd">Grid / Snap</div>
+        <div class="bd">
+          <div class="small" style="margin-bottom:8px">Beat Snap Divisor</div>
+          <input id="snapRange" type="range" min="0" max="7" step="1" value="3">
+          <div class="small" style="margin-top:8px; display:flex; justify-content:space-between">
+            <span class="mono" id="snapLabel">1/4</span>
+            <span class="mono" id="snapOpts">1/1 1/2 1/3 1/4 1/6 1/8 1/12 1/16</span>
+          </div>
+
+          <div class="divider"></div>
+
+          <button id="breakBtn" class="primary" disabled>Insert Break Time</button>
+          <div class="small" style="margin-top:8px">
+            Clique 1 = início • Clique 2 = fim (cria break). Breaks aparecem no export.
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="small" style="margin-bottom:6px">Break list</div>
+          <div class="list" id="breakList" style="max-height:14vh"></div>
+        </div>
+      </div>
+
+      <!-- Note props -->
+      <div class="panel" id="panelProps">
+        <div class="hd">Selected note</div>
+        <div class="bd">
+          <div class="small" id="selLine">—</div>
+
+          <div class="grid2" style="margin-top:10px">
+            <label>Time (ms)
+              <input id="propTime" type="number" step="1" disabled>
+            </label>
+            <label>Lane (1..K)
+              <input id="propLane" type="number" step="1" min="1" max="7" disabled>
+            </label>
+            <label>Type
+              <select id="propType" disabled>
+                <option value="tap">tap</option>
+                <option value="hold">hold</option>
+              </select>
+            </label>
+            <label>End (ms)
+              <input id="propEnd" type="number" step="1" disabled>
+            </label>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="small" style="margin-bottom:8px">Hitsounds</div>
+          <div class="grid3">
+            <button id="hsWhistle" disabled>Whistle</button>
+            <button id="hsFinish" disabled>Finish</button>
+            <button id="hsClap" disabled>Clap</button>
+          </div>
+          <div class="grid2" style="margin-top:10px">
+            <label>Volume (0..100)
+              <input id="hsVol" type="number" min="0" max="100" step="5" value="0" disabled>
+            </label>
+            <label>Flags
+              <input id="hsFlags" type="number" min="0" max="14" step="1" value="0" disabled>
+            </label>
+          </div>
+
+          <div class="hint" style="margin-top:10px">
+            Dica: hitsound flags típicos: whistle=2, finish=4, clap=8 (combináveis somando).
+          </div>
+        </div>
+      </div>
+
+      <!-- Timing -->
+      <div class="panel" id="panelTiming">
+        <div class="hd">Timing points</div>
+        <div class="bd">
+          <div class="grid3">
+            <button id="tpAdd" class="ok" disabled>Add TP @ tempo</button>
+            <button id="tpSort" disabled>Sort</button>
+            <button id="tpReset" class="danger" disabled>Reset</button>
+          </div>
+          <div class="divider"></div>
+          <div class="list" id="tpList" style="max-height:18vh"></div>
+        </div>
+      </div>
+
+      <!-- Song setup -->
+      <div class="panel" id="panelMeta">
+        <div class="hd">Song setup</div>
+        <div class="bd">
+          <div class="grid2">
+            <label>Title <input id="mTitle" type="text" value="WebManiaEditor"></label>
+            <label>Artist <input id="mArtist" type="text" value="Unknown"></label>
+            <label>Creator <input id="mCreator" type="text" value="reze"></label>
+            <label>Version <input id="mVersion" type="text" value="Easy"></label>
+          </div>
+
+          <div class="divider"></div>
+
+          <label>Background image (opcional)
+            <input id="bgFile" type="file" accept="image/*">
+          </label>
+          <div class="grid2" style="margin-top:10px">
+            <label>BG opacity
+              <input id="bgOpacity" type="number" min="0" max="1" step="0.05" value="0.35">
+            </label>
+            <label>Lane opacity
+              <input id="laneOpacity" type="number" min="0" max="1" step="0.05" value="0.08">
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <div class="group">
-    <label>Playback rate
-      <input id="rate" type="number" min="0.25" max="2" step="0.05" value="1">
-    </label>
-    <label>Metronome
-      <select id="metronome" disabled>
-        <option value="off" selected>Off</option>
-        <option value="on">On</option>
-      </select>
-    </label>
-    <button id="undoBtn" disabled>Undo</button>
-    <button id="delBtn" class="danger" disabled>Delete</button>
+  <div class="transport">
+    <div class="leftInfo">
+      <span class="mono" id="timeStr">00:00:000</span>
+      <span class="mono" id="pctStr">0.0%</span>
+      <span class="mono" id="noteStr">notes: 0</span>
+      <span class="mono" id="selStr">sel: 0</span>
+    </div>
+
+    <div class="controls">
+      <div class="iconBtn" id="playBtn" title="Play/Pause (Space)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div class="iconBtn" id="stopBtn" title="Stop">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v10H7z"/></svg>
+      </div>
+
+      <div class="rateBtns" title="Playback rate">
+        <button data-rate="0.25">25%</button>
+        <button data-rate="0.50">50%</button>
+        <button data-rate="0.75">75%</button>
+        <button data-rate="1.00" class="active">100%</button>
+      </div>
+
+      <label class="small" style="gap:6px; min-width:160px">
+        Volume
+        <input id="volRange" type="range" min="0" max="1" step="0.01" value="1">
+      </label>
+    </div>
   </div>
-</header>
-
-<main>
-  <!-- LEFT: Tools -->
-  <section class="panel" id="leftPanel">
-    <h3>Ferramentas <span class="small">Compose</span></h3>
-    <div class="toolGrid">
-      <button class="toolBtn active" data-tool="select" id="toolSelect">
-        <span><b>Select</b></span><span class="kbd">1</span>
-      </button>
-      <button class="toolBtn" data-tool="tap" id="toolTap">
-        <span><b>Tap</b></span><span class="kbd">2</span>
-      </button>
-      <button class="toolBtn" data-tool="hold" id="toolHold">
-        <span><b>Hold</b></span><span class="kbd">3</span>
-      </button>
-      <button class="toolBtn" data-tool="erase" id="toolErase">
-        <span><b>Erase</b></span><span class="kbd">4</span>
-      </button>
-    </div>
-
-    <div class="hint">
-      Layout inspirado no fluxo do editor do osu!: <span class="kbd">Compose</span> pra criar objetos,
-      <span class="kbd">Timing</span> pra timing sections e (no osu) hitsounds, e <span class="kbd">Song setup</span> pra metadata. :contentReference[oaicite:1]{index=1}
-    </div>
-  </section>
-
-  <!-- CENTER: Playfield + Timeline -->
-  <section class="center">
-    <div class="canvasWrap" id="playWrap">
-      <div class="overlayBar">
-        <span class="badge">Tempo: <span id="lblTime">0</span> ms</span>
-        <span class="badge">Notas: <span id="lblCount">0</span></span>
-        <span class="badge">TP: <span id="lblTP">—</span></span>
-        <span class="badge">Tool: <span id="lblTool">select</span></span>
-      </div>
-      <canvas id="playCanvas"></canvas>
-    </div>
-
-    <div class="timelineWrap" id="timeWrap">
-      <div class="overlayBar">
-        <span class="badge">Timeline window: <span id="lblWin">8</span>s</span>
-        <span class="badge">Waveform: <span id="lblWF">—</span></span>
-      </div>
-      <canvas id="timeCanvas"></canvas>
-    </div>
-  </section>
-
-  <!-- RIGHT: Tabbed panel -->
-  <section class="panel" id="rightPanel">
-    <!-- Compose properties -->
-    <div id="rightCompose">
-      <h3>Propriedades</h3>
-      <div class="row"><span>Seleção</span><b id="selInfo">—</b></div>
-      <div class="grid2" style="margin-top:10px">
-        <label>Time (ms)
-          <input id="propTime" type="number" step="1" disabled>
-        </label>
-        <label>Lane (1..K)
-          <input id="propLane" type="number" step="1" min="1" max="7" disabled>
-        </label>
-        <label>Type
-          <select id="propType" disabled>
-            <option value="tap">tap</option>
-            <option value="hold">hold</option>
-          </select>
-        </label>
-        <label>End (ms) (hold)
-          <input id="propEnd" type="number" step="1" disabled>
-        </label>
-      </div>
-
-      <h3 style="margin-top:14px">Hitsound (simples)</h3>
-      <div class="grid2">
-        <label>Flags
-          <select id="hsFlags" disabled>
-            <option value="0">Normal (0)</option>
-            <option value="2">Whistle (2)</option>
-            <option value="4">Finish (4)</option>
-            <option value="8">Clap (8)</option>
-          </select>
-        </label>
-        <label>Volume (0..100)
-          <input id="hsVol" type="number" min="0" max="100" step="5" value="0" disabled>
-        </label>
-      </div>
-
-      <h3 style="margin-top:14px">Notas (recentes)</h3>
-      <div class="list" id="noteList"></div>
-
-      <div class="hint">
-        <div><b>Dicas</b>:</div>
-        <div>• Clique na <b>timeline</b> pra navegar rápido.</div>
-        <div>• Se o snap estiver te “lutando”, coloca <b>Snap Off</b> e posiciona livre.</div>
-        <div>• Wheel no playfield = “andar” pelo áudio sem dor.</div>
-      </div>
-    </div>
-
-    <!-- Timing -->
-    <div id="rightTiming" class="hidden">
-      <h3>Timing Points</h3>
-      <div class="grid3" style="margin-bottom:10px">
-        <button id="addTP" class="ok" disabled>Add TP @ tempo</button>
-        <button id="sortTP" disabled>Ordenar</button>
-        <button id="resetTP" class="danger" disabled>Reset</button>
-      </div>
-      <div class="list" id="tpList" style="max-height:42vh"></div>
-
-      <div class="hint">
-        No osu, a aba Timing gerencia timing sections e controle de hitsounds; aqui você controla os BPM changes (timing points). :contentReference[oaicite:2]{index=2}
-      </div>
-    </div>
-
-    <!-- Song setup -->
-    <div id="rightSong" class="hidden">
-      <h3>Song setup</h3>
-      <div class="grid2">
-        <label>Title <input id="metaTitle" type="text" value="WebManiaEditor"/></label>
-        <label>Artist <input id="metaArtist" type="text" value="Unknown"/></label>
-        <label>Creator <input id="metaCreator" type="text" value="reze"/></label>
-        <label>Version <input id="metaVersion" type="text" value="Easy"/></label>
-      </div>
-      <div class="hint">
-        Metadata e coisas “universais” do beatmap ficam aqui (igual a ideia do Song setup no osu). :contentReference[oaicite:3]{index=3}
-      </div>
-    </div>
-  </section>
-</main>
 
 <script>
 (() => {
+  // ---------- DOM ----------
   const $ = (id) => document.getElementById(id);
+  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
 
-  // Elements
+  const tabs = qsa(".tab");
+  const tools = qsa(".tool");
+
+  const pillKeys = $("pillKeys");
+  const pillSnap = $("pillSnap");
+  const pillTool = $("pillTool");
+
   const audioFile = $("audioFile");
-  const playBtn = $("playBtn");
-  const stopBtn = $("stopBtn");
+  const keysSel = $("keysSel");
+  const snapOnSel = $("snapOnSel");
+  const scrollIn = $("scrollIn");
+  const tlWinIn = $("tlWinIn");
+
   const exportBtn = $("exportBtn");
   const undoBtn = $("undoBtn");
-  const delBtn = $("delBtn");
+  const deleteBtn = $("deleteBtn");
+  const clearNotesBtn = $("clearNotesBtn");
 
-  const keysSel = $("keys");
-  const snapSel = $("snap");
-  const snapOnSel = $("snapOn");
-  const zoomIn = $("zoom");
-  const rateIn = $("rate");
-  const metronomeSel = $("metronome");
+  const snapRange = $("snapRange");
+  const snapLabel = $("snapLabel");
 
-  const tabCompose = $("tabCompose");
-  const tabTiming = $("tabTiming");
-  const tabSong = $("tabSong");
-  const rightCompose = $("rightCompose");
-  const rightTiming = $("rightTiming");
-  const rightSong = $("rightSong");
+  const breakBtn = $("breakBtn");
+  const breakList = $("breakList");
 
-  const toolButtons = Array.from(document.querySelectorAll(".toolBtn"));
-  const lblTime = $("lblTime");
-  const lblCount = $("lblCount");
-  const lblTP = $("lblTP");
-  const lblTool = $("lblTool");
-  const lblWin = $("lblWin");
-  const lblWF = $("lblWF");
-
-  const playWrap = $("playWrap");
-  const playCanvas = $("playCanvas");
-  const pctx = playCanvas.getContext("2d");
-
-  const timeWrap = $("timeWrap");
-  const timeCanvas = $("timeCanvas");
-  const tctx = timeCanvas.getContext("2d");
-
-  const selInfo = $("selInfo");
-  const noteList = $("noteList");
+  const tpAdd = $("tpAdd");
+  const tpSort = $("tpSort");
+  const tpReset = $("tpReset");
+  const tpList = $("tpList");
 
   const propTime = $("propTime");
   const propLane = $("propLane");
   const propType = $("propType");
   const propEnd = $("propEnd");
-  const hsFlags = $("hsFlags");
+  const hsWhistle = $("hsWhistle");
+  const hsFinish = $("hsFinish");
+  const hsClap = $("hsClap");
   const hsVol = $("hsVol");
+  const hsFlags = $("hsFlags");
+  const selLine = $("selLine");
 
-  const addTPBtn = $("addTP");
-  const sortTPBtn = $("sortTP");
-  const resetTPBtn = $("resetTP");
-  const tpList = $("tpList");
+  const mTitle = $("mTitle");
+  const mArtist = $("mArtist");
+  const mCreator = $("mCreator");
+  const mVersion = $("mVersion");
 
-  const metaTitle = $("metaTitle");
-  const metaArtist = $("metaArtist");
-  const metaCreator = $("metaCreator");
-  const metaVersion = $("metaVersion");
+  const bgFile = $("bgFile");
+  const bgOpacity = $("bgOpacity");
+  const laneOpacity = $("laneOpacity");
 
-  // State
+  const recToggle = $("recToggle");
+  const recQuantToggle = $("recQuantToggle");
+
+  const stageWrap = $("stageWrap");
+  const stageCanvas = $("stageCanvas");
+  const sctx = stageCanvas.getContext("2d");
+
+  const timelineWrap = $("timelineWrap");
+  const timelineCanvas = $("timelineCanvas");
+  const tctx = timelineCanvas.getContext("2d");
+
+  const miniCanvas = $("miniCanvas");
+  const mctx = miniCanvas.getContext("2d");
+  const miniLbl = $("miniLbl");
+
+  const hudTime = $("hudTime");
+  const hudCount = $("hudCount");
+  const hudTP = $("hudTP");
+  const hudSnap = $("hudSnap");
+  const hudSnapOn = $("hudSnapOn");
+  const tlWin = $("tlWin");
+  const tlWf = $("tlWf");
+  const brkStatus = $("brkStatus");
+
+  const playBtn = $("playBtn");
+  const stopBtn = $("stopBtn");
+  const volRange = $("volRange");
+  const rateBtns = qsa(".rateBtns button");
+
+  const timeStr = $("timeStr");
+  const pctStr = $("pctStr");
+  const noteStr = $("noteStr");
+  const selStr = $("selStr");
+
+  // ---------- State ----------
+  const SNAP_OPTS = [1,2,3,4,6,8,12,16];
+
   const state = {
+    tab: "compose",
+    tool: "select",
+
     keys: 4,
-    snap: 4,
+    snap: 4,        // divisor value, one of SNAP_OPTS
     snapOn: true,
+
     scrollPxPerSec: 1700,
-    rate: 1,
-    timelineWindowSec: 8,
+    tlWinSec: 8,
 
     // audio
     ac: null,
     buffer: null,
     source: null,
+    gain: null,
     startedAt: 0,
     startOffsetSec: 0,
     isPlaying: false,
     timeMs: 0,
+    rate: 1,
 
     // waveform peaks
     wf: {
-      ready: false,
-      peaks: null, // Float32Array
-      blockSize: 2048,
-      blockSec: 0,
-      max: 1,
-      progress: 0
+      ready:false,
+      peaks:null,
+      blockSize:2048,
+      blockSec:0,
+      max:1,
+      progress:0
     },
 
-    // timing points: {id, t, bpm, meter}
-    timing: [{ id: uid(), t: 0, bpm: 180, meter: 4 }],
+    // minimap helper
+    mini: { ready:false },
 
-    // notes: {id, lane, t, type, end, hs, vol}
-    notes: [],
+    // assets
+    bgImg: null,
+    bgOpacity: 0.35,
+    laneOpacity: 0.08,
+
+    // timing points
+    timing: [{ id: uid(), t:0, bpm:180, meter:4 }],
+
+    // breaks
+    breaks: [], // {id, start, end}
+    breakArming: false,
+    breakStart: null,
+
+    // notes
+    notes: [], // {id, lane, t, type, end, hs, vol}
     selected: new Set(),
     undo: [],
 
-    tool: "select",
-
+    // drag
     drag: {
-      down: false,
-      mode: "none", // none | holdCreate | move | box
-      startX: 0, startY: 0,
-      box: null,
-      moveSnap: null, // Map id -> base note
-      holdId: null
+      down:false,
+      mode:"none", // none | box | move | holdCreate
+      x0:0, y0:0,
+      box:null,
+      moveSnap:null, // Map id -> base
+      holdId:null
     },
 
-    timelineDrag: false,
+    // timeline drag
+    tlDrag:false,
 
-    metronome: { on: false, lastBeatIndex: null }
+    // recording
+    rec: {
+      on:false,
+      quantize:true,
+      bindsByKeys: {
+        4:["d","f","j","k"],
+        5:["d","f","space","j","k"],
+        6:["s","d","f","j","k","l"],
+        7:["s","d","f","space","j","k","l"],
+      },
+      downMap: new Map(), // key -> {noteId}
+    },
   };
 
-  function uid(){
-    return Math.random().toString(36).slice(2,10);
-  }
+  function uid(){ return Math.random().toString(36).slice(2,10); }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
-  // Geometry
+  // ---------- Resize ----------
   function resizeCanvas(canvas, wrap){
     const r = wrap.getBoundingClientRect();
     canvas.width = Math.floor(r.width * devicePixelRatio);
@@ -522,38 +796,39 @@
     const ctx = canvas.getContext("2d");
     ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   }
-  const playRO = new ResizeObserver(()=> resizeCanvas(playCanvas, playWrap));
-  const timeRO = new ResizeObserver(()=> resizeCanvas(timeCanvas, timeWrap));
-  playRO.observe(playWrap);
-  timeRO.observe(timeWrap);
-  resizeCanvas(playCanvas, playWrap);
-  resizeCanvas(timeCanvas, timeWrap);
+  const roStage = new ResizeObserver(()=> resizeCanvas(stageCanvas, stageWrap));
+  const roTl = new ResizeObserver(()=> resizeCanvas(timelineCanvas, timelineWrap));
+  const roMini = new ResizeObserver(()=> resizeCanvas(miniCanvas, miniCanvas.parentElement));
+  roStage.observe(stageWrap);
+  roTl.observe(timelineWrap);
+  roMini.observe(miniCanvas.parentElement);
+  resizeCanvas(stageCanvas, stageWrap);
+  resizeCanvas(timelineCanvas, timelineWrap);
+  resizeCanvas(miniCanvas, miniCanvas.parentElement);
 
-  function PW(){ return playCanvas.width / devicePixelRatio; }
-  function PH(){ return playCanvas.height / devicePixelRatio; }
-  function TW(){ return timeCanvas.width / devicePixelRatio; }
-  function TH(){ return timeCanvas.height / devicePixelRatio; }
+  const SW = ()=> stageCanvas.width / devicePixelRatio;
+  const SH = ()=> stageCanvas.height / devicePixelRatio;
+  const TW = ()=> timelineCanvas.width / devicePixelRatio;
+  const TH = ()=> timelineCanvas.height / devicePixelRatio;
+  const MW = ()=> miniCanvas.width / devicePixelRatio;
+  const MH = ()=> miniCanvas.height / devicePixelRatio;
 
-  function centerY(){ return Math.floor(PH() * 0.55); }
-  function pxPerMs(){ return state.scrollPxPerSec / 1000; }
-  function laneW(){ return PW() / state.keys; }
+  const centerY = ()=> Math.floor(SH()*0.55);
+  const pxPerMs = ()=> state.scrollPxPerSec / 1000;
+  const laneW = ()=> SW() / state.keys;
 
-  function xFromLane(l){ return l * laneW(); }
-  function laneFromX(x){ return clamp(Math.floor(x / laneW()), 0, state.keys - 1); }
+  const xFromLane = (lane)=> lane * laneW();
+  const laneFromX = (x)=> clamp(Math.floor(x / laneW()), 0, state.keys-1);
 
-  function yFromTime(tMs){
-    return centerY() - (tMs - state.timeMs) * pxPerMs();
-  }
-  function timeFromY(y){
-    return state.timeMs + (centerY() - y) / pxPerMs();
-  }
+  const yFromTime = (tMs)=> centerY() - (tMs - state.timeMs) * pxPerMs();
+  const timeFromY = (y)=> state.timeMs + (centerY() - y) / pxPerMs();
 
-  // Timing helpers
+  // ---------- Timing helpers ----------
   function normalizeTiming(){
     state.timing.sort((a,b)=>a.t-b.t);
-    const out = [];
+    const out=[];
     for(const tp of state.timing){
-      if(out.length && out[out.length-1].t === tp.t) out[out.length-1] = tp;
+      if(out.length && out[out.length-1].t === tp.t) out[out.length-1]=tp;
       else out.push(tp);
     }
     state.timing = out;
@@ -567,73 +842,39 @@
     }
     return best;
   }
-  function beatLenMsAt(ms){
-    const tp = activeTP(ms);
-    return 60000 / tp.bpm;
-  }
   function snapMsAt(ms){
-    return beatLenMsAt(ms) / state.snap;
+    const tp = activeTP(ms);
+    const beatLen = 60000 / tp.bpm;
+    return beatLen / state.snap;
   }
   function quantizeAt(ms){
     if(!state.snapOn) return ms;
     const tp = activeTP(ms);
-    const step = (60000 / tp.bpm) / state.snap;
+    const beatLen = 60000 / tp.bpm;
+    const step = beatLen / state.snap;
     const base = tp.t;
     const n = Math.round((ms - base) / step);
-    return base + n * step;
+    return base + n*step;
   }
 
-  // Undo
-  function pushUndo(){
-    state.undo.push(JSON.stringify({
-      notes: state.notes,
-      timing: state.timing,
-      keys: state.keys,
-      snap: state.snap,
-      snapOn: state.snapOn,
-      scroll: state.scrollPxPerSec,
-      rate: state.rate,
-      meta: getMeta()
-    }));
-    if(state.undo.length > 200) state.undo.shift();
-    undoBtn.disabled = state.undo.length === 0;
-  }
-  function doUndo(){
-    const raw = state.undo.pop();
-    if(!raw) return;
-    const s = JSON.parse(raw);
-    state.notes = s.notes || [];
-    state.timing = s.timing || state.timing;
-    state.keys = s.keys ?? state.keys;
-    state.snap = s.snap ?? state.snap;
-    state.snapOn = s.snapOn ?? state.snapOn;
-    state.scrollPxPerSec = s.scroll ?? state.scrollPxPerSec;
-    state.rate = s.rate ?? state.rate;
-    if(s.meta) setMeta(s.meta);
-
-    keysSel.value = String(state.keys);
-    snapSel.value = String(state.snap);
-    snapOnSel.value = state.snapOn ? "on" : "off";
-    zoomIn.value = String(state.scrollPxPerSec);
-    rateIn.value = String(state.rate);
-
-    state.selected.clear();
-    updateSelectionUI();
-    renderTimingUI();
-    renderNoteList();
-    undoBtn.disabled = state.undo.length === 0;
-  }
-
-  // Audio
+  // ---------- Audio ----------
   async function ensureAC(){
     if(state.ac) return state.ac;
     state.ac = new (window.AudioContext || window.webkitAudioContext)();
+
+    // gain node for volume
+    state.gain = state.ac.createGain();
+    state.gain.gain.value = parseFloat(volRange.value) || 1;
+    state.gain.connect(state.ac.destination);
+
     return state.ac;
   }
+
   function cleanupSource(){
-    try{ if(state.source) state.source.stop(); } catch(e){}
+    try{ if(state.source) state.source.stop(); }catch(e){}
     state.source = null;
   }
+
   async function loadAudio(file){
     const ac = await ensureAC();
     const arr = await file.arrayBuffer();
@@ -644,62 +885,55 @@
     state.isPlaying = false;
     cleanupSource();
 
-    playBtn.disabled = false;
-    stopBtn.disabled = false;
     exportBtn.disabled = false;
+    undoBtn.disabled = state.undo.length===0;
+    deleteBtn.disabled = state.selected.size===0;
+    clearNotesBtn.disabled = false;
+    breakBtn.disabled = false;
+    tpAdd.disabled = false;
+    tpSort.disabled = false;
+    tpReset.disabled = false;
 
-    addTPBtn.disabled = false;
-    sortTPBtn.disabled = false;
-    resetTPBtn.disabled = false;
-    metronomeSel.disabled = false;
-
-    // build waveform
+    // waveform
     state.wf.ready = false;
     state.wf.peaks = null;
-    lblWF.textContent = "gerando…";
+    tlWf.textContent = "gerando…";
     buildPeaks();
-
-    renderTimingUI();
   }
 
-  function play(){
+  async function play(){
     if(!state.buffer) return;
-    ensureAC().then(async ac => {
-      if(ac.state === "suspended") await ac.resume();
-      cleanupSource();
-      const src = ac.createBufferSource();
-      src.buffer = state.buffer;
-      src.playbackRate.value = state.rate;
-      src.connect(ac.destination);
+    const ac = await ensureAC();
+    if(ac.state === "suspended") await ac.resume();
 
-      state.startedAt = ac.currentTime;
-      src.start(0, state.startOffsetSec);
+    cleanupSource();
 
-      state.source = src;
-      state.isPlaying = true;
-      playBtn.textContent = "Pause";
+    const src = ac.createBufferSource();
+    src.buffer = state.buffer;
+    src.playbackRate.value = state.rate;
 
-      state.metronome.lastBeatIndex = null;
+    src.connect(state.gain);
 
-      src.onended = () => {
-        if(state.isPlaying){
-          state.isPlaying = false;
-          playBtn.textContent = "Play";
-        }
-      };
-    });
+    state.startedAt = ac.currentTime;
+    src.start(0, state.startOffsetSec);
+
+    state.source = src;
+    state.isPlaying = true;
+
+    src.onended = ()=>{
+      if(state.isPlaying){
+        state.isPlaying=false;
+      }
+    };
   }
 
   function pause(){
     if(!state.ac) return;
     const ac = state.ac;
-
     const playedSec = (ac.currentTime - state.startedAt) * state.rate;
     state.startOffsetSec += playedSec;
-
     cleanupSource();
     state.isPlaying = false;
-    playBtn.textContent = "Play";
   }
 
   function stop(){
@@ -726,43 +960,10 @@
 
     const playedSec = (ac.currentTime - state.startedAt) * state.rate;
     const tSec = state.startOffsetSec + playedSec;
-    const ms = tSec * 1000;
-    state.timeMs = clamp(ms, 0, state.buffer.duration * 1000);
+    state.timeMs = clamp(tSec*1000, 0, state.buffer.duration*1000);
   }
 
-  // Metronome (simple tick)
-  function metronomeTick(){
-    if(!state.metronome.on) return;
-    if(!state.isPlaying) return;
-    if(!state.ac) return;
-
-    const tp = activeTP(state.timeMs);
-    const beatLen = 60000 / tp.bpm;
-    const base = tp.t;
-
-    const beatIndex = Math.floor((state.timeMs - base) / beatLen);
-    if(state.metronome.lastBeatIndex === beatIndex) return;
-    state.metronome.lastBeatIndex = beatIndex;
-
-    // short beep
-    try{
-      const ac = state.ac;
-      const osc = ac.createOscillator();
-      const gain = ac.createGain();
-      osc.type = "square";
-      osc.frequency.value = 880;
-      gain.gain.value = 0.03;
-
-      osc.connect(gain);
-      gain.connect(ac.destination);
-
-      const now = ac.currentTime;
-      osc.start(now);
-      osc.stop(now + 0.03);
-    } catch(e){}
-  }
-
-  // Waveform peaks for timeline
+  // ---------- Waveform peaks ----------
   function buildPeaks(){
     const buf = state.buffer;
     if(!buf) return;
@@ -805,18 +1006,18 @@
         i++;
       }
 
-      wf.progress = i / blocks;
-      lblWF.textContent = wf.progress >= 1 ? "ok" : Math.round(wf.progress*100) + "%";
+      wf.progress = i/blocks;
+      tlWf.textContent = wf.progress >= 1 ? "ok" : Math.round(wf.progress*100) + "%";
+      miniLbl.textContent = tlWf.textContent;
 
-      if(i < blocks){
-        requestAnimationFrame(step);
-      } else {
+      if(i < blocks) requestAnimationFrame(step);
+      else {
         wf.max = max || 1;
         wf.ready = true;
-        lblWF.textContent = "ok";
+        tlWf.textContent = "ok";
+        miniLbl.textContent = "ok";
       }
     }
-
     requestAnimationFrame(step);
   }
 
@@ -829,7 +1030,62 @@
     return wf.peaks[idx] / wf.max;
   }
 
-  // Notes
+  // ---------- Undo ----------
+  function pushUndo(){
+    state.undo.push(JSON.stringify({
+      keys: state.keys,
+      snap: state.snap,
+      snapOn: state.snapOn,
+      scrollPxPerSec: state.scrollPxPerSec,
+      tlWinSec: state.tlWinSec,
+      timing: state.timing,
+      breaks: state.breaks,
+      notes: state.notes,
+      meta: getMeta(),
+      bgOpacity: state.bgOpacity,
+      laneOpacity: state.laneOpacity
+    }));
+    if(state.undo.length > 200) state.undo.shift();
+    undoBtn.disabled = state.undo.length === 0;
+  }
+
+  function doUndo(){
+    const raw = state.undo.pop();
+    if(!raw) return;
+    const s = JSON.parse(raw);
+
+    state.keys = s.keys ?? state.keys;
+    state.snap = s.snap ?? state.snap;
+    state.snapOn = s.snapOn ?? state.snapOn;
+    state.scrollPxPerSec = s.scrollPxPerSec ?? state.scrollPxPerSec;
+    state.tlWinSec = s.tlWinSec ?? state.tlWinSec;
+    state.timing = s.timing ?? state.timing;
+    state.breaks = s.breaks ?? state.breaks;
+    state.notes = s.notes ?? state.notes;
+    if(s.meta) setMeta(s.meta);
+    state.bgOpacity = s.bgOpacity ?? state.bgOpacity;
+    state.laneOpacity = s.laneOpacity ?? state.laneOpacity;
+
+    // sync UI
+    keysSel.value = String(state.keys);
+    scrollIn.value = String(state.scrollPxPerSec);
+    tlWinIn.value = String(state.tlWinSec);
+    snapOnSel.value = state.snapOn ? "on" : "off";
+    bgOpacity.value = String(state.bgOpacity);
+    laneOpacity.value = String(state.laneOpacity);
+
+    // snap slider index
+    const idx = SNAP_OPTS.indexOf(state.snap);
+    snapRange.value = String(Math.max(0, idx));
+
+    state.selected.clear();
+    updateSelectionUI();
+    renderTPList();
+    renderBreakList();
+    undoBtn.disabled = state.undo.length===0;
+  }
+
+  // ---------- Notes ----------
   function sortNotes(){
     state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
   }
@@ -841,7 +1097,7 @@
     state.selected.clear();
     state.selected.add(note.id);
     updateSelectionUI();
-    renderNoteList();
+    deleteBtn.disabled = false;
   }
 
   function deleteSelection(){
@@ -850,86 +1106,114 @@
     state.notes = state.notes.filter(n => !state.selected.has(n.id));
     state.selected.clear();
     updateSelectionUI();
-    renderNoteList();
+    deleteBtn.disabled = true;
   }
 
-  function getSelectedNotes(){
-    const ids = state.selected;
-    return state.notes.filter(n => ids.has(n.id));
+  function clearNotes(){
+    pushUndo();
+    state.notes = [];
+    state.selected.clear();
+    updateSelectionUI();
+  }
+
+  function getSelectedOne(){
+    if(state.selected.size !== 1) return null;
+    const id = [...state.selected][0];
+    return state.notes.find(n => n.id === id) || null;
+  }
+
+  function setPropsEnabled(on){
+    propTime.disabled = !on;
+    propLane.disabled = !on;
+    propType.disabled = !on;
+    propEnd.disabled = !on;
+    hsVol.disabled = !on;
+    hsFlags.disabled = !on;
+    hsWhistle.disabled = !on;
+    hsFinish.disabled = !on;
+    hsClap.disabled = !on;
   }
 
   function updateSelectionUI(){
-    if(state.selected.size === 0){
-      selInfo.textContent = "—";
-      delBtn.disabled = true;
-      setPropsDisabled(true);
+    const countSel = state.selected.size;
+    selStr.textContent = `sel: ${countSel}`;
+    deleteBtn.disabled = countSel === 0;
+
+    if(countSel === 0){
+      selLine.textContent = "—";
+      setPropsEnabled(false);
       return;
     }
-    delBtn.disabled = false;
-
-    if(state.selected.size === 1){
-      const n = getSelectedNotes()[0];
-      selInfo.textContent = `lane ${n.lane+1} @ ${Math.round(n.t)}ms`;
-      setPropsDisabled(false);
-      fillPropsFromNote(n);
-    } else {
-      selInfo.textContent = `${state.selected.size} notas`;
-      setPropsDisabled(true);
+    if(countSel > 1){
+      selLine.textContent = `${countSel} notas selecionadas`;
+      setPropsEnabled(false);
+      return;
     }
-  }
 
-  function setPropsDisabled(dis){
-    propTime.disabled = dis;
-    propLane.disabled = dis;
-    propType.disabled = dis;
-    propEnd.disabled = dis;
-    hsFlags.disabled = dis;
-    hsVol.disabled = dis;
-  }
+    const n = getSelectedOne();
+    if(!n){
+      selLine.textContent = "—";
+      setPropsEnabled(false);
+      return;
+    }
+    selLine.textContent = `lane ${n.lane+1} @ ${Math.round(n.t)}ms`;
+    setPropsEnabled(true);
 
-  function fillPropsFromNote(n){
     propTime.value = Math.round(n.t);
-    propLane.value = n.lane + 1;
+    propLane.value = n.lane+1;
     propType.value = n.type;
     propEnd.value = Math.round(n.end ?? n.t);
-    hsFlags.value = String(n.hs ?? 0);
     hsVol.value = String(n.vol ?? 0);
+    hsFlags.value = String(n.hs ?? 0);
+
+    // button highlight
+    const hs = n.hs ?? 0;
+    hsWhistle.classList.toggle("active", (hs & 2) !== 0);
+    hsFinish.classList.toggle("active", (hs & 4) !== 0);
+    hsClap.classList.toggle("active", (hs & 8) !== 0);
   }
 
-  function applyPropsToSelected(){
-    if(state.selected.size !== 1) return;
-    const n = getSelectedNotes()[0];
+  function applyProps(){
+    const n = getSelectedOne();
     if(!n) return;
 
     pushUndo();
 
-    const t = Number(propTime.value)||0;
-    const lane = clamp((Number(propLane.value)||1) - 1, 0, state.keys - 1);
+    const tRaw = Number(propTime.value)||0;
+    const laneRaw = (Number(propLane.value)||1) - 1;
+    const lane = clamp(laneRaw, 0, state.keys-1);
     const type = propType.value === "hold" ? "hold" : "tap";
-    let end = Number(propEnd.value)||t;
-    const hs = Number(hsFlags.value)||0;
-    const vol = clamp(Number(hsVol.value)||0, 0, 100);
 
     n.lane = lane;
-    n.t = state.snapOn ? quantizeAt(t) : t;
+    n.t = state.snapOn ? quantizeAt(tRaw) : tRaw;
 
     if(type === "tap"){
       n.type = "tap";
       n.end = n.t;
     } else {
+      const endRaw = Number(propEnd.value)||n.t;
+      const endQ = state.snapOn ? quantizeAt(endRaw) : endRaw;
       n.type = "hold";
-      end = Math.max(n.t + 1, state.snapOn ? quantizeAt(end) : end);
-      n.end = end;
+      n.end = Math.max(n.t + 1, endQ);
     }
-    n.hs = hs;
-    n.vol = vol;
+
+    n.vol = clamp(Number(hsVol.value)||0, 0, 100);
+    n.hs = clamp(Number(hsFlags.value)||0, 0, 14);
 
     sortNotes();
-    renderNoteList();
     updateSelectionUI();
   }
 
-  // Hit-testing
+  function toggleHs(bit){
+    const n = getSelectedOne();
+    if(!n) return;
+    pushUndo();
+    n.hs = (n.hs ?? 0) ^ bit;
+    hsFlags.value = String(n.hs);
+    updateSelectionUI();
+  }
+
+  // ---------- Hit testing ----------
   function findNoteAt(mx, my){
     const lw = laneW();
     const lane = laneFromX(mx);
@@ -945,375 +1229,160 @@
       const rectH = 12;
 
       // head
-      const rx = x0 + pad, ry = y - rectH/2, rw = rectW, rh = rectH;
-      if(mx >= rx && mx <= rx+rw && my >= ry && my <= ry+rh) return n;
+      const rx = x0+pad, ry = y-rectH/2, rw = rectW, rh=rectH;
+      if(mx>=rx && mx<=rx+rw && my>=ry && my<=ry+rh) return n;
 
       if(n.type === "hold"){
         const y2 = yFromTime(n.end);
         const top = Math.min(y,y2);
         const bot = Math.max(y,y2);
         const barX = x0 + lw/2 - 3;
-        if(mx >= barX-7 && mx <= barX+13 && my >= top-7 && my <= bot+7) return n;
+        if(mx>=barX-7 && mx<=barX+13 && my>=top-7 && my<=bot+7) return n;
       }
     }
     return null;
   }
 
-  // Rendering
-  function drawPlayfield(){
-    const w = PW(), h = PH();
-    pctx.clearRect(0,0,w,h);
-    pctx.fillStyle = "#07090d";
-    pctx.fillRect(0,0,w,h);
-
-    // lanes
-    const lw = laneW();
-    for(let i=0;i<state.keys;i++){
-      pctx.fillStyle = "rgba(255,255,255,.04)";
-      pctx.fillRect(i*lw, 0, lw-1, h);
-      pctx.fillStyle = "rgba(255,255,255,.08)";
-      pctx.fillRect(i*lw, 0, 1, h);
+  // ---------- Breaks ----------
+  function setBreakStatus(){
+    if(!state.breakArming){
+      brkStatus.textContent = "—";
+      return;
     }
-    pctx.fillStyle = "rgba(255,255,255,.10)";
-    pctx.fillRect(w-1,0,1,h);
-
-    // faint waveform in background (optional)
-    if(state.wf.ready){
-      pctx.globalAlpha = 0.12;
-      pctx.strokeStyle = "rgba(125,211,252,.9)";
-      pctx.lineWidth = 1;
-      pctx.beginPath();
-      const mid = w*0.5;
-      const maxX = w*0.48;
-      for(let y=0; y<=h; y+=3){
-        const t = timeFromY(y);
-        const a = ampAtMs(t);
-        const x = mid + (a*maxX);
-        if(y===0) pctx.moveTo(x,y); else pctx.lineTo(x,y);
-      }
-      pctx.stroke();
-      pctx.globalAlpha = 1;
-    }
-
-    // grid lines (snap)
-    const viewMs = h / pxPerMs();
-    const tMin = state.timeMs - viewMs*0.65;
-    const tMax = state.timeMs + viewMs*0.45;
-
-    // draw per segment (timing points)
-    normalizeTiming();
-    const tps = state.timing.slice();
-    for(let i=0;i<tps.length;i++){
-      const tp = tps[i];
-      const next = tps[i+1];
-      const segStart = Math.max(tMin, tp.t);
-      const segEnd = Math.min(tMax, next ? next.t : Infinity);
-      if(segEnd <= segStart) continue;
-
-      const beatLen = 60000 / tp.bpm;
-      const meter = tp.meter || 4;
-      const step = beatLen / state.snap;
-
-      const base = tp.t;
-      const n0 = Math.ceil((segStart - base) / step);
-      for(let t = base + n0*step; t <= segEnd; t += step){
-        const y = yFromTime(t);
-        if(y < -50 || y > h+50) continue;
-
-        const rel = t - base;
-        const beatIndex = Math.round(rel / beatLen);
-        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
-        const isBar = isBeat && (beatIndex % meter === 0);
-
-        pctx.strokeStyle = isBar ? "rgba(255,255,255,.18)"
-                      : isBeat ? "rgba(255,255,255,.13)"
-                               : "rgba(255,255,255,.07)";
-        pctx.lineWidth = isBar ? 1.7 : (isBeat ? 1.2 : 1);
-        pctx.beginPath();
-        pctx.moveTo(0,y);
-        pctx.lineTo(w,y);
-        pctx.stroke();
-      }
-    }
-
-    // playhead
-    pctx.strokeStyle = "rgba(125,211,252,.85)";
-    pctx.lineWidth = 2;
-    pctx.beginPath();
-    pctx.moveTo(0, centerY());
-    pctx.lineTo(w, centerY());
-    pctx.stroke();
-
-    // notes
-    for(const n of state.notes){
-      const y = yFromTime(n.t);
-      if(y < -140 || y > h+140) continue;
-
-      const x0 = xFromLane(n.lane);
-      const pad = 7;
-      const rectW = lw - pad*2;
-      const rectH = 12;
-
-      const isSel = state.selected.has(n.id);
-
-      if(n.type === "hold"){
-        const y2 = yFromTime(n.end);
-        const top = Math.min(y,y2);
-        const bot = Math.max(y,y2);
-
-        pctx.fillStyle = isSel ? "rgba(167,139,250,.40)" : "rgba(255,255,255,.16)";
-        pctx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
-
-        pctx.fillStyle = isSel ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.70)";
-        pctx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
-      }
-
-      pctx.fillStyle = isSel ? "rgba(125,211,252,.92)" : "rgba(255,255,255,.70)";
-      pctx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
-
-      if(isSel){
-        pctx.strokeStyle = "rgba(125,211,252,.95)";
-        pctx.lineWidth = 1.2;
-        pctx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
-      }
-    }
-
-    // box select
-    if(state.drag.mode === "box" && state.drag.box){
-      const b = rectNorm(state.drag.box);
-      pctx.fillStyle = "rgba(125,211,252,.12)";
-      pctx.strokeStyle = "rgba(125,211,252,.7)";
-      pctx.lineWidth = 1.4;
-      pctx.fillRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
-      pctx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+    if(state.breakStart == null){
+      brkStatus.textContent = "click p/ start";
+    } else {
+      brkStatus.textContent = `start ${Math.round(state.breakStart)}ms`;
     }
   }
 
-  function rectNorm(b){
-    return { x0: Math.min(b.x0,b.x1), y0: Math.min(b.y0,b.y1), x1: Math.max(b.x0,b.x1), y1: Math.max(b.y0,b.y1) };
+  function toggleBreakMode(){
+    state.breakArming = !state.breakArming;
+    state.breakStart = null;
+    breakBtn.classList.toggle("active", state.breakArming);
+    setBreakStatus();
   }
 
-  // Timeline mapping (window around playhead)
-  function timelineRange(){
-    const half = (state.timelineWindowSec * 1000) / 2;
-    const start = state.timeMs - half;
-    const end = state.timeMs + half;
-    return { start, end };
-  }
-  function xFromTime(ms){
-    const {start,end} = timelineRange();
-    const w = TW();
-    const t = (ms - start) / (end - start);
-    return t * w;
-  }
-  function timeFromX(x){
-    const {start,end} = timelineRange();
-    const w = TW();
-    const t = x / w;
-    return start + t * (end - start);
-  }
+  function commitBreakAt(ms){
+    if(!state.breakArming) return;
 
-  function drawTimeline(){
-    const w = TW(), h = TH();
-    tctx.clearRect(0,0,w,h);
-    tctx.fillStyle = "#07090d";
-    tctx.fillRect(0,0,w,h);
-
-    const {start,end} = timelineRange();
-
-    // waveform
-    if(state.wf.ready){
-      tctx.globalAlpha = 0.35;
-      tctx.strokeStyle = "rgba(125,211,252,.85)";
-      tctx.lineWidth = 1;
-      tctx.beginPath();
-      for(let x=0; x<=w; x+=2){
-        const ms = timeFromX(x);
-        const a = ampAtMs(ms);
-        const y = h*0.5;
-        const amp = a * (h*0.42);
-        tctx.moveTo(x, y-amp);
-        tctx.lineTo(x, y+amp);
-      }
-      tctx.stroke();
-      tctx.globalAlpha = 1;
+    if(state.breakStart == null){
+      state.breakStart = ms;
+      setBreakStatus();
+      return;
     }
-
-    // beat lines
-    normalizeTiming();
-    const tp = activeTP(state.timeMs);
-    const beatLen = 60000 / tp.bpm;
-    const step = beatLen / state.snap;
-    const base = tp.t;
-
-    const n0 = Math.ceil((start - base) / step);
-    for(let t = base + n0*step; t <= end; t += step){
-      const x = xFromTime(t);
-      const rel = t - base;
-      const beatIndex = Math.round(rel / beatLen);
-      const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
-      const isBar = isBeat && (beatIndex % (tp.meter||4) === 0);
-
-      tctx.strokeStyle = isBar ? "rgba(255,255,255,.20)"
-                    : isBeat ? "rgba(255,255,255,.13)"
-                             : "rgba(255,255,255,.07)";
-      tctx.lineWidth = isBar ? 1.6 : (isBeat ? 1.1 : 1);
-      tctx.beginPath();
-      tctx.moveTo(x, 0);
-      tctx.lineTo(x, h);
-      tctx.stroke();
+    const a = Math.round(Math.min(state.breakStart, ms));
+    const b = Math.round(Math.max(state.breakStart, ms));
+    if(b - a < 10){
+      // too short -> cancel
+      state.breakStart = null;
+      setBreakStatus();
+      return;
     }
-
-    // notes markers (per lane)
-    const laneH = h / state.keys;
-    for(const n of state.notes){
-      if(n.t < start || n.t > end) continue;
-      const x = xFromTime(n.t);
-      const y = (n.lane + 0.5) * laneH;
-      tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.75)";
-      tctx.fillRect(x-2, y-6, 4, 12);
-      if(n.type === "hold"){
-        const x2 = xFromTime(n.end);
-        tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.18)";
-        tctx.fillRect(Math.min(x,x2), y-2, Math.abs(x2-x), 4);
-      }
-    }
-
-    // playhead in timeline
-    const xPH = xFromTime(state.timeMs);
-    tctx.strokeStyle = "rgba(125,211,252,.9)";
-    tctx.lineWidth = 2;
-    tctx.beginPath();
-    tctx.moveTo(xPH, 0);
-    tctx.lineTo(xPH, h);
-    tctx.stroke();
-
-    // window label
-    lblWin.textContent = String(state.timelineWindowSec);
+    pushUndo();
+    state.breaks.push({ id: uid(), start:a, end:b });
+    state.breaks.sort((x,y)=>x.start-y.start);
+    state.breakStart = null;
+    setBreakStatus();
+    renderBreakList();
   }
 
-  function renderLoop(){
-    updateTimeFromAudio();
-    metronomeTick();
-
-    const tp = activeTP(state.timeMs);
-    lblTime.textContent = String(Math.round(state.timeMs));
-    lblCount.textContent = String(state.notes.length);
-    lblTP.textContent = `${tp.bpm.toFixed(3)} BPM @ ${Math.round(tp.t)}ms`;
-    lblTool.textContent = state.tool;
-
-    drawPlayfield();
-    drawTimeline();
-
-    requestAnimationFrame(renderLoop);
-  }
-
-  // Note list UI
-  function renderNoteList(){
-    const items = state.notes.slice().sort((a,b)=>b.t-a.t).slice(0,120);
-    noteList.innerHTML = items.map(n => {
-      const sel = state.selected.has(n.id);
-      const t = Math.round(n.t);
-      const extra = n.type === "hold" ? ` → ${Math.round(n.end)}ms` : "";
-      return `<div class="item ${sel ? "sel":""}" data-id="${n.id}">
-        <span><b>${n.type.toUpperCase()}</b> lane ${n.lane+1}</span>
-        <span>${t}ms${extra}</span>
+  function renderBreakList(){
+    if(state.breaks.length === 0){
+      breakList.innerHTML = `<div class="item"><span>—</span><span class="mono">sem breaks</span></div>`;
+      return;
+    }
+    breakList.innerHTML = state.breaks.map(b => {
+      return `<div class="item" data-id="${b.id}">
+        <span><b class="mono">${b.start}</b> → <b class="mono">${b.end}</b></span>
+        <span class="mono" style="opacity:.9">del</span>
       </div>`;
-    }).join("") || `<div class="row"><span>—</span><span>Sem notas ainda</span></div>`;
+    }).join("");
 
-    noteList.querySelectorAll(".item").forEach(el => {
-      el.addEventListener("click", (e) => {
+    breakList.querySelectorAll(".item").forEach(el => {
+      el.addEventListener("click", () => {
         const id = el.getAttribute("data-id");
-        if(e.ctrlKey || e.metaKey){
-          if(state.selected.has(id)) state.selected.delete(id);
-          else state.selected.add(id);
-        } else {
-          state.selected.clear();
-          state.selected.add(id);
-        }
-        updateSelectionUI();
-        renderNoteList();
+        pushUndo();
+        state.breaks = state.breaks.filter(b => b.id !== id);
+        renderBreakList();
       });
     });
   }
 
-  // Timing UI
-  function renderTimingUI(){
+  // ---------- Timing list ----------
+  function renderTPList(){
     normalizeTiming();
     tpList.innerHTML = state.timing.map(tp => {
-      return `
-        <div class="item" style="cursor:default" data-tpid="${tp.id}">
-          <span>
-            <b>${Math.round(tp.t)}ms</b> • ${tp.bpm.toFixed(3)} BPM • ${tp.meter||4}/4
-          </span>
-          <span style="display:flex; gap:8px; align-items:center;">
-            <input data-k="t" type="number" step="1" value="${Math.round(tp.t)}" style="width:110px">
-            <input data-k="bpm" type="number" step="0.001" value="${tp.bpm}" style="width:110px">
-            <button class="danger" data-act="del">X</button>
-          </span>
-        </div>
-      `;
+      return `<div class="item" data-id="${tp.id}" style="cursor:default">
+        <span><b class="mono">${Math.round(tp.t)}ms</b> • <span class="mono">${tp.bpm.toFixed(3)} BPM</span></span>
+        <span style="display:flex; gap:8px; align-items:center">
+          <input class="mono" data-k="t" type="number" step="1" value="${Math.round(tp.t)}" style="width:110px">
+          <input class="mono" data-k="bpm" type="number" step="0.001" value="${tp.bpm}" style="width:110px">
+          <span class="mono" style="opacity:.9; cursor:pointer" data-act="del">x</span>
+        </span>
+      </div>`;
     }).join("");
 
     tpList.querySelectorAll(".item").forEach(row => {
-      const id = row.getAttribute("data-tpid");
+      const id = row.getAttribute("data-id");
       const tp = state.timing.find(x => x.id === id);
       if(!tp) return;
 
       const tIn = row.querySelector('input[data-k="t"]');
       const bpmIn = row.querySelector('input[data-k="bpm"]');
-      const del = row.querySelector('button[data-act="del"]');
+      const del = row.querySelector('[data-act="del"]');
 
-      tIn.addEventListener("change", () => {
+      tIn.addEventListener("change", ()=>{
         pushUndo();
         tp.t = Math.max(0, Math.round(Number(tIn.value)||0));
         normalizeTiming();
-        renderTimingUI();
+        renderTPList();
       });
-      bpmIn.addEventListener("change", () => {
+      bpmIn.addEventListener("change", ()=>{
         pushUndo();
         tp.bpm = clamp(Number(bpmIn.value)||180, 30, 400);
         normalizeTiming();
-        renderTimingUI();
+        renderTPList();
       });
-      del.addEventListener("click", () => {
+      del.addEventListener("click", ()=>{
         if(state.timing.length <= 1) return;
         pushUndo();
         state.timing = state.timing.filter(x => x.id !== id);
         normalizeTiming();
-        renderTimingUI();
+        renderTPList();
       });
     });
   }
 
-  // Export (.osu mania)
+  // ---------- Export .osu ----------
+  function getMeta(){
+    return {
+      title: mTitle.value || "WebManiaEditor",
+      artist: mArtist.value || "Unknown",
+      creator: mCreator.value || "reze",
+      version: mVersion.value || "Easy"
+    };
+  }
+  function setMeta(m){
+    mTitle.value = m.title ?? mTitle.value;
+    mArtist.value = m.artist ?? mArtist.value;
+    mCreator.value = m.creator ?? mCreator.value;
+    mVersion.value = m.version ?? mVersion.value;
+  }
+
   function laneToOsuX(lane){
     const x = Math.floor((lane + 0.5) * 512 / state.keys);
     return clamp(x, 0, 511);
   }
 
-  function getMeta(){
-    return {
-      title: metaTitle?.value ?? "WebManiaEditor",
-      artist: metaArtist?.value ?? "Unknown",
-      creator: metaCreator?.value ?? "reze",
-      version: metaVersion?.value ?? "Easy"
-    };
-  }
-  function setMeta(m){
-    if(metaTitle) metaTitle.value = m.title ?? metaTitle.value;
-    if(metaArtist) metaArtist.value = m.artist ?? metaArtist.value;
-    if(metaCreator) metaCreator.value = m.creator ?? metaCreator.value;
-    if(metaVersion) metaVersion.value = m.version ?? metaVersion.value;
-  }
-
   function exportOsu(){
+    if(!state.buffer) return;
+    normalizeTiming();
+    sortNotes();
+
     const meta = getMeta();
     const audioName = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\","/");
     const keys = state.keys;
-
-    normalizeTiming();
-    sortNotes();
 
     const header =
 `osu file format v14
@@ -1331,7 +1400,6 @@ SpecialStyle: 0
 WidescreenStoryboard: 0
 
 [Editor]
-DistanceSpacing: 1.0
 BeatDivisor: ${state.snap}
 GridSize: 4
 TimelineZoom: 1.0
@@ -1354,21 +1422,25 @@ SliderTickRate:1
 
 [Events]
 //Background and Video events
-//Break Periods
-//Storyboard Layer 0 (Background)
-//Storyboard Layer 1 (Fail)
-//Storyboard Layer 2 (Pass)
-//Storyboard Layer 3 (Foreground)
-//Storyboard Layer 4 (Overlay)
-//Storyboard Sound Samples
+`;
+
+    const events = state.breaks
+      .slice()
+      .sort((a,b)=>a.start-b.start)
+      .map(b => `2,${Math.round(b.start)},${Math.round(b.end)}`)
+      .join("\n");
+
+    const timingHeader = `
 
 [TimingPoints]
 `;
-
-    const tps = state.timing.map(tp => {
-      const beatLen = (60000 / tp.bpm);
-      return `${Math.round(tp.t)},${beatLen.toFixed(15)},${tp.meter||4},2,0,100,1,0`;
-    }).join("\n");
+    const tps = state.timing
+      .slice()
+      .sort((a,b)=>a.t-b.t)
+      .map(tp => {
+        const beatLen = (60000 / tp.bpm);
+        return `${Math.round(tp.t)},${beatLen.toFixed(15)},${tp.meter||4},2,0,100,1,0`;
+      }).join("\n");
 
     const hitHeader = `
 
@@ -1380,8 +1452,6 @@ SliderTickRate:1
       const y = 192;
       const t = Math.round(n.t);
       const hs = n.hs ?? 0;
-
-      // hitSample: normalSet:additionSet:index:volume:filename
       const vol = clamp(n.vol ?? 0, 0, 100);
       const sample = `0:0:0:${vol}:`;
 
@@ -1393,7 +1463,7 @@ SliderTickRate:1
       }
     }).join("\n");
 
-    const out = header + tps + hitHeader + hitLines + "\n";
+    const out = header + (events ? events + "\n" : "") + timingHeader + tps + hitHeader + hitLines + "\n";
     const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -1402,179 +1472,428 @@ SliderTickRate:1
     URL.revokeObjectURL(a.href);
   }
 
-  // Tool switching
+  // ---------- Rendering ----------
+  function fmtTime(ms){
+    ms = Math.max(0, Math.floor(ms));
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const t = ms % 1000;
+    const mm = String(m).padStart(2,"0");
+    const ss = String(s).padStart(2,"0");
+    const tt = String(t).padStart(3,"0");
+    return `${mm}:${ss}:${tt}`;
+  }
+
+  function drawStage(){
+    const w = SW(), h = SH();
+    sctx.clearRect(0,0,w,h);
+
+    // bg image
+    if(state.bgImg){
+      sctx.globalAlpha = state.bgOpacity;
+      const img = state.bgImg;
+      // cover
+      const scale = Math.max(w/img.width, h/img.height);
+      const iw = img.width*scale, ih = img.height*scale;
+      const ix = (w-iw)/2, iy=(h-ih)/2;
+      sctx.drawImage(img, ix, iy, iw, ih);
+      sctx.globalAlpha = 1;
+    } else {
+      sctx.fillStyle = "#07090d";
+      sctx.fillRect(0,0,w,h);
+    }
+
+    // lanes background
+    const lw = laneW();
+    for(let i=0;i<state.keys;i++){
+      sctx.fillStyle = `rgba(255,255,255,${state.laneOpacity})`;
+      sctx.fillRect(i*lw, 0, lw-1, h);
+      sctx.fillStyle = "rgba(255,255,255,.08)";
+      sctx.fillRect(i*lw, 0, 1, h);
+    }
+    sctx.fillStyle = "rgba(255,255,255,.12)";
+    sctx.fillRect(w-1,0,1,h);
+
+    // grid lines (per timing segments)
+    const viewMs = h / pxPerMs();
+    const tMin = state.timeMs - viewMs*0.65;
+    const tMax = state.timeMs + viewMs*0.45;
+
+    normalizeTiming();
+    const tps = state.timing.slice();
+
+    for(let i=0;i<tps.length;i++){
+      const tp = tps[i];
+      const next = tps[i+1];
+      const segStart = Math.max(tMin, tp.t);
+      const segEnd = Math.min(tMax, next ? next.t : Infinity);
+      if(segEnd <= segStart) continue;
+
+      const beatLen = 60000 / tp.bpm;
+      const meter = tp.meter || 4;
+      const step = beatLen / state.snap;
+
+      // first tick
+      const base = tp.t;
+      const n0 = Math.ceil((segStart - base) / step);
+      for(let t = base + n0*step; t <= segEnd; t += step){
+        const y = yFromTime(t);
+        if(y < -50 || y > h+50) continue;
+
+        const rel = t - base;
+        const beatIndex = Math.round(rel / beatLen);
+        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+        const isBar = isBeat && (beatIndex % meter === 0);
+
+        const a = isBar ? 0.22 : isBeat ? 0.14 : 0.08;
+        sctx.strokeStyle = `rgba(255,255,255,${a})`;
+        sctx.lineWidth = isBar ? 1.8 : isBeat ? 1.2 : 1;
+        sctx.beginPath();
+        sctx.moveTo(0,y);
+        sctx.lineTo(w,y);
+        sctx.stroke();
+      }
+    }
+
+    // playhead
+    sctx.strokeStyle = "rgba(125,211,252,.92)";
+    sctx.lineWidth = 2;
+    sctx.beginPath();
+    sctx.moveTo(0, centerY());
+    sctx.lineTo(w, centerY());
+    sctx.stroke();
+
+    // draw breaks region overlay (optional subtle)
+    if(state.breaks.length){
+      sctx.globalAlpha = 0.10;
+      sctx.fillStyle = "rgba(134,239,172,1)";
+      for(const b of state.breaks){
+        const y1 = yFromTime(b.start);
+        const y2 = yFromTime(b.end);
+        const top = Math.min(y1,y2);
+        const bot = Math.max(y1,y2);
+        if(bot < -50 || top > h+50) continue;
+        sctx.fillRect(0, top, w, bot-top);
+      }
+      sctx.globalAlpha = 1;
+    }
+
+    // notes
+    for(const n of state.notes){
+      const y = yFromTime(n.t);
+      if(y < -140 || y > h+140) continue;
+
+      const x0 = xFromLane(n.lane);
+      const pad = 7;
+      const rectW = lw - pad*2;
+      const rectH = 12;
+      const isSel = state.selected.has(n.id);
+
+      if(n.type === "hold"){
+        const y2 = yFromTime(n.end);
+        const top = Math.min(y,y2);
+        const bot = Math.max(y,y2);
+        sctx.fillStyle = isSel ? "rgba(167,139,250,.40)" : "rgba(255,255,255,.16)";
+        sctx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
+
+        sctx.fillStyle = isSel ? "rgba(167,139,250,.92)" : "rgba(255,255,255,.72)";
+        sctx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
+      }
+
+      sctx.fillStyle = isSel ? "rgba(125,211,252,.95)" : "rgba(255,255,255,.78)";
+      sctx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
+
+      if(isSel){
+        sctx.strokeStyle = "rgba(125,211,252,.95)";
+        sctx.lineWidth = 1.2;
+        sctx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
+      }
+    }
+
+    // box select overlay
+    if(state.drag.mode === "box" && state.drag.box){
+      const b = rectNorm(state.drag.box);
+      sctx.fillStyle = "rgba(125,211,252,.12)";
+      sctx.strokeStyle = "rgba(125,211,252,.72)";
+      sctx.lineWidth = 1.4;
+      sctx.fillRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+      sctx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+    }
+  }
+
+  function rectNorm(box){
+    return {
+      x0: Math.min(box.x0, box.x1),
+      y0: Math.min(box.y0, box.y1),
+      x1: Math.max(box.x0, box.x1),
+      y1: Math.max(box.y0, box.y1),
+    };
+  }
+
+  // Timeline window around playhead
+  function tlRange(){
+    const half = (state.tlWinSec*1000)/2;
+    return { start: state.timeMs - half, end: state.timeMs + half };
+  }
+  function xFromTime(ms){
+    const {start,end} = tlRange();
+    const w = TW();
+    const t = (ms - start) / (end - start);
+    return t * w;
+  }
+  function timeFromX(x){
+    const {start,end} = tlRange();
+    const w = TW();
+    const t = x / w;
+    return start + t*(end-start);
+  }
+
+  function drawTimeline(){
+    const w = TW(), h = TH();
+    tctx.clearRect(0,0,w,h);
+    tctx.fillStyle = "#07090d";
+    tctx.fillRect(0,0,w,h);
+
+    const {start,end} = tlRange();
+
+    // waveform
+    if(state.wf.ready){
+      tctx.globalAlpha = 0.35;
+      tctx.strokeStyle = "rgba(125,211,252,.85)";
+      tctx.lineWidth = 1;
+      tctx.beginPath();
+      const mid = h*0.5;
+      for(let x=0; x<=w; x+=2){
+        const ms = timeFromX(x);
+        const a = ampAtMs(ms);
+        const amp = a*(h*0.42);
+        tctx.moveTo(x, mid-amp);
+        tctx.lineTo(x, mid+amp);
+      }
+      tctx.stroke();
+      tctx.globalAlpha = 1;
+    }
+
+    // breaks overlay
+    if(state.breaks.length){
+      tctx.globalAlpha = 0.10;
+      tctx.fillStyle = "rgba(134,239,172,1)";
+      for(const b of state.breaks){
+        if(b.end < start || b.start > end) continue;
+        const x1 = xFromTime(b.start);
+        const x2 = xFromTime(b.end);
+        tctx.fillRect(Math.min(x1,x2), 0, Math.abs(x2-x1), h);
+      }
+      tctx.globalAlpha = 1;
+    }
+
+    // beat lines (active TP only for simplicity here)
+    const tp = activeTP(state.timeMs);
+    const beatLen = 60000 / tp.bpm;
+    const step = beatLen / state.snap;
+    const base = tp.t;
+
+    const n0 = Math.ceil((start - base) / step);
+    for(let t = base + n0*step; t <= end; t += step){
+      const x = xFromTime(t);
+      const rel = t - base;
+      const beatIndex = Math.round(rel / beatLen);
+      const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+      const isBar = isBeat && (beatIndex % (tp.meter||4) === 0);
+      const a = isBar ? .22 : isBeat ? .14 : .08;
+
+      tctx.strokeStyle = `rgba(255,255,255,${a})`;
+      tctx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
+      tctx.beginPath();
+      tctx.moveTo(x,0);
+      tctx.lineTo(x,h);
+      tctx.stroke();
+    }
+
+    // notes markers per lane
+    const laneH = h / state.keys;
+    for(const n of state.notes){
+      if(n.t < start || n.t > end) continue;
+      const x = xFromTime(n.t);
+      const y = (n.lane + 0.5)*laneH;
+
+      tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.75)";
+      tctx.fillRect(x-2, y-6, 4, 12);
+
+      if(n.type === "hold"){
+        const x2 = xFromTime(n.end);
+        tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.18)";
+        tctx.fillRect(Math.min(x,x2), y-2, Math.abs(x2-x), 4);
+      }
+    }
+
+    // playhead
+    const xPH = xFromTime(state.timeMs);
+    tctx.strokeStyle = "rgba(125,211,252,.95)";
+    tctx.lineWidth = 2;
+    tctx.beginPath();
+    tctx.moveTo(xPH,0);
+    tctx.lineTo(xPH,h);
+    tctx.stroke();
+  }
+
+  // Minimap: whole song waveform + note density + playhead
+  function drawMinimap(){
+    const w = MW(), h = MH();
+    mctx.clearRect(0,0,w,h);
+    mctx.fillStyle = "#07090d";
+    mctx.fillRect(0,0,w,h);
+
+    if(!state.buffer || !state.wf.ready){
+      mctx.fillStyle = "rgba(255,255,255,.10)";
+      mctx.fillRect(0,0,w,h);
+      return;
+    }
+
+    const durMs = state.buffer.duration*1000;
+
+    // waveform vertical strip
+    mctx.globalAlpha = 0.35;
+    mctx.strokeStyle = "rgba(125,211,252,.85)";
+    mctx.lineWidth = 1;
+    mctx.beginPath();
+
+    for(let y=0; y<=h; y+=2){
+      const ms = (y/h)*durMs;
+      const a = ampAtMs(ms);
+      const x = (w*0.5) + a*(w*0.45);
+      if(y===0) mctx.moveTo(x,y);
+      else mctx.lineTo(x,y);
+    }
+    mctx.stroke();
+    mctx.globalAlpha = 1;
+
+    // breaks overlay
+    if(state.breaks.length){
+      mctx.globalAlpha = 0.10;
+      mctx.fillStyle = "rgba(134,239,172,1)";
+      for(const b of state.breaks){
+        const y1 = (b.start/durMs)*h;
+        const y2 = (b.end/durMs)*h;
+        mctx.fillRect(0, Math.min(y1,y2), w, Math.abs(y2-y1));
+      }
+      mctx.globalAlpha = 1;
+    }
+
+    // density of notes (simple)
+    mctx.globalAlpha = 0.18;
+    mctx.fillStyle = "rgba(255,255,255,1)";
+    const bins = 140;
+    const binMs = durMs / bins;
+    const counts = new Array(bins).fill(0);
+    for(const n of state.notes){
+      const idx = clamp(Math.floor(n.t / binMs), 0, bins-1);
+      counts[idx]++;
+    }
+    const maxC = Math.max(1, ...counts);
+    for(let i=0;i<bins;i++){
+      const y0 = (i/bins)*h;
+      const y1 = ((i+1)/bins)*h;
+      const ww = (counts[i]/maxC) * (w*0.35);
+      mctx.fillRect(0, y0, ww, y1-y0);
+    }
+    mctx.globalAlpha = 1;
+
+    // playhead
+    const py = (state.timeMs/durMs)*h;
+    mctx.strokeStyle = "rgba(125,211,252,.95)";
+    mctx.lineWidth = 2;
+    mctx.beginPath();
+    mctx.moveTo(0, py);
+    mctx.lineTo(w, py);
+    mctx.stroke();
+  }
+
+  // ---------- Input handling ----------
   function setTool(tool){
     state.tool = tool;
-    toolButtons.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
+    tools.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
+    pillTool.textContent = tool[0].toUpperCase()+tool.slice(1);
   }
 
-  // Tabs
-  function setTab(name){
-    [tabCompose, tabTiming, tabSong].forEach(t => t.classList.remove("active"));
-    if(name === "compose") tabCompose.classList.add("active");
-    if(name === "timing") tabTiming.classList.add("active");
-    if(name === "song") tabSong.classList.add("active");
+  function setTab(tab){
+    state.tab = tab;
+    tabs.forEach(t => t.classList.toggle("active", t.getAttribute("data-tab")===tab));
 
-    rightCompose.classList.toggle("hidden", name !== "compose");
-    rightTiming.classList.toggle("hidden", name !== "timing");
-    rightSong.classList.toggle("hidden", name !== "song");
+    // (layout já está sempre visível; tab é mais “estado” por enquanto)
+    // Você pode depois esconder/mostrar painéis por tab se quiser.
   }
 
-  // Input wiring
-  audioFile.addEventListener("change", async () => {
-    const f = audioFile.files[0];
-    if(!f) return;
-    await loadAudio(f);
-  });
-
-  playBtn.addEventListener("click", async () => {
-    if(!state.buffer) return;
-    if(!state.ac) await ensureAC();
-    if(state.isPlaying) pause(); else play();
-  });
-  stopBtn.addEventListener("click", stop);
-  exportBtn.addEventListener("click", exportOsu);
-
-  undoBtn.addEventListener("click", doUndo);
-  delBtn.addEventListener("click", deleteSelection);
-
-  keysSel.addEventListener("change", () => {
-    pushUndo();
-    state.keys = parseInt(keysSel.value,10);
+  function setKeys(k){
+    state.keys = clamp(k,4,7);
+    pillKeys.textContent = String(state.keys);
     // clamp lanes
     for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
-    // clamp selection props
     updateSelectionUI();
-    renderNoteList();
-  });
+  }
 
-  snapSel.addEventListener("change", () => state.snap = parseInt(snapSel.value,10));
-  snapOnSel.addEventListener("change", () => state.snapOn = (snapOnSel.value === "on"));
-  zoomIn.addEventListener("change", () => state.scrollPxPerSec = parseInt(zoomIn.value,10));
+  function setSnapByIndex(idx){
+    idx = clamp(idx,0,SNAP_OPTS.length-1);
+    state.snap = SNAP_OPTS[idx];
+    const label = `1/${state.snap}`;
+    snapLabel.textContent = label;
+    pillSnap.textContent = label;
+    hudSnap.textContent = label;
+    state.snapOn = (snapOnSel.value === "on");
+  }
 
-  rateIn.addEventListener("change", () => {
-    state.rate = clamp(parseFloat(rateIn.value)||1, 0.25, 2);
-    if(state.isPlaying){
-      pause();
-      play();
-    }
-  });
+  function setSnapOn(on){
+    state.snapOn = on;
+    hudSnapOn.textContent = on ? "(on)" : "(off)";
+  }
 
-  metronomeSel.addEventListener("change", () => {
-    state.metronome.on = (metronomeSel.value === "on");
-  });
-
-  tabCompose.addEventListener("click", () => setTab("compose"));
-  tabTiming.addEventListener("click", () => setTab("timing"));
-  tabSong.addEventListener("click", () => setTab("song"));
-
-  toolButtons.forEach(btn => {
-    btn.addEventListener("click", () => setTool(btn.getAttribute("data-tool")));
-  });
-
-  // Timing buttons
-  addTPBtn.addEventListener("click", () => {
-    pushUndo();
-    const ms = Math.round(state.timeMs);
-    const cur = activeTP(ms);
-    state.timing.push({ id: uid(), t: ms, bpm: cur.bpm, meter: cur.meter||4 });
-    normalizeTiming();
-    renderTimingUI();
-  });
-  sortTPBtn.addEventListener("click", () => {
-    pushUndo();
-    normalizeTiming();
-    renderTimingUI();
-  });
-  resetTPBtn.addEventListener("click", () => {
-    pushUndo();
-    state.timing = [{ id: uid(), t: 0, bpm: 180, meter: 4 }];
-    renderTimingUI();
-  });
-
-  // Props change
-  [propTime, propLane, propType, propEnd, hsFlags, hsVol].forEach(el => {
-    el.addEventListener("change", applyPropsToSelected);
-  });
-
-  // Mouse helpers
   function mousePos(e, wrap){
     const r = wrap.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
-  // Playfield wheel => scroll time
-  playWrap.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    if(!state.buffer) return;
-    const delta = e.deltaY;
-    const ms = state.timeMs + delta * 2.2;
-    seekMs(ms);
-  }, {passive:false});
-
-  // Timeline interactions (seek)
-  function timelineSeekAtX(x){
-    const t = timeFromX(x);
-    seekMs(t);
-  }
-
-  timeWrap.addEventListener("mousedown", (e) => {
-    if(!state.buffer) return;
-    state.timelineDrag = true;
-    const m = mousePos(e, timeWrap);
-    timelineSeekAtX(m.x);
-  });
-
-  window.addEventListener("mousemove", (e) => {
-    if(!state.timelineDrag) return;
-    const m = mousePos(e, timeWrap);
-    timelineSeekAtX(m.x);
-  });
-
-  window.addEventListener("mouseup", () => {
-    state.timelineDrag = false;
-  });
-
-  // Box select helper
-  function selectByBox(box){
+  function selectByBox(box, additive=false){
     const b = rectNorm(box);
-    const tMin = Math.min(quantizeAt(timeFromY(b.y1)), quantizeAt(timeFromY(b.y0)));
-    const tMax = Math.max(quantizeAt(timeFromY(b.y1)), quantizeAt(timeFromY(b.y0)));
+    const tA = state.snapOn ? quantizeAt(timeFromY(b.y1)) : timeFromY(b.y1);
+    const tB = state.snapOn ? quantizeAt(timeFromY(b.y0)) : timeFromY(b.y0);
+    const tMin = Math.min(tA,tB), tMax = Math.max(tA,tB);
 
     const laneMin = laneFromX(b.x0);
     const laneMax = laneFromX(b.x1);
 
-    state.selected.clear();
+    if(!additive) state.selected.clear();
+
     for(const n of state.notes){
       if(n.lane < laneMin || n.lane > laneMax) continue;
       if(n.type === "tap"){
         if(n.t >= tMin && n.t <= tMax) state.selected.add(n.id);
       } else {
-        // overlap
         if(!(n.end < tMin || n.t > tMax)) state.selected.add(n.id);
       }
     }
     updateSelectionUI();
-    renderNoteList();
   }
 
-  // Move selection snapshot
-  function beginMove(){
+  function beginMoveSelection(){
     const snap = new Map();
     for(const n of state.notes){
-      if(state.selected.has(n.id)) snap.set(n.id, { t:n.t, end:n.end, lane:n.lane });
+      if(state.selected.has(n.id)){
+        snap.set(n.id, { t:n.t, end:n.end, lane:n.lane });
+      }
     }
     state.drag.moveSnap = snap;
   }
-  function applyMove(deltaLane, deltaMs){
+
+  function applyMoveSelection(deltaLane, deltaMs){
     const snap = state.drag.moveSnap;
     if(!snap) return;
+
     for(const n of state.notes){
       if(!state.selected.has(n.id)) continue;
       const base = snap.get(n.id);
       if(!base) continue;
 
-      const lane = clamp(base.lane + deltaLane, 0, state.keys - 1);
+      const lane = clamp(base.lane + deltaLane, 0, state.keys-1);
       let t = base.t + deltaMs;
       t = state.snapOn ? quantizeAt(t) : t;
 
@@ -1590,20 +1909,34 @@ SliderTickRate:1
       }
     }
     sortNotes();
+    updateSelectionUI();
   }
 
-  // Playfield mouse (tools)
-  playWrap.addEventListener("mousedown", (e) => {
+  // Stage interactions
+  stageWrap.addEventListener("wheel", (e)=>{
+    e.preventDefault();
     if(!state.buffer) return;
+    seekMs(state.timeMs + e.deltaY * 2.2);
+  }, {passive:false});
+
+  stageWrap.addEventListener("mousedown", (e)=>{
+    if(!state.buffer) return;
+    const m = mousePos(e, stageWrap);
     state.drag.down = true;
-    const m = mousePos(e, playWrap);
-    state.drag.startX = m.x; state.drag.startY = m.y;
+    state.drag.x0 = m.x; state.drag.y0 = m.y;
+
+    // if break mode armed: clicking stage commits break start/end at current playhead
+    if(state.breakArming){
+      commitBreakAt(state.timeMs);
+      return;
+    }
 
     const hit = findNoteAt(m.x, m.y);
+    const additive = e.ctrlKey || e.metaKey;
 
     if(state.tool === "select"){
       if(hit){
-        if(e.ctrlKey || e.metaKey){
+        if(additive){
           if(state.selected.has(hit.id)) state.selected.delete(hit.id);
           else state.selected.add(hit.id);
         } else {
@@ -1613,15 +1946,16 @@ SliderTickRate:1
           }
         }
         updateSelectionUI();
-        renderNoteList();
 
-        // drag move selection
+        // start move
         state.drag.mode = "move";
-        beginMove();
+        beginMoveSelection();
       } else {
         // start box
         state.drag.mode = "box";
         state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
+        if(!additive) state.selected.clear();
+        updateSelectionUI();
       }
       return;
     }
@@ -1632,7 +1966,6 @@ SliderTickRate:1
         state.notes = state.notes.filter(n => n.id !== hit.id);
         state.selected.delete(hit.id);
         updateSelectionUI();
-        renderNoteList();
       }
       return;
     }
@@ -1640,39 +1973,39 @@ SliderTickRate:1
     if(state.tool === "tap"){
       const lane = laneFromX(m.x);
       const tRaw = timeFromY(m.y);
-      const t = quantizeAt(tRaw);
+      const t = state.snapOn ? quantizeAt(tRaw) : tRaw;
       addNote({ id: uid(), lane, t, type:"tap", end:t, hs:0, vol:0 });
       return;
     }
 
     if(state.tool === "hold"){
       const lane = laneFromX(m.x);
-      const t0 = quantizeAt(timeFromY(m.y));
+      const t0Raw = timeFromY(m.y);
+      const t0 = state.snapOn ? quantizeAt(t0Raw) : t0Raw;
       const id = uid();
-      addNote({ id, lane, t: t0, type:"hold", end: t0 + snapMsAt(t0), hs:0, vol:0 });
+      addNote({ id, lane, t:t0, type:"hold", end:t0 + snapMsAt(t0), hs:0, vol:0 });
       state.drag.mode = "holdCreate";
       state.drag.holdId = id;
       return;
     }
   });
 
-  playWrap.addEventListener("mousemove", (e) => {
+  stageWrap.addEventListener("mousemove", (e)=>{
     if(!state.drag.down) return;
-    const m = mousePos(e, playWrap);
+    const m = mousePos(e, stageWrap);
 
     if(state.tool === "select" && state.drag.mode === "box" && state.drag.box){
       state.drag.box.x1 = m.x;
       state.drag.box.y1 = m.y;
-      // live preview
-      selectByBox(state.drag.box);
+      selectByBox(state.drag.box, e.ctrlKey || e.metaKey);
       return;
     }
 
     if(state.tool === "select" && state.drag.mode === "move"){
-      const dxLane = laneFromX(m.x) - laneFromX(state.drag.startX);
-      const dMs = quantizeAt(timeFromY(m.y)) - quantizeAt(timeFromY(state.drag.startY));
-      applyMove(dxLane, dMs);
-      renderNoteList();
+      const dxLane = laneFromX(m.x) - laneFromX(state.drag.x0);
+      const dMsRaw = (state.snapOn ? quantizeAt(timeFromY(m.y)) : timeFromY(m.y))
+                   - (state.snapOn ? quantizeAt(timeFromY(state.drag.y0)) : timeFromY(state.drag.y0));
+      applyMoveSelection(dxLane, dMsRaw);
       return;
     }
 
@@ -1680,35 +2013,126 @@ SliderTickRate:1
       const id = state.drag.holdId;
       const n = state.notes.find(x => x.id === id);
       if(!n) return;
-      const end = quantizeAt(timeFromY(m.y));
+      const endRaw = timeFromY(m.y);
+      const end = state.snapOn ? quantizeAt(endRaw) : endRaw;
       n.end = Math.max(n.t + 1, end);
-      renderNoteList();
+      updateSelectionUI();
       return;
     }
   });
 
-  window.addEventListener("mouseup", () => {
+  window.addEventListener("mouseup", ()=>{
     if(state.drag.down){
       if(state.drag.mode === "move" || state.drag.mode === "holdCreate" || state.drag.mode === "box"){
-        // commit undo after drag operations
+        // commit drag
         pushUndo();
       }
     }
-    state.drag.down = false;
-    state.drag.mode = "none";
-    state.drag.box = null;
-    state.drag.moveSnap = null;
-    state.drag.holdId = null;
+    state.drag.down=false;
+    state.drag.mode="none";
+    state.drag.box=null;
+    state.drag.moveSnap=null;
+    state.drag.holdId=null;
   });
 
-  // Keyboard shortcuts
-  window.addEventListener("keydown", (e) => {
+  // Timeline interactions
+  function timelineSeekAtX(x){
+    seekMs(timeFromX(x));
+  }
+
+  timelineWrap.addEventListener("mousedown", (e)=>{
+    if(!state.buffer) return;
+    state.tlDrag = true;
+    const m = mousePos(e, timelineWrap);
+    timelineSeekAtX(m.x);
+  });
+  window.addEventListener("mousemove", (e)=>{
+    if(!state.tlDrag) return;
+    const m = mousePos(e, timelineWrap);
+    timelineSeekAtX(m.x);
+  });
+  window.addEventListener("mouseup", ()=> state.tlDrag=false);
+
+  // Minimap click seek
+  miniCanvas.addEventListener("mousedown", (e)=>{
+    if(!state.buffer) return;
+    const r = miniCanvas.getBoundingClientRect();
+    const y = e.clientY - r.top;
+    const durMs = state.buffer.duration*1000;
+    seekMs((y / r.height) * durMs);
+  });
+
+  // ---------- Recording ----------
+  function normalizeKey(e){
+    if(e.code === "Space") return "space";
+    return (e.key || "").toLowerCase();
+  }
+
+  function recKeyDown(e){
+    if(!state.rec.on) return;
+    if(!state.isPlaying) return;
+    if(e.repeat) return;
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const key = normalizeKey(e);
+    const binds = state.rec.bindsByKeys[state.keys];
+    const lane = binds.indexOf(key);
+    if(lane < 0) return;
+
+    if(state.rec.downMap.has(key)) return;
+
+    pushUndo();
+
+    const ms = state.timeMs;
+    const t = state.rec.quantize ? quantizeAt(ms) : ms;
+
+    const id = uid();
+    const note = { id, lane, t, type:"hold", end: t + snapMsAt(t), hs:0, vol:0 };
+    state.notes.push(note);
+    sortNotes();
+
+    state.rec.downMap.set(key, { noteId:id });
+    state.selected.clear();
+    state.selected.add(id);
+    updateSelectionUI();
+
+    e.preventDefault();
+  }
+
+  function recKeyUp(e){
+    if(!state.rec.on) return;
+    const key = normalizeKey(e);
+    const info = state.rec.downMap.get(key);
+    if(!info) return;
+
+    const n = state.notes.find(x => x.id === info.noteId);
+    state.rec.downMap.delete(key);
+    if(!n) return;
+
+    const ms = state.timeMs;
+    const end = state.rec.quantize ? quantizeAt(ms) : ms;
+    const minHold = snapMsAt(n.t) * 0.6;
+
+    if(end - n.t < minHold){
+      n.type = "tap";
+      n.end = n.t;
+    } else {
+      n.type = "hold";
+      n.end = Math.max(n.t + 1, end);
+    }
+    sortNotes();
+    updateSelectionUI();
+    e.preventDefault();
+  }
+
+  window.addEventListener("keydown", (e)=>{
+    // shortcuts
     if(e.code === "Space"){
       e.preventDefault();
-      playBtn.click();
+      if(state.isPlaying) pause(); else play();
       return;
     }
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z"){
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){
       e.preventDefault();
       doUndo();
       return;
@@ -1722,43 +2146,185 @@ SliderTickRate:1
     if(e.key === "3") setTool("hold");
     if(e.key === "4") setTool("erase");
 
-    // timeline window +/- (como zoom no “timeline feel”)
-    if(e.key === "-" || e.key === "_"){
-      state.timelineWindowSec = clamp(state.timelineWindowSec + 1, 3, 30);
-    }
-    if(e.key === "=" || e.key === "+"){
-      state.timelineWindowSec = clamp(state.timelineWindowSec - 1, 3, 30);
-    }
+    // record
+    recKeyDown(e);
+  });
+  window.addEventListener("keyup", (e)=> recKeyUp(e));
+
+  // ---------- UI wiring ----------
+  tabs.forEach(t => t.addEventListener("click", ()=> setTab(t.getAttribute("data-tab"))));
+  tools.forEach(b => b.addEventListener("click", ()=> setTool(b.getAttribute("data-tool"))));
+
+  audioFile.addEventListener("change", async ()=>{
+    const f = audioFile.files[0];
+    if(!f) return;
+    await loadAudio(f);
   });
 
-  // Tab init
+  keysSel.addEventListener("change", ()=>{
+    pushUndo();
+    setKeys(parseInt(keysSel.value,10));
+  });
+
+  snapOnSel.addEventListener("change", ()=>{
+    pushUndo();
+    setSnapOn(snapOnSel.value === "on");
+  });
+
+  scrollIn.addEventListener("change", ()=>{
+    state.scrollPxPerSec = clamp(parseInt(scrollIn.value,10)||1700, 250, 9000);
+  });
+
+  tlWinIn.addEventListener("change", ()=>{
+    state.tlWinSec = clamp(parseInt(tlWinIn.value,10)||8, 3, 30);
+  });
+
+  snapRange.addEventListener("input", ()=>{
+    const idx = parseInt(snapRange.value,10);
+    setSnapByIndex(idx);
+  });
+
+  breakBtn.addEventListener("click", ()=>{
+    toggleBreakMode();
+  });
+
+  tpAdd.addEventListener("click", ()=>{
+    pushUndo();
+    const ms = Math.round(state.timeMs);
+    const cur = activeTP(ms);
+    state.timing.push({ id: uid(), t: ms, bpm: cur.bpm, meter: cur.meter||4 });
+    normalizeTiming();
+    renderTPList();
+  });
+
+  tpSort.addEventListener("click", ()=>{
+    pushUndo();
+    normalizeTiming();
+    renderTPList();
+  });
+
+  tpReset.addEventListener("click", ()=>{
+    pushUndo();
+    state.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
+    renderTPList();
+  });
+
+  exportBtn.addEventListener("click", exportOsu);
+  undoBtn.addEventListener("click", doUndo);
+  deleteBtn.addEventListener("click", deleteSelection);
+  clearNotesBtn.addEventListener("click", clearNotes);
+
+  // props
+  [propTime, propLane, propType, propEnd, hsVol, hsFlags].forEach(el=>{
+    el.addEventListener("change", applyProps);
+  });
+  hsWhistle.addEventListener("click", ()=> toggleHs(2));
+  hsFinish.addEventListener("click", ()=> toggleHs(4));
+  hsClap.addEventListener("click", ()=> toggleHs(8));
+
+  // bg
+  bgFile.addEventListener("change", async ()=>{
+    const f = bgFile.files[0];
+    if(!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = ()=>{
+      state.bgImg = img;
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  });
+  bgOpacity.addEventListener("change", ()=> state.bgOpacity = clamp(parseFloat(bgOpacity.value)||0.35, 0, 1));
+  laneOpacity.addEventListener("change", ()=> state.laneOpacity = clamp(parseFloat(laneOpacity.value)||0.08, 0, 1));
+
+  // rec
+  recToggle.addEventListener("change", ()=>{
+    state.rec.on = !!recToggle.checked;
+  });
+  recQuantToggle.addEventListener("change", ()=>{
+    state.rec.quantize = !!recQuantToggle.checked;
+  });
+
+  // transport
+  playBtn.addEventListener("click", ()=> { if(state.isPlaying) pause(); else play(); });
+  stopBtn.addEventListener("click", stop);
+  volRange.addEventListener("input", ()=>{
+    if(state.gain) state.gain.gain.value = parseFloat(volRange.value)||1;
+  });
+  rateBtns.forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      rateBtns.forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      state.rate = parseFloat(btn.getAttribute("data-rate"));
+      if(state.isPlaying){
+        pause();
+        play();
+      }
+    });
+  });
+
+  // ---------- Loop ----------
+  function renderHUD(){
+    const tp = activeTP(state.timeMs);
+    hudTime.textContent = String(Math.round(state.timeMs));
+    hudCount.textContent = String(state.notes.length);
+    hudTP.textContent = `${tp.bpm.toFixed(3)} @ ${Math.round(tp.t)}ms`;
+    hudSnap.textContent = `1/${state.snap}`;
+    hudSnapOn.textContent = state.snapOn ? "(on)" : "(off)";
+
+    pillKeys.textContent = String(state.keys);
+    pillSnap.textContent = `1/${state.snap}`;
+
+    tlWin.textContent = String(state.tlWinSec);
+
+    noteStr.textContent = `notes: ${state.notes.length}`;
+    timeStr.textContent = fmtTime(state.timeMs);
+
+    if(state.buffer){
+      const pct = (state.timeMs / (state.buffer.duration*1000)) * 100;
+      pctStr.textContent = `${pct.toFixed(1)}%`;
+    } else {
+      pctStr.textContent = "0.0%";
+    }
+  }
+
+  function loop(){
+    updateTimeFromAudio();
+    renderHUD();
+
+    drawStage();
+    drawTimeline();
+    drawMinimap();
+
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- Init ----------
   setTab("compose");
-
-  // Tool init
   setTool("select");
+  setKeys(4);
 
-  // Metronome init
-  metronomeSel.value = "off";
-  state.metronome.on = false;
+  // snap default index for 1/4
+  snapRange.value = String(SNAP_OPTS.indexOf(4));
+  setSnapByIndex(SNAP_OPTS.indexOf(4));
 
-  // UI init
-  keysSel.value = String(state.keys);
-  snapSel.value = String(state.snap);
-  snapOnSel.value = "on";
-  zoomIn.value = String(state.scrollPxPerSec);
-  rateIn.value = "1";
-
-  // Enable metronome toggle after audio loads
-  metronomeSel.disabled = true;
-
-  // Render timing and notes
-  renderTimingUI();
-  renderNoteList();
+  setSnapOn(true);
+  renderTPList();
+  renderBreakList();
+  setBreakStatus();
   updateSelectionUI();
 
-  // Start render loop
-  requestAnimationFrame(renderLoop);
+  // disable buttons until audio loaded
+  exportBtn.disabled = true;
+  undoBtn.disabled = true;
+  deleteBtn.disabled = true;
+  clearNotesBtn.disabled = true;
+  breakBtn.disabled = true;
+  tpAdd.disabled = true;
+  tpSort.disabled = true;
+  tpReset.disabled = true;
 
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>

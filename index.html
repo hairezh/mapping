@@ -3,16 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Web Mania Editor V2 (4K–7K)</title>
+  <title>Web Mania Editor V3 — osu-like (4K–7K)</title>
   <style>
     :root{
-      --bg:#0b0c0f; --panel:#11141a; --fg:#eaeef6; --muted:#9aa4b2;
+      --bg:#0b0c0f;
+      --panel:#11141a;
+      --panel2:#0e1117;
+      --fg:#eaeef6;
+      --muted:#9aa4b2;
       --border:rgba(255,255,255,.10);
       --accent:#7dd3fc;
+      --accent2:#a78bfa;
       --danger:#fb7185;
       --ok:#86efac;
       --r:12px;
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     html,body{height:100%}
     body{
@@ -20,92 +26,195 @@
       display:flex; flex-direction:column;
     }
     header{
-      padding:12px 14px; border-bottom:1px solid var(--border);
+      padding:10px 12px;
+      border-bottom:1px solid var(--border);
       display:flex; gap:10px; align-items:center; flex-wrap:wrap;
       background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
     }
     .group{
       display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      background:var(--panel); border:1px solid var(--border); padding:10px; border-radius:var(--r)
+      background:var(--panel); border:1px solid var(--border);
+      padding:10px; border-radius:var(--r);
     }
-    label{font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:6px}
+    label{
+      font-size:12px; color:var(--muted);
+      display:flex; flex-direction:column; gap:6px;
+    }
     input[type="number"], select, button, input[type="text"]{
-      background:#0e1117; color:var(--fg); border:1px solid var(--border);
-      border-radius:10px; padding:9px 10px; font-size:14px;
-      outline:none;
+      background:var(--panel2); color:var(--fg);
+      border:1px solid var(--border);
+      border-radius:10px; padding:8px 10px;
+      font-size:14px; outline:none;
     }
     input[type="file"]{color:var(--muted); font-size:13px}
-    button{cursor:pointer}
+    button{cursor:pointer; user-select:none}
     button.primary{border-color:rgba(125,211,252,.45)}
-    button.danger{border-color:rgba(251,113,133,.5); color:#ffd7df}
     button.ok{border-color:rgba(134,239,172,.5); color:#d1fae5}
+    button.danger{border-color:rgba(251,113,133,.5); color:#ffd7df}
     button:disabled{opacity:.55; cursor:not-allowed}
 
-    main{flex:1; display:flex; gap:12px; padding:12px}
-    .left{flex:1; min-width:340px; display:flex; flex-direction:column; gap:10px}
+    .tabs{
+      display:flex; gap:8px; align-items:center;
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:999px;
+      padding:6px;
+    }
+    .tab{
+      border-radius:999px;
+      padding:8px 12px;
+      border:1px solid transparent;
+      background:transparent;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .tab.active{
+      background:rgba(125,211,252,.12);
+      border-color:rgba(125,211,252,.30);
+      color:var(--fg);
+    }
+
+    main{
+      flex:1;
+      display:grid;
+      grid-template-columns: 240px 1fr 360px;
+      gap:12px;
+      padding:12px;
+      min-height:0;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:12px;
+      min-height:0;
+    }
+    .panel h3{
+      margin:0 0 10px 0;
+      font-size:14px;
+      color:#dbe5f5;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .small{font-size:12px; color:var(--muted); line-height:1.45}
+    .kbd{
+      font-family:var(--mono); font-size:12px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      padding:2px 6px; border-radius:8px; color:#dbe5f5;
+    }
+
+    /* Left tools */
+    .toolGrid{display:grid; grid-template-columns:1fr; gap:8px}
+    .toolBtn{
+      display:flex; justify-content:space-between; align-items:center; gap:8px;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      color:var(--fg);
+      font-size:13px;
+    }
+    .toolBtn.active{
+      border-color:rgba(125,211,252,.45);
+      background:rgba(125,211,252,.10);
+    }
+
+    /* Center area: compose view with playfield + timeline */
+    .center{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:0;
+    }
     .canvasWrap{
-      position:relative; flex:1; border:1px solid var(--border); border-radius:16px;
-      overflow:hidden; background:#07090d;
+      position:relative;
+      flex:1;
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+      background:#07090d;
+      min-height:0;
     }
     canvas{display:block; width:100%; height:100%}
-    .hint{
-      padding:10px 12px; border:1px solid var(--border); border-radius:14px;
-      color:var(--muted); background:rgba(255,255,255,.03); font-size:13px; line-height:1.45;
+    .timelineWrap{
+      height:140px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+      background:#07090d;
+      position:relative;
     }
-    .right{
-      width:420px; max-width:45vw;
-      display:flex; flex-direction:column; gap:10px;
+    .overlayBar{
+      position:absolute; top:10px; left:10px;
+      display:flex; gap:8px; flex-wrap:wrap;
+      z-index:5;
     }
-    .panel{
-      background:var(--panel); border:1px solid var(--border); border-radius:16px; padding:12px;
+    .badge{
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      background:rgba(255,255,255,.03);
     }
-    .panel h3{margin:0 0 8px 0; font-size:14px; color:#dbe5f5}
+
+    /* Right panel lists */
     .row{
       display:flex; justify-content:space-between; gap:10px;
-      padding:9px 10px; border-bottom:1px solid rgba(255,255,255,.06);
+      padding:9px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
       font-size:13px; color:var(--muted);
     }
     .row b{color:var(--fg); font-weight:600}
     .row:last-child{border-bottom:none}
-
     .list{
-      max-height:30vh; overflow:auto; border:1px solid var(--border);
-      border-radius:12px; background:#0e1117;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:var(--panel2);
+      overflow:auto;
+      max-height:26vh;
     }
-    .list .item{
-      padding:9px 10px; border-bottom:1px solid rgba(255,255,255,.06);
+    .item{
+      padding:9px 10px;
+      border-bottom:1px solid rgba(255,255,255,.06);
       font-size:13px; color:var(--muted);
       display:flex; justify-content:space-between; gap:10px;
       cursor:pointer;
       user-select:none;
     }
-    .list .item:last-child{border-bottom:none}
-    .list .item.sel{background:rgba(125,211,252,.10)}
-    .list .item b{color:var(--fg)}
-    .kbd{
-      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px;
-      background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
-      padding:2px 6px; border-radius:8px; color:#dbe5f5
-    }
-    .badge{font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); color:var(--muted)}
+    .item:last-child{border-bottom:none}
+    .item.sel{background:rgba(125,211,252,.10)}
+    .item b{color:var(--fg)}
 
-    .grid2{
-      display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
+
+    .hint{
+      margin-top:10px;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      color:var(--muted);
+      background:rgba(255,255,255,.03);
+      font-size:13px;
+      line-height:1.45;
     }
-    .grid3{
-      display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;
-    }
-    .tpRow{
-      display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center;
-      padding:8px; border-bottom:1px solid rgba(255,255,255,.06);
-    }
-    .tpRow:last-child{border-bottom:none}
-    .small{font-size:12px; color:var(--muted)}
-    .muted{color:var(--muted)}
+    .hidden{display:none !important;}
   </style>
 </head>
+
 <body>
 <header>
+  <div class="tabs" role="tablist" aria-label="Editor Tabs">
+    <button class="tab active" id="tabCompose" data-tab="compose">Compose</button>
+    <button class="tab" id="tabTiming" data-tab="timing">Timing</button>
+    <button class="tab" id="tabSong" data-tab="song">Song setup</button>
+  </div>
+
   <div class="group">
     <label>Áudio
       <input id="audioFile" type="file" accept="audio/*">
@@ -113,7 +222,6 @@
     <button id="playBtn" class="primary" disabled>Play</button>
     <button id="stopBtn" disabled>Stop</button>
     <button id="exportBtn" class="primary" disabled>Exportar .osu</button>
-    <span class="badge">Waveform: <span id="wfLbl">—</span></span>
   </div>
 
   <div class="group">
@@ -122,7 +230,7 @@
         <option>4</option><option>5</option><option>6</option><option>7</option>
       </select>
     </label>
-    <label>Snap
+    <label>Beat snap (divisor)
       <select id="snap">
         <option value="1">1/1</option>
         <option value="2">1/2</option>
@@ -134,139 +242,164 @@
         <option value="16">1/16</option>
       </select>
     </label>
-    <label>Zoom (px/s)
-      <input id="zoom" type="number" min="200" max="8000" step="50" value="1600">
+    <label>Snap
+      <select id="snapOn">
+        <option value="on" selected>On</option>
+        <option value="off">Off</option>
+      </select>
     </label>
-    <label>Grid Opacity
-      <input id="gridOp" type="number" min="0" max="1" step="0.05" value="1">
+    <label>Scroll speed (px/s)
+      <input id="zoom" type="number" min="200" max="9000" step="50" value="1700">
     </label>
   </div>
 
   <div class="group">
+    <label>Playback rate
+      <input id="rate" type="number" min="0.25" max="2" step="0.05" value="1">
+    </label>
+    <label>Metronome
+      <select id="metronome" disabled>
+        <option value="off" selected>Off</option>
+        <option value="on">On</option>
+      </select>
+    </label>
     <button id="undoBtn" disabled>Undo</button>
-    <button id="delBtn" class="danger" disabled>Deletar seleção</button>
-    <span class="badge">Seleção: <span id="selInfo">—</span></span>
+    <button id="delBtn" class="danger" disabled>Delete</button>
   </div>
 </header>
 
 <main>
-  <section class="left">
-    <div class="canvasWrap" id="wrap">
-      <canvas id="cv"></canvas>
+  <!-- LEFT: Tools -->
+  <section class="panel" id="leftPanel">
+    <h3>Ferramentas <span class="small">Compose</span></h3>
+    <div class="toolGrid">
+      <button class="toolBtn active" data-tool="select" id="toolSelect">
+        <span><b>Select</b></span><span class="kbd">1</span>
+      </button>
+      <button class="toolBtn" data-tool="tap" id="toolTap">
+        <span><b>Tap</b></span><span class="kbd">2</span>
+      </button>
+      <button class="toolBtn" data-tool="hold" id="toolHold">
+        <span><b>Hold</b></span><span class="kbd">3</span>
+      </button>
+      <button class="toolBtn" data-tool="erase" id="toolErase">
+        <span><b>Erase</b></span><span class="kbd">4</span>
+      </button>
     </div>
 
     <div class="hint">
-      <div><b>Mouse / Teclado</b>:
-        <span class="kbd">Espaço</span> play/pausa,
-        <span class="kbd">Clique</span> cria tap,
-        <span class="kbd">Shift + arrastar</span> cria hold,
-        <span class="kbd">Arrastar vazio</span> seleção box,
-        <span class="kbd">Arrastar nota selecionada</span> move bloco,
-        <span class="kbd">Ctrl+Clique</span> adiciona/remove da seleção,
-        <span class="kbd">Delete</span> apaga,
-        <span class="kbd">Ctrl+Z</span> undo,
-        <span class="kbd">Wheel</span> scroll tempo.
-      </div>
-      <div style="margin-top:6px" class="small">
-        <b>Recording:</b> ative o toggle e toque as teclas (binds editáveis). Segurar tecla cria hold.
-      </div>
+      Layout inspirado no fluxo do editor do osu!: <span class="kbd">Compose</span> pra criar objetos,
+      <span class="kbd">Timing</span> pra timing sections e (no osu) hitsounds, e <span class="kbd">Song setup</span> pra metadata. :contentReference[oaicite:1]{index=1}
     </div>
   </section>
 
-  <aside class="right">
-    <div class="panel">
-      <h3>Status</h3>
-      <div class="row"><span>Tempo</span><b><span id="timeLbl">0</span> ms</b></div>
-      <div class="row"><span>Notas</span><b><span id="countLbl">0</span></b></div>
-      <div class="row"><span>Timing ativo</span><b><span id="tpLbl">—</span></b></div>
+  <!-- CENTER: Playfield + Timeline -->
+  <section class="center">
+    <div class="canvasWrap" id="playWrap">
+      <div class="overlayBar">
+        <span class="badge">Tempo: <span id="lblTime">0</span> ms</span>
+        <span class="badge">Notas: <span id="lblCount">0</span></span>
+        <span class="badge">TP: <span id="lblTP">—</span></span>
+        <span class="badge">Tool: <span id="lblTool">select</span></span>
+      </div>
+      <canvas id="playCanvas"></canvas>
     </div>
 
-    <div class="panel">
-      <h3>Metadata (.osu)</h3>
+    <div class="timelineWrap" id="timeWrap">
+      <div class="overlayBar">
+        <span class="badge">Timeline window: <span id="lblWin">8</span>s</span>
+        <span class="badge">Waveform: <span id="lblWF">—</span></span>
+      </div>
+      <canvas id="timeCanvas"></canvas>
+    </div>
+  </section>
+
+  <!-- RIGHT: Tabbed panel -->
+  <section class="panel" id="rightPanel">
+    <!-- Compose properties -->
+    <div id="rightCompose">
+      <h3>Propriedades</h3>
+      <div class="row"><span>Seleção</span><b id="selInfo">—</b></div>
+      <div class="grid2" style="margin-top:10px">
+        <label>Time (ms)
+          <input id="propTime" type="number" step="1" disabled>
+        </label>
+        <label>Lane (1..K)
+          <input id="propLane" type="number" step="1" min="1" max="7" disabled>
+        </label>
+        <label>Type
+          <select id="propType" disabled>
+            <option value="tap">tap</option>
+            <option value="hold">hold</option>
+          </select>
+        </label>
+        <label>End (ms) (hold)
+          <input id="propEnd" type="number" step="1" disabled>
+        </label>
+      </div>
+
+      <h3 style="margin-top:14px">Hitsound (simples)</h3>
+      <div class="grid2">
+        <label>Flags
+          <select id="hsFlags" disabled>
+            <option value="0">Normal (0)</option>
+            <option value="2">Whistle (2)</option>
+            <option value="4">Finish (4)</option>
+            <option value="8">Clap (8)</option>
+          </select>
+        </label>
+        <label>Volume (0..100)
+          <input id="hsVol" type="number" min="0" max="100" step="5" value="0" disabled>
+        </label>
+      </div>
+
+      <h3 style="margin-top:14px">Notas (recentes)</h3>
+      <div class="list" id="noteList"></div>
+
+      <div class="hint">
+        <div><b>Dicas</b>:</div>
+        <div>• Clique na <b>timeline</b> pra navegar rápido.</div>
+        <div>• Se o snap estiver te “lutando”, coloca <b>Snap Off</b> e posiciona livre.</div>
+        <div>• Wheel no playfield = “andar” pelo áudio sem dor.</div>
+      </div>
+    </div>
+
+    <!-- Timing -->
+    <div id="rightTiming" class="hidden">
+      <h3>Timing Points</h3>
+      <div class="grid3" style="margin-bottom:10px">
+        <button id="addTP" class="ok" disabled>Add TP @ tempo</button>
+        <button id="sortTP" disabled>Ordenar</button>
+        <button id="resetTP" class="danger" disabled>Reset</button>
+      </div>
+      <div class="list" id="tpList" style="max-height:42vh"></div>
+
+      <div class="hint">
+        No osu, a aba Timing gerencia timing sections e controle de hitsounds; aqui você controla os BPM changes (timing points). :contentReference[oaicite:2]{index=2}
+      </div>
+    </div>
+
+    <!-- Song setup -->
+    <div id="rightSong" class="hidden">
+      <h3>Song setup</h3>
       <div class="grid2">
         <label>Title <input id="metaTitle" type="text" value="WebManiaEditor"/></label>
         <label>Artist <input id="metaArtist" type="text" value="Unknown"/></label>
         <label>Creator <input id="metaCreator" type="text" value="reze"/></label>
         <label>Version <input id="metaVersion" type="text" value="Easy"/></label>
       </div>
-      <div class="small muted" style="margin-top:8px">AudioFilename será o nome do arquivo que você carregou.</div>
-    </div>
-
-    <div class="panel">
-      <h3>Timing Points (BPM changes)</h3>
-      <div class="grid3" style="margin-bottom:10px">
-        <button id="addTpBtn" class="ok" disabled>Add TP @ tempo</button>
-        <button id="normTpBtn" disabled>Ordenar/Normalizar</button>
-        <button id="clearTpBtn" class="danger" disabled>Reset TPs</button>
-      </div>
-      <div id="tpList" class="list" style="max-height:22vh"></div>
-      <div class="small" style="margin-top:8px">
-        Snap/Grid usa o timing point ativo para o tempo atual (e para quantização da nota).
+      <div class="hint">
+        Metadata e coisas “universais” do beatmap ficam aqui (igual a ideia do Song setup no osu). :contentReference[oaicite:3]{index=3}
       </div>
     </div>
-
-    <div class="panel">
-      <h3>Key Recording</h3>
-      <div class="grid2">
-        <label>Recording
-          <select id="recMode" disabled>
-            <option value="off" selected>Off</option>
-            <option value="on">On (tap + hold)</option>
-          </select>
-        </label>
-        <label>Quantize (record)
-          <select id="recQuant" disabled>
-            <option value="on" selected>On</option>
-            <option value="off">Off</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="grid2" style="margin-top:10px">
-        <label>Keybinds (separe por espaço)
-          <input id="binds" type="text" disabled value="d f j k">
-        </label>
-        <label class="small" style="gap:6px">
-          Dica
-          <div class="muted">4K: d f j k • 5K: d f space j k • 6K: s d f j k l • 7K: s d f space j k l</div>
-        </label>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Projeto (JSON / Local)</h3>
-      <div class="grid3">
-        <button id="saveLocalBtn" disabled class="ok">Salvar Local</button>
-        <button id="loadLocalBtn" disabled>Carregar Local</button>
-        <button id="exportJsonBtn" disabled>Export JSON</button>
-      </div>
-      <div class="grid2" style="margin-top:10px">
-        <label>Import JSON
-          <input id="importJsonFile" type="file" accept="application/json" disabled>
-        </label>
-        <button id="clearAllBtn" class="danger" disabled style="align-self:end">Limpar tudo</button>
-      </div>
-      <div class="small muted" style="margin-top:8px">
-        “Salvar Local” guarda no navegador (localStorage). Export/Import serve como backup.
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Notas (recentes)</h3>
-      <div class="list" id="noteList"></div>
-    </div>
-  </aside>
+  </section>
 </main>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------- Elements ----------
-  const cv = $("cv");
-  const wrap = $("wrap");
-  const ctx = cv.getContext("2d");
-
+  // Elements
   const audioFile = $("audioFile");
   const playBtn = $("playBtn");
   const stopBtn = $("stopBtn");
@@ -276,45 +409,62 @@
 
   const keysSel = $("keys");
   const snapSel = $("snap");
+  const snapOnSel = $("snapOn");
   const zoomIn = $("zoom");
-  const gridOpIn = $("gridOp");
+  const rateIn = $("rate");
+  const metronomeSel = $("metronome");
 
-  const timeLbl = $("timeLbl");
-  const countLbl = $("countLbl");
-  const tpLbl = $("tpLbl");
-  const wfLbl = $("wfLbl");
+  const tabCompose = $("tabCompose");
+  const tabTiming = $("tabTiming");
+  const tabSong = $("tabSong");
+  const rightCompose = $("rightCompose");
+  const rightTiming = $("rightTiming");
+  const rightSong = $("rightSong");
+
+  const toolButtons = Array.from(document.querySelectorAll(".toolBtn"));
+  const lblTime = $("lblTime");
+  const lblCount = $("lblCount");
+  const lblTP = $("lblTP");
+  const lblTool = $("lblTool");
+  const lblWin = $("lblWin");
+  const lblWF = $("lblWF");
+
+  const playWrap = $("playWrap");
+  const playCanvas = $("playCanvas");
+  const pctx = playCanvas.getContext("2d");
+
+  const timeWrap = $("timeWrap");
+  const timeCanvas = $("timeCanvas");
+  const tctx = timeCanvas.getContext("2d");
+
   const selInfo = $("selInfo");
+  const noteList = $("noteList");
+
+  const propTime = $("propTime");
+  const propLane = $("propLane");
+  const propType = $("propType");
+  const propEnd = $("propEnd");
+  const hsFlags = $("hsFlags");
+  const hsVol = $("hsVol");
+
+  const addTPBtn = $("addTP");
+  const sortTPBtn = $("sortTP");
+  const resetTPBtn = $("resetTP");
+  const tpList = $("tpList");
 
   const metaTitle = $("metaTitle");
   const metaArtist = $("metaArtist");
   const metaCreator = $("metaCreator");
   const metaVersion = $("metaVersion");
 
-  const addTpBtn = $("addTpBtn");
-  const normTpBtn = $("normTpBtn");
-  const clearTpBtn = $("clearTpBtn");
-  const tpList = $("tpList");
-
-  const recMode = $("recMode");
-  const recQuant = $("recQuant");
-  const bindsIn = $("binds");
-
-  const saveLocalBtn = $("saveLocalBtn");
-  const loadLocalBtn = $("loadLocalBtn");
-  const exportJsonBtn = $("exportJsonBtn");
-  const importJsonFile = $("importJsonFile");
-  const clearAllBtn = $("clearAllBtn");
-
-  const noteList = $("noteList");
-
-  // ---------- State ----------
+  // State
   const state = {
     keys: 4,
     snap: 4,
-    zoomPxPerSec: 1600,
-    gridOpacity: 1,
-    timeMs: 0,
-    isPlaying: false,
+    snapOn: true,
+    scrollPxPerSec: 1700,
+    rate: 1,
+    timelineWindowSec: 8,
 
     // audio
     ac: null,
@@ -322,169 +472,74 @@
     source: null,
     startedAt: 0,
     startOffsetSec: 0,
+    isPlaying: false,
+    timeMs: 0,
 
-    // waveform
+    // waveform peaks
     wf: {
       ready: false,
-      peaks: null,      // Float32Array
+      peaks: null, // Float32Array
       blockSize: 2048,
-      sampleRate: 44100,
       blockSec: 0,
       max: 1,
-      progress: 0,      // 0..1
+      progress: 0
     },
 
-    // editor
-    notes: [], // {id, lane, t, type:'tap'|'hold', end}
+    // timing points: {id, t, bpm, meter}
+    timing: [{ id: uid(), t: 0, bpm: 180, meter: 4 }],
+
+    // notes: {id, lane, t, type, end, hs, vol}
+    notes: [],
+    selected: new Set(),
     undo: [],
 
-    // selection
-    selected: new Set(),   // ids
-    hoverId: null,
+    tool: "select",
 
-    // interactions
     drag: {
-      mode: "none", // none | holdCreate | boxSelect | moveSelection
-      downX: 0, downY: 0,
-      lane: 0,
-      holdStartMs: 0,
-      box: null, // {x0,y0,x1,y1}
-      move: null, // {anchorMs, anchorLane, baseNotesSnapshot}
+      down: false,
+      mode: "none", // none | holdCreate | move | box
+      startX: 0, startY: 0,
+      box: null,
+      moveSnap: null, // Map id -> base note
+      holdId: null
     },
 
-    // timing points: {id, t(ms), bpm, meter}
-    timing: [
-      { id: cryptoId(), t: 0, bpm: 180, meter: 4 }
-    ],
+    timelineDrag: false,
 
-    // recording
-    rec: {
-      mode: "off", // off | on
-      quantize: true,
-      // binds: array of arrays (keys string per lane)
-      binds: ["d","f","j","k"],
-      downMap: new Map(), // key -> {lane, startMs, noteId}
-    }
+    metronome: { on: false, lastBeatIndex: null }
   };
 
-  // ---------- Utils ----------
-  function cryptoId(){
+  function uid(){
     return Math.random().toString(36).slice(2,10);
   }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 
-  function pushUndo(){
-    state.undo.push(JSON.stringify({
-      notes: state.notes,
-      timing: state.timing,
-      keys: state.keys,
-      snap: state.snap,
-      zoom: state.zoomPxPerSec,
-      meta: getMeta(),
-      rec: { binds: state.rec.binds }
-    }));
-    if(state.undo.length > 200) state.undo.shift();
-    undoBtn.disabled = state.undo.length === 0;
+  // Geometry
+  function resizeCanvas(canvas, wrap){
+    const r = wrap.getBoundingClientRect();
+    canvas.width = Math.floor(r.width * devicePixelRatio);
+    canvas.height = Math.floor(r.height * devicePixelRatio);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
   }
-  function doUndo(){
-    const prev = state.undo.pop();
-    if(!prev) return;
-    const obj = JSON.parse(prev);
-    state.notes = obj.notes || [];
-    state.timing = obj.timing || state.timing;
-    state.keys = obj.keys ?? state.keys;
-    state.snap = obj.snap ?? state.snap;
-    state.zoomPxPerSec = obj.zoom ?? state.zoomPxPerSec;
-    if(obj.meta) setMeta(obj.meta);
-    if(obj.rec?.binds) state.rec.binds = obj.rec.binds;
+  const playRO = new ResizeObserver(()=> resizeCanvas(playCanvas, playWrap));
+  const timeRO = new ResizeObserver(()=> resizeCanvas(timeCanvas, timeWrap));
+  playRO.observe(playWrap);
+  timeRO.observe(timeWrap);
+  resizeCanvas(playCanvas, playWrap);
+  resizeCanvas(timeCanvas, timeWrap);
 
-    keysSel.value = String(state.keys);
-    snapSel.value = String(state.snap);
-    zoomIn.value = String(state.zoomPxPerSec);
-    bindsIn.value = state.rec.binds.join(" ");
+  function PW(){ return playCanvas.width / devicePixelRatio; }
+  function PH(){ return playCanvas.height / devicePixelRatio; }
+  function TW(){ return timeCanvas.width / devicePixelRatio; }
+  function TH(){ return timeCanvas.height / devicePixelRatio; }
 
-    state.selected.clear();
-    updateSelectionUI();
-    renderTimingUI();
-    renderNoteList();
-    undoBtn.disabled = state.undo.length === 0;
-  }
+  function centerY(){ return Math.floor(PH() * 0.55); }
+  function pxPerMs(){ return state.scrollPxPerSec / 1000; }
+  function laneW(){ return PW() / state.keys; }
 
-  function getMeta(){
-    return {
-      title: metaTitle.value,
-      artist: metaArtist.value,
-      creator: metaCreator.value,
-      version: metaVersion.value
-    };
-  }
-  function setMeta(m){
-    metaTitle.value = m.title ?? metaTitle.value;
-    metaArtist.value = m.artist ?? metaArtist.value;
-    metaCreator.value = m.creator ?? metaCreator.value;
-    metaVersion.value = m.version ?? metaVersion.value;
-  }
-
-  function sortNotes(){
-    state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
-  }
-
-  function normalizeTiming(){
-    // remove duplicates by time (keep last)
-    state.timing.sort((a,b)=>a.t-b.t);
-    const out = [];
-    for(const tp of state.timing){
-      if(out.length && out[out.length-1].t === tp.t){
-        out[out.length-1] = tp;
-      } else {
-        out.push(tp);
-      }
-    }
-    state.timing = out;
-  }
-
-  function activeTimingAt(ms){
-    const arr = state.timing;
-    if(arr.length === 0) return {t:0,bpm:180,meter:4};
-    let best = arr[0];
-    for(const tp of arr){
-      if(tp.t <= ms) best = tp;
-      else break;
-    }
-    return best;
-  }
-
-  function beatLenMsAt(ms){
-    const tp = activeTimingAt(ms);
-    return 60000 / tp.bpm;
-  }
-
-  function snapMsAt(ms){
-    return beatLenMsAt(ms) / state.snap;
-  }
-
-  function quantizeAt(ms){
-    const s = snapMsAt(ms);
-    return Math.round(ms / s) * s;
-  }
-
-  function laneFromX(x){
-    const w = getW();
-    const laneW = w / state.keys;
-    return clamp(Math.floor(x / laneW), 0, state.keys-1);
-  }
-  function xFromLane(lane){
-    const w = getW();
-    return lane * (w / state.keys);
-  }
-
-  function getW(){ return cv.width / devicePixelRatio; }
-  function getH(){ return cv.height / devicePixelRatio; }
-
-  function centerY(){
-    return Math.floor(getH() * 0.55);
-  }
-  function pxPerMs(){ return state.zoomPxPerSec / 1000; }
+  function xFromLane(l){ return l * laneW(); }
+  function laneFromX(x){ return clamp(Math.floor(x / laneW()), 0, state.keys - 1); }
 
   function yFromTime(tMs){
     return centerY() - (tMs - state.timeMs) * pxPerMs();
@@ -493,53 +548,117 @@
     return state.timeMs + (centerY() - y) / pxPerMs();
   }
 
-  // ---------- Audio ----------
+  // Timing helpers
+  function normalizeTiming(){
+    state.timing.sort((a,b)=>a.t-b.t);
+    const out = [];
+    for(const tp of state.timing){
+      if(out.length && out[out.length-1].t === tp.t) out[out.length-1] = tp;
+      else out.push(tp);
+    }
+    state.timing = out;
+  }
+  function activeTP(ms){
+    normalizeTiming();
+    let best = state.timing[0];
+    for(const tp of state.timing){
+      if(tp.t <= ms) best = tp;
+      else break;
+    }
+    return best;
+  }
+  function beatLenMsAt(ms){
+    const tp = activeTP(ms);
+    return 60000 / tp.bpm;
+  }
+  function snapMsAt(ms){
+    return beatLenMsAt(ms) / state.snap;
+  }
+  function quantizeAt(ms){
+    if(!state.snapOn) return ms;
+    const tp = activeTP(ms);
+    const step = (60000 / tp.bpm) / state.snap;
+    const base = tp.t;
+    const n = Math.round((ms - base) / step);
+    return base + n * step;
+  }
+
+  // Undo
+  function pushUndo(){
+    state.undo.push(JSON.stringify({
+      notes: state.notes,
+      timing: state.timing,
+      keys: state.keys,
+      snap: state.snap,
+      snapOn: state.snapOn,
+      scroll: state.scrollPxPerSec,
+      rate: state.rate,
+      meta: getMeta()
+    }));
+    if(state.undo.length > 200) state.undo.shift();
+    undoBtn.disabled = state.undo.length === 0;
+  }
+  function doUndo(){
+    const raw = state.undo.pop();
+    if(!raw) return;
+    const s = JSON.parse(raw);
+    state.notes = s.notes || [];
+    state.timing = s.timing || state.timing;
+    state.keys = s.keys ?? state.keys;
+    state.snap = s.snap ?? state.snap;
+    state.snapOn = s.snapOn ?? state.snapOn;
+    state.scrollPxPerSec = s.scroll ?? state.scrollPxPerSec;
+    state.rate = s.rate ?? state.rate;
+    if(s.meta) setMeta(s.meta);
+
+    keysSel.value = String(state.keys);
+    snapSel.value = String(state.snap);
+    snapOnSel.value = state.snapOn ? "on" : "off";
+    zoomIn.value = String(state.scrollPxPerSec);
+    rateIn.value = String(state.rate);
+
+    state.selected.clear();
+    updateSelectionUI();
+    renderTimingUI();
+    renderNoteList();
+    undoBtn.disabled = state.undo.length === 0;
+  }
+
+  // Audio
   async function ensureAC(){
     if(state.ac) return state.ac;
     state.ac = new (window.AudioContext || window.webkitAudioContext)();
     return state.ac;
   }
-
   function cleanupSource(){
-    try{ if(state.source) state.source.stop(); }catch(e){}
+    try{ if(state.source) state.source.stop(); } catch(e){}
     state.source = null;
   }
-
   async function loadAudio(file){
     const ac = await ensureAC();
     const arr = await file.arrayBuffer();
     state.buffer = await ac.decodeAudioData(arr);
+
     state.timeMs = 0;
     state.startOffsetSec = 0;
     state.isPlaying = false;
     cleanupSource();
 
-    // enable UI
     playBtn.disabled = false;
     stopBtn.disabled = false;
     exportBtn.disabled = false;
-    addTpBtn.disabled = false;
-    normTpBtn.disabled = false;
-    clearTpBtn.disabled = false;
 
-    recMode.disabled = false;
-    recQuant.disabled = false;
-    bindsIn.disabled = false;
+    addTPBtn.disabled = false;
+    sortTPBtn.disabled = false;
+    resetTPBtn.disabled = false;
+    metronomeSel.disabled = false;
 
-    saveLocalBtn.disabled = false;
-    loadLocalBtn.disabled = false;
-    exportJsonBtn.disabled = false;
-    importJsonFile.disabled = false;
-    clearAllBtn.disabled = false;
-
-    // reset waveform + build
+    // build waveform
     state.wf.ready = false;
     state.wf.peaks = null;
-    wfLbl.textContent = "gerando…";
-    buildWaveformPeaks();
+    lblWF.textContent = "gerando…";
+    buildPeaks();
 
-    // default timing if only one
-    if(state.timing.length === 0) state.timing = [{id:cryptoId(), t:0, bpm:180, meter:4}];
     renderTimingUI();
   }
 
@@ -550,12 +669,18 @@
       cleanupSource();
       const src = ac.createBufferSource();
       src.buffer = state.buffer;
+      src.playbackRate.value = state.rate;
       src.connect(ac.destination);
+
       state.startedAt = ac.currentTime;
       src.start(0, state.startOffsetSec);
+
       state.source = src;
       state.isPlaying = true;
       playBtn.textContent = "Pause";
+
+      state.metronome.lastBeatIndex = null;
+
       src.onended = () => {
         if(state.isPlaying){
           state.isPlaying = false;
@@ -568,8 +693,10 @@
   function pause(){
     if(!state.ac) return;
     const ac = state.ac;
-    const playedSec = ac.currentTime - state.startedAt;
+
+    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
     state.startOffsetSec += playedSec;
+
     cleanupSource();
     state.isPlaying = false;
     playBtn.textContent = "Play";
@@ -582,8 +709,11 @@
   }
 
   function seekMs(ms){
-    state.timeMs = clamp(ms, 0, state.buffer ? state.buffer.duration*1000 : 1e12);
+    if(!state.buffer) return;
+    const max = state.buffer.duration * 1000;
+    state.timeMs = clamp(ms, 0, max);
     state.startOffsetSec = state.timeMs / 1000;
+
     if(state.isPlaying){
       pause();
       play();
@@ -593,77 +723,104 @@
   function updateTimeFromAudio(){
     if(!state.isPlaying || !state.ac) return;
     const ac = state.ac;
-    const playedSec = ac.currentTime - state.startedAt;
+
+    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
     const tSec = state.startOffsetSec + playedSec;
-    state.timeMs = clamp(tSec*1000, 0, state.buffer.duration*1000);
+    const ms = tSec * 1000;
+    state.timeMs = clamp(ms, 0, state.buffer.duration * 1000);
   }
 
-  // ---------- Waveform peaks ----------
-  function buildWaveformPeaks(){
+  // Metronome (simple tick)
+  function metronomeTick(){
+    if(!state.metronome.on) return;
+    if(!state.isPlaying) return;
+    if(!state.ac) return;
+
+    const tp = activeTP(state.timeMs);
+    const beatLen = 60000 / tp.bpm;
+    const base = tp.t;
+
+    const beatIndex = Math.floor((state.timeMs - base) / beatLen);
+    if(state.metronome.lastBeatIndex === beatIndex) return;
+    state.metronome.lastBeatIndex = beatIndex;
+
+    // short beep
+    try{
+      const ac = state.ac;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = "square";
+      osc.frequency.value = 880;
+      gain.gain.value = 0.03;
+
+      osc.connect(gain);
+      gain.connect(ac.destination);
+
+      const now = ac.currentTime;
+      osc.start(now);
+      osc.stop(now + 0.03);
+    } catch(e){}
+  }
+
+  // Waveform peaks for timeline
+  function buildPeaks(){
     const buf = state.buffer;
     if(!buf) return;
 
     const wf = state.wf;
-    wf.progress = 0;
-    wf.ready = false;
+    const dur = buf.duration;
+    wf.blockSize = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
 
     const channels = buf.numberOfChannels;
     const len = buf.length;
-    wf.sampleRate = buf.sampleRate;
-
-    // choose block size based on duration (tradeoff)
-    const dur = buf.duration;
-    wf.blockSize = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
     const block = wf.blockSize;
-
     const blocks = Math.ceil(len / block);
+
     wf.peaks = new Float32Array(blocks);
-    wf.blockSec = block / wf.sampleRate;
+    wf.blockSec = block / buf.sampleRate;
 
-    const chData = [];
-    for(let c=0;c<channels;c++) chData.push(buf.getChannelData(c));
+    const ch = [];
+    for(let c=0;c<channels;c++) ch.push(buf.getChannelData(c));
 
-    let i = 0;
-    let maxPeak = 0;
+    let i=0, max=0;
 
     function step(){
       const t0 = performance.now();
-      const budgetMs = 12; // keep UI responsive
+      const budget = 12;
 
-      while(i < blocks && performance.now() - t0 < budgetMs){
+      while(i < blocks && performance.now() - t0 < budget){
         const start = i * block;
         const end = Math.min(len, start + block);
+        let peak=0;
 
-        let peak = 0;
         for(let s=start; s<end; s++){
-          let v = 0;
-          for(let c=0;c<channels;c++) v += chData[c][s];
+          let v=0;
+          for(let c=0;c<channels;c++) v += ch[c][s];
           v /= channels;
           const a = Math.abs(v);
           if(a > peak) peak = a;
         }
         wf.peaks[i] = peak;
-        if(peak > maxPeak) maxPeak = peak;
-
+        if(peak > max) max = peak;
         i++;
       }
 
       wf.progress = i / blocks;
-      wfLbl.textContent = wf.progress >= 1 ? "ok" : Math.round(wf.progress*100) + "%";
+      lblWF.textContent = wf.progress >= 1 ? "ok" : Math.round(wf.progress*100) + "%";
 
       if(i < blocks){
         requestAnimationFrame(step);
       } else {
-        wf.max = maxPeak || 1;
+        wf.max = max || 1;
         wf.ready = true;
-        wfLbl.textContent = "ok";
+        lblWF.textContent = "ok";
       }
     }
 
     requestAnimationFrame(step);
   }
 
-  function ampAtTimeMs(ms){
+  function ampAtMs(ms){
     const wf = state.wf;
     if(!wf.ready || !wf.peaks) return 0;
     const sec = ms / 1000;
@@ -672,7 +829,11 @@
     return wf.peaks[idx] / wf.max;
   }
 
-  // ---------- Notes & selection ----------
+  // Notes
+  function sortNotes(){
+    state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
+  }
+
   function addNote(note){
     pushUndo();
     state.notes.push(note);
@@ -686,32 +847,91 @@
   function deleteSelection(){
     if(state.selected.size === 0) return;
     pushUndo();
-    const s = state.selected;
-    state.notes = state.notes.filter(n => !s.has(n.id));
+    state.notes = state.notes.filter(n => !state.selected.has(n.id));
     state.selected.clear();
     updateSelectionUI();
     renderNoteList();
+  }
+
+  function getSelectedNotes(){
+    const ids = state.selected;
+    return state.notes.filter(n => ids.has(n.id));
   }
 
   function updateSelectionUI(){
     if(state.selected.size === 0){
       selInfo.textContent = "—";
       delBtn.disabled = true;
+      setPropsDisabled(true);
       return;
     }
     delBtn.disabled = false;
+
     if(state.selected.size === 1){
-      const id = [...state.selected][0];
-      const n = state.notes.find(x => x.id === id);
-      selInfo.textContent = n ? `lane ${n.lane+1} @ ${Math.round(n.t)}ms` : `${state.selected.size} notas`;
+      const n = getSelectedNotes()[0];
+      selInfo.textContent = `lane ${n.lane+1} @ ${Math.round(n.t)}ms`;
+      setPropsDisabled(false);
+      fillPropsFromNote(n);
     } else {
       selInfo.textContent = `${state.selected.size} notas`;
+      setPropsDisabled(true);
     }
   }
 
+  function setPropsDisabled(dis){
+    propTime.disabled = dis;
+    propLane.disabled = dis;
+    propType.disabled = dis;
+    propEnd.disabled = dis;
+    hsFlags.disabled = dis;
+    hsVol.disabled = dis;
+  }
+
+  function fillPropsFromNote(n){
+    propTime.value = Math.round(n.t);
+    propLane.value = n.lane + 1;
+    propType.value = n.type;
+    propEnd.value = Math.round(n.end ?? n.t);
+    hsFlags.value = String(n.hs ?? 0);
+    hsVol.value = String(n.vol ?? 0);
+  }
+
+  function applyPropsToSelected(){
+    if(state.selected.size !== 1) return;
+    const n = getSelectedNotes()[0];
+    if(!n) return;
+
+    pushUndo();
+
+    const t = Number(propTime.value)||0;
+    const lane = clamp((Number(propLane.value)||1) - 1, 0, state.keys - 1);
+    const type = propType.value === "hold" ? "hold" : "tap";
+    let end = Number(propEnd.value)||t;
+    const hs = Number(hsFlags.value)||0;
+    const vol = clamp(Number(hsVol.value)||0, 0, 100);
+
+    n.lane = lane;
+    n.t = state.snapOn ? quantizeAt(t) : t;
+
+    if(type === "tap"){
+      n.type = "tap";
+      n.end = n.t;
+    } else {
+      n.type = "hold";
+      end = Math.max(n.t + 1, state.snapOn ? quantizeAt(end) : end);
+      n.end = end;
+    }
+    n.hs = hs;
+    n.vol = vol;
+
+    sortNotes();
+    renderNoteList();
+    updateSelectionUI();
+  }
+
+  // Hit-testing
   function findNoteAt(mx, my){
-    const w = getW();
-    const laneW = w / state.keys;
+    const lw = laneW();
     const lane = laneFromX(mx);
     const x0 = xFromLane(lane);
 
@@ -721,444 +941,82 @@
 
       const y = yFromTime(n.t);
       const pad = 7;
-      const rectW = laneW - pad*2;
+      const rectW = lw - pad*2;
       const rectH = 12;
 
       // head
       const rx = x0 + pad, ry = y - rectH/2, rw = rectW, rh = rectH;
       if(mx >= rx && mx <= rx+rw && my >= ry && my <= ry+rh) return n;
 
-      // hold body / end
       if(n.type === "hold"){
         const y2 = yFromTime(n.end);
         const top = Math.min(y,y2);
         const bot = Math.max(y,y2);
-        const barX = x0 + laneW/2 - 3;
+        const barX = x0 + lw/2 - 3;
         if(mx >= barX-7 && mx <= barX+13 && my >= top-7 && my <= bot+7) return n;
       }
     }
     return null;
   }
 
-  function rectNorm(x0,y0,x1,y1){
-    return {x0:Math.min(x0,x1), y0:Math.min(y0,y1), x1:Math.max(x0,x1), y1:Math.max(y0,y1)};
-  }
-
-  function selectByBox(box, additive=false){
-    const r = rectNorm(box.x0, box.y0, box.x1, box.y1);
-    const tA = timeFromY(r.y1);
-    const tB = timeFromY(r.y0);
-    const tMin = Math.min(tA,tB), tMax = Math.max(tA,tB);
-
-    const laneMin = laneFromX(r.x0);
-    const laneMax = laneFromX(r.x1);
-
-    if(!additive) state.selected.clear();
-
-    for(const n of state.notes){
-      if(n.lane < laneMin || n.lane > laneMax) continue;
-      const insideTime =
-        (n.type === "tap" && n.t >= tMin && n.t <= tMax) ||
-        (n.type === "hold" && !(n.end < tMin || n.t > tMax));
-      if(insideTime) state.selected.add(n.id);
-    }
-    updateSelectionUI();
-    renderNoteList();
-  }
-
-  function beginMoveSelection(anchorLane, anchorMs){
-    const snapshot = new Map();
-    for(const n of state.notes){
-      if(state.selected.has(n.id)){
-        snapshot.set(n.id, { t:n.t, end:n.end, lane:n.lane });
-      }
-    }
-    state.drag.move = { anchorLane, anchorMs, snapshot };
-  }
-
-  function applyMoveSelection(deltaLane, deltaMs){
-    const mv = state.drag.move;
-    if(!mv) return;
-    for(const n of state.notes){
-      if(!state.selected.has(n.id)) continue;
-      const base = mv.snapshot.get(n.id);
-      if(!base) continue;
-
-      const lane = clamp(base.lane + deltaLane, 0, state.keys-1);
-      let t = base.t + deltaMs;
-      let end = base.end + deltaMs;
-
-      // quantize to current grid at target time (optional but makes it stable)
-      t = quantizeAt(t);
-      if(n.type === "hold") end = Math.max(t+1, quantizeAt(end));
-      else end = t;
-
-      n.lane = lane;
-      n.t = t;
-      n.end = end;
-    }
-    sortNotes();
-  }
-
-  // ---------- Timing UI ----------
-  function renderTimingUI(){
-    normalizeTiming();
-    if(state.timing.length === 0){
-      tpList.innerHTML = `<div class="row"><span>—</span><span>Sem timing points</span></div>`;
-      return;
-    }
-    tpList.innerHTML = state.timing.map(tp => {
-      return `
-        <div class="tpRow" data-tpid="${tp.id}">
-          <input type="number" step="1" value="${Math.round(tp.t)}" data-k="t" title="time (ms)">
-          <input type="number" step="0.001" value="${tp.bpm}" data-k="bpm" title="bpm">
-          <button class="danger" data-act="del">X</button>
-        </div>
-      `;
-    }).join("");
-
-    tpList.querySelectorAll(".tpRow").forEach(row => {
-      const id = row.getAttribute("data-tpid");
-      row.querySelectorAll("input").forEach(inp => {
-        inp.addEventListener("change", () => {
-          const k = inp.getAttribute("data-k");
-          const tp = state.timing.find(x => x.id === id);
-          if(!tp) return;
-          pushUndo();
-          if(k === "t") tp.t = Math.max(0, Math.round(Number(inp.value)||0));
-          if(k === "bpm") tp.bpm = clamp(Number(inp.value)||180, 30, 400);
-          normalizeTiming();
-          renderTimingUI();
-        });
-      });
-      const del = row.querySelector('button[data-act="del"]');
-      del.addEventListener("click", () => {
-        if(state.timing.length <= 1) return;
-        pushUndo();
-        state.timing = state.timing.filter(x => x.id !== id);
-        normalizeTiming();
-        renderTimingUI();
-      });
-    });
-  }
-
-  // ---------- Export .osu ----------
-  function laneToOsuX(lane){
-    const x = Math.floor((lane + 0.5) * 512 / state.keys);
-    return clamp(x, 0, 511);
-  }
-
-  function exportOsu(){
-    const keys = state.keys;
-    const audioName = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\", "/");
-    const meta = getMeta();
-
-    const header =
-`osu file format v14
-
-[General]
-AudioFilename: ${audioName}
-AudioLeadIn: 0
-PreviewTime: -1
-Countdown: 0
-SampleSet: Soft
-StackLeniency: 0.7
-Mode: 3
-LetterboxInBreaks: 0
-SpecialStyle: 0
-WidescreenStoryboard: 0
-
-[Editor]
-DistanceSpacing: 1.0
-BeatDivisor: ${state.snap}
-GridSize: 4
-TimelineZoom: 1.0
-
-[Metadata]
-Title:${meta.title}
-Artist:${meta.artist}
-Creator:${meta.creator}
-Version:${meta.version}
-Source:
-Tags:
-
-[Difficulty]
-HPDrainRate:5
-CircleSize:${keys}
-OverallDifficulty:8
-ApproachRate:5
-SliderMultiplier:1.4
-SliderTickRate:1
-
-[Events]
-//Background and Video events
-//Break Periods
-//Storyboard Layer 0 (Background)
-//Storyboard Layer 1 (Fail)
-//Storyboard Layer 2 (Pass)
-//Storyboard Layer 3 (Foreground)
-//Storyboard Layer 4 (Overlay)
-//Storyboard Sound Samples
-
-[TimingPoints]
-`;
-
-    const tps = state.timing
-      .slice()
-      .sort((a,b)=>a.t-b.t)
-      .map(tp => {
-        const beatLen = (60000 / tp.bpm);
-        // offset, beatLength, meter, sampleSet, sampleIndex, volume, uninherited, effects
-        return `${Math.round(tp.t)},${beatLen.toFixed(15)},${tp.meter||4},2,0,100,1,0`;
-      }).join("\n");
-
-    const hitHeader = `
-
-[HitObjects]
-`;
-
-    const lines = state.notes
-      .slice()
-      .sort((a,b)=>a.t-b.t)
-      .map(n => {
-        const x = laneToOsuX(n.lane);
-        const y = 192;
-        const t = Math.round(n.t);
-        if(n.type === "tap"){
-          return `${x},${y},${t},1,0,0:0:0:0:`;
-        } else {
-          const end = Math.max(t+1, Math.round(n.end));
-          return `${x},${y},${t},128,0,${end}:0:0:0:0:`;
-        }
-      }).join("\n");
-
-    const out = header + tps + hitHeader + lines + "\n";
-    const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${meta.title} - ${meta.artist} (${meta.creator}) [${keys}K ${meta.version}].osu`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  // ---------- Project JSON ----------
-  function projectObj(){
-    return {
-      v: 2,
-      keys: state.keys,
-      snap: state.snap,
-      zoomPxPerSec: state.zoomPxPerSec,
-      gridOpacity: state.gridOpacity,
-      timing: state.timing,
-      notes: state.notes,
-      meta: getMeta(),
-      binds: state.rec.binds
-    };
-  }
-
-  function loadProject(obj){
-    if(!obj) return;
-    pushUndo();
-    state.keys = clamp(Number(obj.keys)||4, 4, 7);
-    state.snap = clamp(Number(obj.snap)||4, 1, 16);
-    state.zoomPxPerSec = clamp(Number(obj.zoomPxPerSec)||1600, 200, 8000);
-    state.gridOpacity = clamp(Number(obj.gridOpacity)||1, 0, 1);
-    state.timing = Array.isArray(obj.timing) && obj.timing.length ? obj.timing : state.timing;
-    state.notes = Array.isArray(obj.notes) ? obj.notes : [];
-    if(obj.meta) setMeta(obj.meta);
-    if(Array.isArray(obj.binds) && obj.binds.length) state.rec.binds = obj.binds;
-
-    keysSel.value = String(state.keys);
-    snapSel.value = String(state.snap);
-    zoomIn.value = String(state.zoomPxPerSec);
-    gridOpIn.value = String(state.gridOpacity);
-    bindsIn.value = state.rec.binds.join(" ");
-
-    normalizeTiming();
-    sortNotes();
-    state.selected.clear();
-    updateSelectionUI();
-    renderTimingUI();
-    renderNoteList();
-  }
-
-  function saveLocal(){
-    const key = "web_mania_editor_v2_project";
-    localStorage.setItem(key, JSON.stringify(projectObj()));
-  }
-  function loadLocal(){
-    const key = "web_mania_editor_v2_project";
-    const raw = localStorage.getItem(key);
-    if(!raw) return;
-    try{
-      const obj = JSON.parse(raw);
-      loadProject(obj);
-    }catch(e){}
-  }
-
-  function exportJson(){
-    const out = JSON.stringify(projectObj(), null, 2);
-    const blob = new Blob([out], {type:"application/json;charset=utf-8"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "mania_project.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  // ---------- Recording ----------
-  function defaultBindsForKeys(k){
-    if(k===4) return ["d","f","j","k"];
-    if(k===5) return ["d","f","space","j","k"];
-    if(k===6) return ["s","d","f","j","k","l"];
-    return ["s","d","f","space","j","k","l"]; // 7
-  }
-  function parseBinds(str){
-    const parts = (str||"").trim().split(/\s+/).filter(Boolean);
-    return parts;
-  }
-  function keyToNormalized(e){
-    // unify Space
-    if(e.code === "Space") return "space";
-    return (e.key || "").toLowerCase();
-  }
-
-  function recordKeyDown(e){
-    if(state.rec.mode !== "on") return;
-    if(!state.isPlaying) return;
-    if(e.repeat) return;
-
-    const key = keyToNormalized(e);
-    const binds = state.rec.binds;
-    const lane = binds.indexOf(key);
-    if(lane < 0 || lane >= state.keys) return;
-
-    // avoid capturing shortcuts
-    if(e.ctrlKey || e.metaKey || e.altKey) return;
-
-    const msRaw = state.timeMs;
-    const t = state.rec.quantize ? quantizeAt(msRaw) : msRaw;
-
-    if(state.rec.downMap.has(key)) return;
-
-    pushUndo();
-    const id = cryptoId();
-    const note = { id, lane, t, type:"hold", end: t + snapMsAt(t) };
-    state.notes.push(note);
-    sortNotes();
-    state.rec.downMap.set(key, { lane, startMs: t, noteId: id });
-    state.selected.clear();
-    state.selected.add(id);
-    updateSelectionUI();
-    renderNoteList();
-    e.preventDefault();
-  }
-
-  function recordKeyUp(e){
-    if(state.rec.mode !== "on") return;
-    const key = keyToNormalized(e);
-    const info = state.rec.downMap.get(key);
-    if(!info) return;
-    const n = state.notes.find(x => x.id === info.noteId);
-    if(!n) { state.rec.downMap.delete(key); return; }
-
-    const msRaw = state.timeMs;
-    const end = state.rec.quantize ? quantizeAt(msRaw) : msRaw;
-
-    // if too short => tap
-    const minHold = snapMsAt(n.t) * 0.6;
-    if(end - n.t < minHold){
-      n.type = "tap";
-      n.end = n.t;
-    } else {
-      n.type = "hold";
-      n.end = Math.max(n.t + 1, end);
-    }
-
-    sortNotes();
-    state.rec.downMap.delete(key);
-    renderNoteList();
-    e.preventDefault();
-  }
-
-  // ---------- Rendering ----------
-  function resize(){
-    const r = wrap.getBoundingClientRect();
-    cv.width = Math.floor(r.width * devicePixelRatio);
-    cv.height = Math.floor(r.height * devicePixelRatio);
-    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-  }
-
-  function drawWaveform(){
-    const w = getW(), h = getH();
-    if(!state.wf.ready) return;
-
-    // draw as vertical waveform around center line
-    const midX = w * 0.5;
-    const maxAmpX = w * 0.47;
-
-    ctx.globalAlpha = 0.22;
-    ctx.strokeStyle = "rgba(125,211,252,.9)";
-    ctx.lineWidth = 1;
-
-    ctx.beginPath();
-    const stepY = 2; // px
-    for(let y=0; y<=h; y+=stepY){
-      const t = timeFromY(y);
-      const a = ampAtTimeMs(t);
-      const x = midX + (a * maxAmpX) * (a >= 0 ? 1 : -1);
-      if(y === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-
-  function drawGrid(){
-    const w = getW(), h = getH();
-    const op = state.gridOpacity;
+  // Rendering
+  function drawPlayfield(){
+    const w = PW(), h = PH();
+    pctx.clearRect(0,0,w,h);
+    pctx.fillStyle = "#07090d";
+    pctx.fillRect(0,0,w,h);
 
     // lanes
-    const laneW = w / state.keys;
+    const lw = laneW();
     for(let i=0;i<state.keys;i++){
-      ctx.fillStyle = "rgba(255,255,255,.04)";
-      ctx.fillRect(i*laneW, 0, laneW-1, h);
-      ctx.fillStyle = "rgba(255,255,255,.08)";
-      ctx.fillRect(i*laneW, 0, 1, h);
+      pctx.fillStyle = "rgba(255,255,255,.04)";
+      pctx.fillRect(i*lw, 0, lw-1, h);
+      pctx.fillStyle = "rgba(255,255,255,.08)";
+      pctx.fillRect(i*lw, 0, 1, h);
     }
-    ctx.fillStyle = "rgba(255,255,255,.10)";
-    ctx.fillRect(w-1,0,1,h);
+    pctx.fillStyle = "rgba(255,255,255,.10)";
+    pctx.fillRect(w-1,0,1,h);
 
-    if(op <= 0) return;
+    // faint waveform in background (optional)
+    if(state.wf.ready){
+      pctx.globalAlpha = 0.12;
+      pctx.strokeStyle = "rgba(125,211,252,.9)";
+      pctx.lineWidth = 1;
+      pctx.beginPath();
+      const mid = w*0.5;
+      const maxX = w*0.48;
+      for(let y=0; y<=h; y+=3){
+        const t = timeFromY(y);
+        const a = ampAtMs(t);
+        const x = mid + (a*maxX);
+        if(y===0) pctx.moveTo(x,y); else pctx.lineTo(x,y);
+      }
+      pctx.stroke();
+      pctx.globalAlpha = 1;
+    }
 
-    // time grid by timing segments
+    // grid lines (snap)
     const viewMs = h / pxPerMs();
-    const tMin = state.timeMs - viewMs * 0.65;
-    const tMax = state.timeMs + viewMs * 0.45;
+    const tMin = state.timeMs - viewMs*0.65;
+    const tMax = state.timeMs + viewMs*0.45;
 
-    const tps = state.timing.slice().sort((a,b)=>a.t-b.t);
-    const segs = [];
+    // draw per segment (timing points)
+    normalizeTiming();
+    const tps = state.timing.slice();
     for(let i=0;i<tps.length;i++){
-      const a = tps[i];
-      const b = tps[i+1];
-      segs.push({ tp:a, start:a.t, end: b ? b.t : Infinity });
-    }
-
-    for(const seg of segs){
-      const segStart = Math.max(tMin, seg.start);
-      const segEnd = Math.min(tMax, seg.end);
+      const tp = tps[i];
+      const next = tps[i+1];
+      const segStart = Math.max(tMin, tp.t);
+      const segEnd = Math.min(tMax, next ? next.t : Infinity);
       if(segEnd <= segStart) continue;
 
-      const beatLen = 60000 / seg.tp.bpm;
-      const meter = seg.tp.meter || 4;
+      const beatLen = 60000 / tp.bpm;
+      const meter = tp.meter || 4;
       const step = beatLen / state.snap;
 
-      // find first tick >= segStart aligned to seg.tp.t
-      const base = seg.tp.t;
+      const base = tp.t;
       const n0 = Math.ceil((segStart - base) / step);
-      let t = base + n0 * step;
-
-      for(; t <= segEnd; t += step){
+      for(let t = base + n0*step; t <= segEnd; t += step){
         const y = yFromTime(t);
         if(y < -50 || y > h+50) continue;
 
@@ -1167,103 +1025,192 @@ SliderTickRate:1
         const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
         const isBar = isBeat && (beatIndex % meter === 0);
 
-        ctx.strokeStyle = isBar
-          ? `rgba(255,255,255,${0.18*op})`
-          : isBeat ? `rgba(255,255,255,${0.13*op})`
-                   : `rgba(255,255,255,${0.07*op})`;
-        ctx.lineWidth = isBar ? 1.7 : (isBeat ? 1.2 : 1);
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
+        pctx.strokeStyle = isBar ? "rgba(255,255,255,.18)"
+                      : isBeat ? "rgba(255,255,255,.13)"
+                               : "rgba(255,255,255,.07)";
+        pctx.lineWidth = isBar ? 1.7 : (isBeat ? 1.2 : 1);
+        pctx.beginPath();
+        pctx.moveTo(0,y);
+        pctx.lineTo(w,y);
+        pctx.stroke();
       }
     }
 
     // playhead
-    ctx.strokeStyle = "rgba(125,211,252,.85)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, centerY());
-    ctx.lineTo(w, centerY());
-    ctx.stroke();
-  }
+    pctx.strokeStyle = "rgba(125,211,252,.85)";
+    pctx.lineWidth = 2;
+    pctx.beginPath();
+    pctx.moveTo(0, centerY());
+    pctx.lineTo(w, centerY());
+    pctx.stroke();
 
-  function drawNotes(){
-    const w = getW(), h = getH();
-    const laneW = w / state.keys;
-
+    // notes
     for(const n of state.notes){
-      const x0 = xFromLane(n.lane);
       const y = yFromTime(n.t);
-      if(y < -120 || y > h+120) continue;
+      if(y < -140 || y > h+140) continue;
 
+      const x0 = xFromLane(n.lane);
       const pad = 7;
-      const rectW = laneW - pad*2;
+      const rectW = lw - pad*2;
       const rectH = 12;
 
       const isSel = state.selected.has(n.id);
 
-      // hold body + end
       if(n.type === "hold"){
         const y2 = yFromTime(n.end);
         const top = Math.min(y,y2);
         const bot = Math.max(y,y2);
 
-        ctx.fillStyle = isSel ? "rgba(125,211,252,.40)" : "rgba(255,255,255,.16)";
-        ctx.fillRect(x0 + laneW/2 - 3, top, 6, bot-top);
+        pctx.fillStyle = isSel ? "rgba(167,139,250,.40)" : "rgba(255,255,255,.16)";
+        pctx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
 
-        ctx.fillStyle = isSel ? "rgba(125,211,252,.92)" : "rgba(255,255,255,.70)";
-        ctx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
+        pctx.fillStyle = isSel ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.70)";
+        pctx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
       }
 
-      // head
-      ctx.fillStyle = isSel ? "rgba(125,211,252,.92)" : "rgba(255,255,255,.70)";
-      ctx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
+      pctx.fillStyle = isSel ? "rgba(125,211,252,.92)" : "rgba(255,255,255,.70)";
+      pctx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
 
-      // outline for selection
       if(isSel){
-        ctx.strokeStyle = "rgba(125,211,252,.95)";
-        ctx.lineWidth = 1.2;
-        ctx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
+        pctx.strokeStyle = "rgba(125,211,252,.95)";
+        pctx.lineWidth = 1.2;
+        pctx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
       }
     }
 
-    // box select overlay
-    if(state.drag.mode === "boxSelect" && state.drag.box){
-      const b = rectNorm(state.drag.box.x0, state.drag.box.y0, state.drag.box.x1, state.drag.box.y1);
-      ctx.fillStyle = "rgba(125,211,252,.12)";
-      ctx.strokeStyle = "rgba(125,211,252,.7)";
-      ctx.lineWidth = 1.4;
-      ctx.fillRect(b.x0, b.y0, b.x1-b.x0, b.y1-b.y0);
-      ctx.strokeRect(b.x0, b.y0, b.x1-b.x0, b.y1-b.y0);
+    // box select
+    if(state.drag.mode === "box" && state.drag.box){
+      const b = rectNorm(state.drag.box);
+      pctx.fillStyle = "rgba(125,211,252,.12)";
+      pctx.strokeStyle = "rgba(125,211,252,.7)";
+      pctx.lineWidth = 1.4;
+      pctx.fillRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+      pctx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
     }
   }
 
-  function render(){
-    updateTimeFromAudio();
-
-    const w = getW(), h = getH();
-    ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = "#07090d";
-    ctx.fillRect(0,0,w,h);
-
-    drawWaveform();
-    drawGrid();
-    drawNotes();
-
-    // HUD labels
-    timeLbl.textContent = Math.round(state.timeMs);
-    countLbl.textContent = state.notes.length;
-
-    const tp = activeTimingAt(state.timeMs);
-    tpLbl.textContent = `${tp.bpm.toFixed(3)} BPM @ ${Math.round(tp.t)}ms`;
-
-    requestAnimationFrame(render);
+  function rectNorm(b){
+    return { x0: Math.min(b.x0,b.x1), y0: Math.min(b.y0,b.y1), x1: Math.max(b.x0,b.x1), y1: Math.max(b.y0,b.y1) };
   }
 
-  // ---------- Note list ----------
+  // Timeline mapping (window around playhead)
+  function timelineRange(){
+    const half = (state.timelineWindowSec * 1000) / 2;
+    const start = state.timeMs - half;
+    const end = state.timeMs + half;
+    return { start, end };
+  }
+  function xFromTime(ms){
+    const {start,end} = timelineRange();
+    const w = TW();
+    const t = (ms - start) / (end - start);
+    return t * w;
+  }
+  function timeFromX(x){
+    const {start,end} = timelineRange();
+    const w = TW();
+    const t = x / w;
+    return start + t * (end - start);
+  }
+
+  function drawTimeline(){
+    const w = TW(), h = TH();
+    tctx.clearRect(0,0,w,h);
+    tctx.fillStyle = "#07090d";
+    tctx.fillRect(0,0,w,h);
+
+    const {start,end} = timelineRange();
+
+    // waveform
+    if(state.wf.ready){
+      tctx.globalAlpha = 0.35;
+      tctx.strokeStyle = "rgba(125,211,252,.85)";
+      tctx.lineWidth = 1;
+      tctx.beginPath();
+      for(let x=0; x<=w; x+=2){
+        const ms = timeFromX(x);
+        const a = ampAtMs(ms);
+        const y = h*0.5;
+        const amp = a * (h*0.42);
+        tctx.moveTo(x, y-amp);
+        tctx.lineTo(x, y+amp);
+      }
+      tctx.stroke();
+      tctx.globalAlpha = 1;
+    }
+
+    // beat lines
+    normalizeTiming();
+    const tp = activeTP(state.timeMs);
+    const beatLen = 60000 / tp.bpm;
+    const step = beatLen / state.snap;
+    const base = tp.t;
+
+    const n0 = Math.ceil((start - base) / step);
+    for(let t = base + n0*step; t <= end; t += step){
+      const x = xFromTime(t);
+      const rel = t - base;
+      const beatIndex = Math.round(rel / beatLen);
+      const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+      const isBar = isBeat && (beatIndex % (tp.meter||4) === 0);
+
+      tctx.strokeStyle = isBar ? "rgba(255,255,255,.20)"
+                    : isBeat ? "rgba(255,255,255,.13)"
+                             : "rgba(255,255,255,.07)";
+      tctx.lineWidth = isBar ? 1.6 : (isBeat ? 1.1 : 1);
+      tctx.beginPath();
+      tctx.moveTo(x, 0);
+      tctx.lineTo(x, h);
+      tctx.stroke();
+    }
+
+    // notes markers (per lane)
+    const laneH = h / state.keys;
+    for(const n of state.notes){
+      if(n.t < start || n.t > end) continue;
+      const x = xFromTime(n.t);
+      const y = (n.lane + 0.5) * laneH;
+      tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.75)";
+      tctx.fillRect(x-2, y-6, 4, 12);
+      if(n.type === "hold"){
+        const x2 = xFromTime(n.end);
+        tctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.18)";
+        tctx.fillRect(Math.min(x,x2), y-2, Math.abs(x2-x), 4);
+      }
+    }
+
+    // playhead in timeline
+    const xPH = xFromTime(state.timeMs);
+    tctx.strokeStyle = "rgba(125,211,252,.9)";
+    tctx.lineWidth = 2;
+    tctx.beginPath();
+    tctx.moveTo(xPH, 0);
+    tctx.lineTo(xPH, h);
+    tctx.stroke();
+
+    // window label
+    lblWin.textContent = String(state.timelineWindowSec);
+  }
+
+  function renderLoop(){
+    updateTimeFromAudio();
+    metronomeTick();
+
+    const tp = activeTP(state.timeMs);
+    lblTime.textContent = String(Math.round(state.timeMs));
+    lblCount.textContent = String(state.notes.length);
+    lblTP.textContent = `${tp.bpm.toFixed(3)} BPM @ ${Math.round(tp.t)}ms`;
+    lblTool.textContent = state.tool;
+
+    drawPlayfield();
+    drawTimeline();
+
+    requestAnimationFrame(renderLoop);
+  }
+
+  // Note list UI
   function renderNoteList(){
-    const items = state.notes.slice().sort((a,b)=>b.t-a.t).slice(0, 120);
+    const items = state.notes.slice().sort((a,b)=>b.t-a.t).slice(0,120);
     noteList.innerHTML = items.map(n => {
       const sel = state.selected.has(n.id);
       const t = Math.round(n.t);
@@ -1290,7 +1237,190 @@ SliderTickRate:1
     });
   }
 
-  // ---------- Events ----------
+  // Timing UI
+  function renderTimingUI(){
+    normalizeTiming();
+    tpList.innerHTML = state.timing.map(tp => {
+      return `
+        <div class="item" style="cursor:default" data-tpid="${tp.id}">
+          <span>
+            <b>${Math.round(tp.t)}ms</b> • ${tp.bpm.toFixed(3)} BPM • ${tp.meter||4}/4
+          </span>
+          <span style="display:flex; gap:8px; align-items:center;">
+            <input data-k="t" type="number" step="1" value="${Math.round(tp.t)}" style="width:110px">
+            <input data-k="bpm" type="number" step="0.001" value="${tp.bpm}" style="width:110px">
+            <button class="danger" data-act="del">X</button>
+          </span>
+        </div>
+      `;
+    }).join("");
+
+    tpList.querySelectorAll(".item").forEach(row => {
+      const id = row.getAttribute("data-tpid");
+      const tp = state.timing.find(x => x.id === id);
+      if(!tp) return;
+
+      const tIn = row.querySelector('input[data-k="t"]');
+      const bpmIn = row.querySelector('input[data-k="bpm"]');
+      const del = row.querySelector('button[data-act="del"]');
+
+      tIn.addEventListener("change", () => {
+        pushUndo();
+        tp.t = Math.max(0, Math.round(Number(tIn.value)||0));
+        normalizeTiming();
+        renderTimingUI();
+      });
+      bpmIn.addEventListener("change", () => {
+        pushUndo();
+        tp.bpm = clamp(Number(bpmIn.value)||180, 30, 400);
+        normalizeTiming();
+        renderTimingUI();
+      });
+      del.addEventListener("click", () => {
+        if(state.timing.length <= 1) return;
+        pushUndo();
+        state.timing = state.timing.filter(x => x.id !== id);
+        normalizeTiming();
+        renderTimingUI();
+      });
+    });
+  }
+
+  // Export (.osu mania)
+  function laneToOsuX(lane){
+    const x = Math.floor((lane + 0.5) * 512 / state.keys);
+    return clamp(x, 0, 511);
+  }
+
+  function getMeta(){
+    return {
+      title: metaTitle?.value ?? "WebManiaEditor",
+      artist: metaArtist?.value ?? "Unknown",
+      creator: metaCreator?.value ?? "reze",
+      version: metaVersion?.value ?? "Easy"
+    };
+  }
+  function setMeta(m){
+    if(metaTitle) metaTitle.value = m.title ?? metaTitle.value;
+    if(metaArtist) metaArtist.value = m.artist ?? metaArtist.value;
+    if(metaCreator) metaCreator.value = m.creator ?? metaCreator.value;
+    if(metaVersion) metaVersion.value = m.version ?? metaVersion.value;
+  }
+
+  function exportOsu(){
+    const meta = getMeta();
+    const audioName = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\","/");
+    const keys = state.keys;
+
+    normalizeTiming();
+    sortNotes();
+
+    const header =
+`osu file format v14
+
+[General]
+AudioFilename: ${audioName}
+AudioLeadIn: 0
+PreviewTime: -1
+Countdown: 0
+SampleSet: Soft
+StackLeniency: 0.7
+Mode: 3
+LetterboxInBreaks: 0
+SpecialStyle: 0
+WidescreenStoryboard: 0
+
+[Editor]
+DistanceSpacing: 1.0
+BeatDivisor: ${state.snap}
+GridSize: 4
+TimelineZoom: 1.0
+
+[Metadata]
+Title:${meta.title}
+Artist:${meta.artist}
+Creator:${meta.creator}
+Version:${keys}K ${meta.version}
+Source:
+Tags:
+
+[Difficulty]
+HPDrainRate:5
+CircleSize:${keys}
+OverallDifficulty:8
+ApproachRate:5
+SliderMultiplier:1.4
+SliderTickRate:1
+
+[Events]
+//Background and Video events
+//Break Periods
+//Storyboard Layer 0 (Background)
+//Storyboard Layer 1 (Fail)
+//Storyboard Layer 2 (Pass)
+//Storyboard Layer 3 (Foreground)
+//Storyboard Layer 4 (Overlay)
+//Storyboard Sound Samples
+
+[TimingPoints]
+`;
+
+    const tps = state.timing.map(tp => {
+      const beatLen = (60000 / tp.bpm);
+      return `${Math.round(tp.t)},${beatLen.toFixed(15)},${tp.meter||4},2,0,100,1,0`;
+    }).join("\n");
+
+    const hitHeader = `
+
+[HitObjects]
+`;
+
+    const hitLines = state.notes.map(n => {
+      const x = laneToOsuX(n.lane);
+      const y = 192;
+      const t = Math.round(n.t);
+      const hs = n.hs ?? 0;
+
+      // hitSample: normalSet:additionSet:index:volume:filename
+      const vol = clamp(n.vol ?? 0, 0, 100);
+      const sample = `0:0:0:${vol}:`;
+
+      if(n.type === "tap"){
+        return `${x},${y},${t},1,${hs},${sample}`;
+      } else {
+        const end = Math.max(t+1, Math.round(n.end));
+        return `${x},${y},${t},128,${hs},${end}:${sample}`;
+      }
+    }).join("\n");
+
+    const out = header + tps + hitHeader + hitLines + "\n";
+    const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${meta.title} - ${meta.artist} (${meta.creator}) [${keys}K ${meta.version}].osu`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // Tool switching
+  function setTool(tool){
+    state.tool = tool;
+    toolButtons.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
+  }
+
+  // Tabs
+  function setTab(name){
+    [tabCompose, tabTiming, tabSong].forEach(t => t.classList.remove("active"));
+    if(name === "compose") tabCompose.classList.add("active");
+    if(name === "timing") tabTiming.classList.add("active");
+    if(name === "song") tabSong.classList.add("active");
+
+    rightCompose.classList.toggle("hidden", name !== "compose");
+    rightTiming.classList.toggle("hidden", name !== "timing");
+    rightSong.classList.toggle("hidden", name !== "song");
+  }
+
+  // Input wiring
   audioFile.addEventListener("change", async () => {
     const f = audioFile.files[0];
     if(!f) return;
@@ -1302,146 +1432,252 @@ SliderTickRate:1
     if(!state.ac) await ensureAC();
     if(state.isPlaying) pause(); else play();
   });
-
   stopBtn.addEventListener("click", stop);
   exportBtn.addEventListener("click", exportOsu);
+
   undoBtn.addEventListener("click", doUndo);
   delBtn.addEventListener("click", deleteSelection);
 
   keysSel.addEventListener("change", () => {
-    state.keys = parseInt(keysSel.value, 10);
-    // clamp notes lanes
     pushUndo();
+    state.keys = parseInt(keysSel.value,10);
+    // clamp lanes
     for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
-    // adjust binds
-    state.rec.binds = defaultBindsForKeys(state.keys);
-    bindsIn.value = state.rec.binds.join(" ");
+    // clamp selection props
+    updateSelectionUI();
     renderNoteList();
   });
 
   snapSel.addEventListener("change", () => state.snap = parseInt(snapSel.value,10));
-  zoomIn.addEventListener("change", () => state.zoomPxPerSec = parseInt(zoomIn.value,10));
-  gridOpIn.addEventListener("change", () => state.gridOpacity = clamp(parseFloat(gridOpIn.value), 0, 1));
+  snapOnSel.addEventListener("change", () => state.snapOn = (snapOnSel.value === "on"));
+  zoomIn.addEventListener("change", () => state.scrollPxPerSec = parseInt(zoomIn.value,10));
 
-  addTpBtn.addEventListener("click", () => {
+  rateIn.addEventListener("change", () => {
+    state.rate = clamp(parseFloat(rateIn.value)||1, 0.25, 2);
+    if(state.isPlaying){
+      pause();
+      play();
+    }
+  });
+
+  metronomeSel.addEventListener("change", () => {
+    state.metronome.on = (metronomeSel.value === "on");
+  });
+
+  tabCompose.addEventListener("click", () => setTab("compose"));
+  tabTiming.addEventListener("click", () => setTab("timing"));
+  tabSong.addEventListener("click", () => setTab("song"));
+
+  toolButtons.forEach(btn => {
+    btn.addEventListener("click", () => setTool(btn.getAttribute("data-tool")));
+  });
+
+  // Timing buttons
+  addTPBtn.addEventListener("click", () => {
     pushUndo();
     const ms = Math.round(state.timeMs);
-    const curr = activeTimingAt(ms);
-    state.timing.push({ id: cryptoId(), t: ms, bpm: curr.bpm, meter: curr.meter || 4 });
+    const cur = activeTP(ms);
+    state.timing.push({ id: uid(), t: ms, bpm: cur.bpm, meter: cur.meter||4 });
     normalizeTiming();
     renderTimingUI();
   });
-
-  normTpBtn.addEventListener("click", () => {
+  sortTPBtn.addEventListener("click", () => {
     pushUndo();
     normalizeTiming();
     renderTimingUI();
   });
-
-  clearTpBtn.addEventListener("click", () => {
+  resetTPBtn.addEventListener("click", () => {
     pushUndo();
-    state.timing = [{ id: cryptoId(), t: 0, bpm: 180, meter: 4 }];
+    state.timing = [{ id: uid(), t: 0, bpm: 180, meter: 4 }];
     renderTimingUI();
   });
 
-  recMode.addEventListener("change", () => state.rec.mode = recMode.value);
-  recQuant.addEventListener("change", () => state.rec.quantize = recQuant.value === "on");
-  bindsIn.addEventListener("change", () => {
-    const arr = parseBinds(bindsIn.value);
-    if(arr.length >= state.keys){
-      state.rec.binds = arr.slice(0, state.keys);
-    } else {
-      // if too few, auto-fill to keep usable
-      const def = defaultBindsForKeys(state.keys);
-      state.rec.binds = arr.concat(def.slice(arr.length)).slice(0, state.keys);
-    }
-    bindsIn.value = state.rec.binds.join(" ");
+  // Props change
+  [propTime, propLane, propType, propEnd, hsFlags, hsVol].forEach(el => {
+    el.addEventListener("change", applyPropsToSelected);
   });
 
-  // wheel scroll = seek (keeps playing if already playing)
-  wrap.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    if(!state.buffer) return;
-    const delta = e.deltaY;
-    seekMs(state.timeMs + delta * 2.2);
-  }, {passive:false});
-
-  // mouse interactions (create, box select, move selection)
-  let mouseDown = false;
-
-  function getMouse(e){
+  // Mouse helpers
+  function mousePos(e, wrap){
     const r = wrap.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   }
 
-  wrap.addEventListener("mousedown", (e) => {
+  // Playfield wheel => scroll time
+  playWrap.addEventListener("wheel", (e) => {
+    e.preventDefault();
     if(!state.buffer) return;
-    mouseDown = true;
-    const m = getMouse(e);
-    state.drag.downX = m.x; state.drag.downY = m.y;
+    const delta = e.deltaY;
+    const ms = state.timeMs + delta * 2.2;
+    seekMs(ms);
+  }, {passive:false});
+
+  // Timeline interactions (seek)
+  function timelineSeekAtX(x){
+    const t = timeFromX(x);
+    seekMs(t);
+  }
+
+  timeWrap.addEventListener("mousedown", (e) => {
+    if(!state.buffer) return;
+    state.timelineDrag = true;
+    const m = mousePos(e, timeWrap);
+    timelineSeekAtX(m.x);
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if(!state.timelineDrag) return;
+    const m = mousePos(e, timeWrap);
+    timelineSeekAtX(m.x);
+  });
+
+  window.addEventListener("mouseup", () => {
+    state.timelineDrag = false;
+  });
+
+  // Box select helper
+  function selectByBox(box){
+    const b = rectNorm(box);
+    const tMin = Math.min(quantizeAt(timeFromY(b.y1)), quantizeAt(timeFromY(b.y0)));
+    const tMax = Math.max(quantizeAt(timeFromY(b.y1)), quantizeAt(timeFromY(b.y0)));
+
+    const laneMin = laneFromX(b.x0);
+    const laneMax = laneFromX(b.x1);
+
+    state.selected.clear();
+    for(const n of state.notes){
+      if(n.lane < laneMin || n.lane > laneMax) continue;
+      if(n.type === "tap"){
+        if(n.t >= tMin && n.t <= tMax) state.selected.add(n.id);
+      } else {
+        // overlap
+        if(!(n.end < tMin || n.t > tMax)) state.selected.add(n.id);
+      }
+    }
+    updateSelectionUI();
+    renderNoteList();
+  }
+
+  // Move selection snapshot
+  function beginMove(){
+    const snap = new Map();
+    for(const n of state.notes){
+      if(state.selected.has(n.id)) snap.set(n.id, { t:n.t, end:n.end, lane:n.lane });
+    }
+    state.drag.moveSnap = snap;
+  }
+  function applyMove(deltaLane, deltaMs){
+    const snap = state.drag.moveSnap;
+    if(!snap) return;
+    for(const n of state.notes){
+      if(!state.selected.has(n.id)) continue;
+      const base = snap.get(n.id);
+      if(!base) continue;
+
+      const lane = clamp(base.lane + deltaLane, 0, state.keys - 1);
+      let t = base.t + deltaMs;
+      t = state.snapOn ? quantizeAt(t) : t;
+
+      n.lane = lane;
+      n.t = t;
+
+      if(n.type === "hold"){
+        let end = base.end + deltaMs;
+        end = state.snapOn ? quantizeAt(end) : end;
+        n.end = Math.max(n.t + 1, end);
+      } else {
+        n.end = n.t;
+      }
+    }
+    sortNotes();
+  }
+
+  // Playfield mouse (tools)
+  playWrap.addEventListener("mousedown", (e) => {
+    if(!state.buffer) return;
+    state.drag.down = true;
+    const m = mousePos(e, playWrap);
+    state.drag.startX = m.x; state.drag.startY = m.y;
 
     const hit = findNoteAt(m.x, m.y);
-    const additive = e.ctrlKey || e.metaKey;
 
-    if(hit){
-      // selection logic
-      if(additive){
-        if(state.selected.has(hit.id)) state.selected.delete(hit.id);
-        else state.selected.add(hit.id);
-      } else {
-        if(!state.selected.has(hit.id)){
-          state.selected.clear();
-          state.selected.add(hit.id);
+    if(state.tool === "select"){
+      if(hit){
+        if(e.ctrlKey || e.metaKey){
+          if(state.selected.has(hit.id)) state.selected.delete(hit.id);
+          else state.selected.add(hit.id);
+        } else {
+          if(!state.selected.has(hit.id)){
+            state.selected.clear();
+            state.selected.add(hit.id);
+          }
         }
+        updateSelectionUI();
+        renderNoteList();
+
+        // drag move selection
+        state.drag.mode = "move";
+        beginMove();
+      } else {
+        // start box
+        state.drag.mode = "box";
+        state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
       }
-      updateSelectionUI();
-      renderNoteList();
-
-      // if clicked a selected note => start move selection (drag)
-      const lane = hit.lane;
-      const t = hit.t;
-      state.drag.mode = "moveSelection";
-      state.drag.move = null;
-      beginMoveSelection(lane, t);
       return;
     }
 
-    // empty area
-    if(e.shiftKey){
-      // create hold by dragging
+    if(state.tool === "erase"){
+      if(hit){
+        pushUndo();
+        state.notes = state.notes.filter(n => n.id !== hit.id);
+        state.selected.delete(hit.id);
+        updateSelectionUI();
+        renderNoteList();
+      }
+      return;
+    }
+
+    if(state.tool === "tap"){
       const lane = laneFromX(m.x);
-      const t = quantizeAt(timeFromY(m.y));
-      state.drag.mode = "holdCreate";
-      state.drag.lane = lane;
-      state.drag.holdStartMs = t;
-
-      const id = cryptoId();
-      addNote({ id, lane, t, type:"hold", end: t + snapMsAt(t) });
-      // keep only this selected
-      state.selected.clear();
-      state.selected.add(id);
-      updateSelectionUI();
-      renderNoteList();
+      const tRaw = timeFromY(m.y);
+      const t = quantizeAt(tRaw);
+      addNote({ id: uid(), lane, t, type:"tap", end:t, hs:0, vol:0 });
       return;
     }
 
-    // start box selection
-    state.drag.mode = "boxSelect";
-    state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
-
-    if(!additive){
-      state.selected.clear();
-      updateSelectionUI();
-      renderNoteList();
+    if(state.tool === "hold"){
+      const lane = laneFromX(m.x);
+      const t0 = quantizeAt(timeFromY(m.y));
+      const id = uid();
+      addNote({ id, lane, t: t0, type:"hold", end: t0 + snapMsAt(t0), hs:0, vol:0 });
+      state.drag.mode = "holdCreate";
+      state.drag.holdId = id;
+      return;
     }
   });
 
-  wrap.addEventListener("mousemove", (e) => {
-    if(!mouseDown) return;
-    const m = getMouse(e);
+  playWrap.addEventListener("mousemove", (e) => {
+    if(!state.drag.down) return;
+    const m = mousePos(e, playWrap);
 
-    if(state.drag.mode === "holdCreate"){
-      const id = [...state.selected][0];
+    if(state.tool === "select" && state.drag.mode === "box" && state.drag.box){
+      state.drag.box.x1 = m.x;
+      state.drag.box.y1 = m.y;
+      // live preview
+      selectByBox(state.drag.box);
+      return;
+    }
+
+    if(state.tool === "select" && state.drag.mode === "move"){
+      const dxLane = laneFromX(m.x) - laneFromX(state.drag.startX);
+      const dMs = quantizeAt(timeFromY(m.y)) - quantizeAt(timeFromY(state.drag.startY));
+      applyMove(dxLane, dMs);
+      renderNoteList();
+      return;
+    }
+
+    if(state.tool === "hold" && state.drag.mode === "holdCreate"){
+      const id = state.drag.holdId;
       const n = state.notes.find(x => x.id === id);
       if(!n) return;
       const end = quantizeAt(timeFromY(m.y));
@@ -1449,44 +1685,23 @@ SliderTickRate:1
       renderNoteList();
       return;
     }
-
-    if(state.drag.mode === "boxSelect" && state.drag.box){
-      state.drag.box.x1 = m.x;
-      state.drag.box.y1 = m.y;
-      // live preview selection
-      const additive = e.ctrlKey || e.metaKey;
-      selectByBox(state.drag.box, additive);
-      return;
-    }
-
-    if(state.drag.mode === "moveSelection" && state.drag.move){
-      const deltaLane = laneFromX(m.x) - state.drag.move.anchorLane;
-      const deltaMs = quantizeAt(timeFromY(m.y)) - quantizeAt(state.drag.move.anchorMs);
-      applyMoveSelection(deltaLane, deltaMs);
-      renderNoteList();
-      return;
-    }
   });
 
-  window.addEventListener("mouseup", (e) => {
-    mouseDown = false;
-
-    if(state.drag.mode === "boxSelect" && state.drag.box){
-      const additive = e.ctrlKey || e.metaKey;
-      selectByBox(state.drag.box, additive);
+  window.addEventListener("mouseup", () => {
+    if(state.drag.down){
+      if(state.drag.mode === "move" || state.drag.mode === "holdCreate" || state.drag.mode === "box"){
+        // commit undo after drag operations
+        pushUndo();
+      }
     }
-
-    if(state.drag.mode === "moveSelection" && state.drag.move){
-      // commit move
-      pushUndo();
-    }
-
+    state.drag.down = false;
     state.drag.mode = "none";
     state.drag.box = null;
-    state.drag.move = null;
+    state.drag.moveSnap = null;
+    state.drag.holdId = null;
   });
 
-  // keyboard shortcuts + recording
+  // Keyboard shortcuts
   window.addEventListener("keydown", (e) => {
     if(e.code === "Space"){
       e.preventDefault();
@@ -1502,60 +1717,48 @@ SliderTickRate:1
       deleteSelection();
       return;
     }
+    if(e.key === "1") setTool("select");
+    if(e.key === "2") setTool("tap");
+    if(e.key === "3") setTool("hold");
+    if(e.key === "4") setTool("erase");
 
-    recordKeyDown(e);
+    // timeline window +/- (como zoom no “timeline feel”)
+    if(e.key === "-" || e.key === "_"){
+      state.timelineWindowSec = clamp(state.timelineWindowSec + 1, 3, 30);
+    }
+    if(e.key === "=" || e.key === "+"){
+      state.timelineWindowSec = clamp(state.timelineWindowSec - 1, 3, 30);
+    }
   });
 
-  window.addEventListener("keyup", (e) => {
-    recordKeyUp(e);
-  });
+  // Tab init
+  setTab("compose");
 
-  // Project buttons
-  saveLocalBtn.addEventListener("click", saveLocal);
-  loadLocalBtn.addEventListener("click", loadLocal);
-  exportJsonBtn.addEventListener("click", exportJson);
-  clearAllBtn.addEventListener("click", () => {
-    pushUndo();
-    state.notes = [];
-    state.selected.clear();
-    updateSelectionUI();
-    renderNoteList();
-  });
+  // Tool init
+  setTool("select");
 
-  importJsonFile.addEventListener("change", async () => {
-    const f = importJsonFile.files[0];
-    if(!f) return;
-    try{
-      const txt = await f.text();
-      const obj = JSON.parse(txt);
-      loadProject(obj);
-    }catch(e){}
-    importJsonFile.value = "";
-  });
+  // Metronome init
+  metronomeSel.value = "off";
+  state.metronome.on = false;
 
-  // ---------- Init ----------
-  function init(){
-    // defaults
-    keysSel.value = String(state.keys);
-    snapSel.value = String(state.snap);
-    zoomIn.value = String(state.zoomPxPerSec);
-    gridOpIn.value = String(state.gridOpacity);
+  // UI init
+  keysSel.value = String(state.keys);
+  snapSel.value = String(state.snap);
+  snapOnSel.value = "on";
+  zoomIn.value = String(state.scrollPxPerSec);
+  rateIn.value = "1";
 
-    state.rec.binds = defaultBindsForKeys(state.keys);
-    bindsIn.value = state.rec.binds.join(" ");
+  // Enable metronome toggle after audio loads
+  metronomeSel.disabled = true;
 
-    // timing UI
-    renderTimingUI();
+  // Render timing and notes
+  renderTimingUI();
+  renderNoteList();
+  updateSelectionUI();
 
-    // resize
-    const ro = new ResizeObserver(() => resize());
-    ro.observe(wrap);
-    resize();
+  // Start render loop
+  requestAnimationFrame(renderLoop);
 
-    // start render loop
-    requestAnimationFrame(render);
-  }
-  init();
 })();
 </script>
 </body>

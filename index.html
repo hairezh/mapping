@@ -1,1159 +1,908 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>WebMania Editor — osu-like layout + realtime preview</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Web Mania Editor — osu!mania vibe (waveform + preview circles)</title>
   <style>
     :root{
-      --bg:#0a0c10;
-      --panel:rgba(20,22,28,.86);
-      --panel2:rgba(28,31,40,.82);
-      --stroke:rgba(255,255,255,.10);
-      --stroke2:rgba(255,255,255,.06);
-      --text:#e8edf7;
-      --muted:#aab3c2;
+      --bg:#0b0c10;
+      --panel:#0f141b;
+      --panel2:#0b1016;
+      --line:rgba(255,255,255,.09);
+      --line2:rgba(255,255,255,.06);
+      --fg:#e9eef7;
+      --muted:#a8b3c4;
 
-      --cyan:#26d3ff;
-      --cyan2:#7dd3fc;
-      --yellow:#facc15;
-      --red:#ef4444;
-      --blue:#3b82f6;
+      --accent:#34d4ff;
+      --accent2:#a78bfa;
+      --danger:#ff5c7a;
+      --ok:#3cf2a6;
 
-      --r:10px;
-      --shadow: 0 10px 24px rgba(0,0,0,.40);
+      --wave:#22c9ff;
+      --hitline:#ff3355;
 
-      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      --r1:12px;
+      --r2:16px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
-      --menuH:34px;
-      --bottomH:52px;
-      --leftW:330px;
-      --rightW:330px;
-      --waveW:300px;
-      --previewW:330px;
+      --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
-
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      font-family:var(--font);
-      color:var(--text);
-      background:var(--bg);
-      overflow:hidden;
+      margin:0; background:var(--bg); color:var(--fg);
+      font-family:var(--font); overflow:hidden;
+      display:flex; flex-direction:column;
     }
 
-    /* BG image layer */
-    #bgLayer{
-      position:fixed; inset:0;
-      background:#000;
-      z-index:-3;
+    /* ===== TOPBAR (osu-like) ===== */
+    .topbar{
+      height:64px;
+      display:flex; align-items:center; gap:12px;
+      padding:10px 14px;
+      border-bottom:1px solid var(--line2);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
     }
-    #bgLayer::before{
-      content:"";
-      position:absolute; inset:0;
-      background: radial-gradient(1000px 700px at 40% 35%, rgba(255,255,255,.06), transparent 55%),
-                  radial-gradient(900px 700px at 70% 55%, rgba(38,211,255,.06), transparent 52%),
-                  linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.65));
-      z-index:1;
-      pointer-events:none;
+    .tbBtn{
+      height:42px;
+      padding:0 18px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:var(--fg);
+      display:inline-flex; align-items:center; gap:10px;
+      font-weight:650;
+      letter-spacing:.2px;
+      cursor:pointer;
+      user-select:none;
     }
-    #bgImg{
-      position:absolute; inset:0;
-      width:100%; height:100%;
-      object-fit:cover;
-      filter: blur(0px);
-      opacity:.35;
-      z-index:0;
-      pointer-events:none;
+    .tbBtn:hover{ background:rgba(255,255,255,.06) }
+    .tbBtn:active{ transform:translateY(1px) }
+    .tbBtn.primary{
+      border-color:rgba(52,212,255,.35);
+      background:rgba(52,212,255,.10);
     }
-
-    /* Top menubar */
-    .menubar{
-      height:var(--menuH);
-      display:flex;
-      align-items:center;
-      gap:18px;
+    .tbBtn.primary:hover{ background:rgba(52,212,255,.14) }
+    .spacer{flex:1}
+    .statusPill{
+      height:42px;
       padding:0 14px;
-      background:rgba(18,20,26,.92);
-      border-bottom:1px solid var(--stroke2);
-      user-select:none;
-      font-size:13px;
-    }
-    .menubar .item{
-      color:rgba(255,255,255,.86);
-      opacity:.92;
-      cursor:default;
-    }
-
-    /* Main layout */
-    .main{
-      height: calc(100% - var(--menuH) - var(--bottomH));
-      display:grid;
-      grid-template-columns: var(--leftW) 1fr var(--rightW);
-      gap:14px;
-      padding:14px;
-      min-height:0;
-    }
-
-    .col{
-      min-height:0;
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-    }
-
-    /* Panels */
-    .panel{
-      background:var(--panel);
-      border:1px solid var(--stroke);
-      border-radius:var(--r);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-    .panel .hd{
-      padding:12px 14px;
-      border-bottom:1px solid var(--stroke2);
-      font-weight:700;
-      letter-spacing:.6px;
-      font-size:14px;
-      color:rgba(255,255,255,.92);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      text-transform:uppercase;
-    }
-    .panel .bd{
-      padding:14px;
-      min-height:0;
-    }
-
-    .detailsGrid{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap:10px 14px;
-      font-size:14px;
-      align-items:center;
-    }
-    .detailsGrid .k{ color:rgba(255,255,255,.88); }
-    .detailsGrid .v{
-      font-family:var(--mono);
-      color:rgba(255,255,255,.92);
-      opacity:.95;
-    }
-    .detailsGrid .v.accent{ color: var(--cyan2); }
-    .detailsGrid .v.yellow{ color: var(--yellow); }
-
-    /* Tools */
-    .toolBtn{
-      width:100%;
-      display:flex;
-      align-items:center;
-      gap:12px;
-      padding:12px 12px;
-      border:none;
-      border-radius:8px;
-      background:transparent;
-      color:rgba(255,255,255,.88);
-      cursor:pointer;
-      font-size:14px;
-      text-align:left;
-      user-select:none;
-    }
-    .toolBtn:hover{ background: rgba(255,255,255,.05); }
-    .toolBtn.active{
-      background: rgba(38,211,255,.14);
-      outline: 1px solid rgba(38,211,255,.32);
-    }
-    .toolIcon{
-      width:16px; height:16px;
-      display:inline-block;
-      flex:0 0 16px;
-      opacity:.95;
-    }
-    .toolIcon svg{width:16px;height:16px; fill: currentColor;}
-    .toolLabel{ font-weight:600; }
-    .toolHint{
-      margin-left:auto;
-      font-family:var(--mono);
-      font-size:12px;
-      opacity:.70;
-    }
-
-    /* Center workspace (waveform + editor + preview) */
-    .workspace{
-      position:relative;
-      min-height:0;
-      flex:1;
-      display:grid;
-      grid-template-columns: var(--waveW) 1fr;
-      gap:14px;
-      align-items:stretch;
-    }
-
-    .wavePanel{
-      position:relative;
-      min-height:0;
-      border-radius:10px;
-      overflow:hidden;
-      background: rgba(0,0,0,.35);
-      border:1px solid var(--stroke);
-      box-shadow:var(--shadow);
-    }
-
-    .waveInner{
-      position:absolute; inset:0;
-      display:grid;
-      grid-template-columns: 56px 1fr;
-      gap:0;
-      min-height:0;
-    }
-    .ampStrip{
-      background: rgba(0,0,0,.20);
-      border-right:1px solid rgba(255,255,255,.10);
-      min-height:0;
-      position:relative;
-    }
-    .ampStrip .snapBadge{
-      position:absolute;
-      top:8px; right:8px;
-      width:30px; height:30px;
-      border-radius:6px;
-      background: rgba(59,130,246,.35);
-      border:1px solid rgba(255,255,255,.12);
-      display:flex; align-items:center; justify-content:center;
-      font-family:var(--mono);
-      font-weight:700;
-    }
-    .waveMain{
-      position:relative;
-      min-height:0;
-      background: rgba(0,0,0,.20);
-    }
-
-    canvas{ display:block; width:100%; height:100%; }
-
-    .zoomBtns{
-      position:absolute;
-      right:10px; top:62px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      z-index:5;
-      user-select:none;
-    }
-    .zoomBtn{
-      width:34px; height:34px;
       border-radius:999px;
-      background: rgba(0,0,0,.45);
-      border:1px solid rgba(255,255,255,.14);
-      color:rgba(255,255,255,.92);
-      display:flex; align-items:center; justify-content:center;
-      cursor:pointer;
-      box-shadow: 0 8px 18px rgba(0,0,0,.35);
-      font-weight:800;
-    }
-    .zoomBtn:hover{ background: rgba(0,0,0,.60); }
-
-    .editorPanel{
-      position:relative;
-      min-height:0;
-      border-radius:10px;
-      overflow:hidden;
-      background: rgba(0,0,0,.28);
-      border:1px solid var(--stroke);
-      box-shadow:var(--shadow);
-    }
-
-    .editorGrid{
-      position:absolute; inset:0;
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:14px;
-      min-height:0;
-      padding:0;
-    }
-
-    /* When preview is enabled, we split the editor area */
-    .editorSplit{
-      position:absolute; inset:0;
-      display:grid;
-      grid-template-columns: 1fr; /* becomes 1fr var(--previewW) when enabled */
-      gap:14px;
-      padding:0;
-      min-height:0;
-    }
-    .editorSplit.previewOn{
-      grid-template-columns: 1fr var(--previewW);
-    }
-
-    .editWrap, .previewWrap{
-      position:relative;
-      border-radius:10px;
-      overflow:hidden;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.25);
-      min-height:0;
-    }
-
-    .hudTop{
-      position:absolute;
-      left:10px; top:10px;
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      z-index:7;
-      pointer-events:none;
-    }
-    .badge{
+      border:1px solid var(--line2);
+      background:rgba(0,0,0,.25);
+      display:flex; align-items:center; gap:10px;
+      color:var(--muted);
       font-size:12px;
-      padding:6px 10px;
-      border-radius:999px;
-      background: rgba(0,0,0,.42);
-      border:1px solid rgba(255,255,255,.12);
-      color: rgba(255,255,255,.86);
-      backdrop-filter: blur(6px);
+      user-select:none;
       white-space:nowrap;
     }
-    .badge b{ font-family:var(--mono); color:#fff; font-weight:800; }
+    .statusPill b{ color:var(--fg) }
 
-    .previewLabel{
+    /* ===== MAIN WORKSPACE ===== */
+    .main{
+      flex:1;
+      padding:14px;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .workspace{
+      flex:1;
+      min-height:0;
+      display:grid;
+      grid-template-columns: 120px 1fr 420px;
+      gap:0;
+      border-radius:18px;
+      border:1px solid var(--line);
+      overflow:hidden;
+      background:#070a0f;
+    }
+    .pane{
+      position:relative;
+      min-height:0;
+      background:#070a0f;
+    }
+    .pane + .pane{ border-left:1px solid var(--line2); }
+
+    canvas{display:block; width:100%; height:100%}
+
+    /* ===== Timeline ===== */
+    .zoomBtns{
       position:absolute;
-      left:10px; top:10px;
-      z-index:7;
+      top:86px; right:10px;
+      display:flex; flex-direction:column; gap:10px;
+      z-index:5;
+    }
+    .zoomBtn{
+      width:44px; height:44px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.28);
+      color:var(--fg);
+      font-size:20px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .zoomBtn:hover{ background:rgba(255,255,255,.06) }
+    .zoomBtn:active{ transform:translateY(1px) }
+
+    .tlBadge{
+      position:absolute; left:10px; top:10px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background:rgba(0,0,0,.35);
+      color:var(--muted);
+      font-size:12px;
+      user-select:none;
+      z-index:5;
+    }
+    .tlBadge b{color:var(--fg)}
+    .tlBadge .mono{font-family:var(--mono)}
+
+    /* ===== Editor HUD stack (pills) ===== */
+    .hudStack{
+      position:absolute;
+      top:12px; right:12px;
+      display:flex; flex-direction:column; gap:10px;
+      z-index:6;
       pointer-events:none;
+      user-select:none;
+    }
+    .pill{
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--line2);
+      background:rgba(0,0,0,.38);
+      color:var(--muted);
+      font-size:13px;
+      white-space:nowrap;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      min-width:190px;
+    }
+    .pill b{color:var(--fg); font-family:var(--mono); font-weight:750}
+    .pill .tag{
       font-size:12px;
-      padding:6px 10px;
+      opacity:.9;
+    }
+    .pillBtn{
+      pointer-events:auto;
+      cursor:pointer;
+      padding:9px 12px;
       border-radius:999px;
-      background: rgba(0,0,0,.42);
-      border:1px solid rgba(255,255,255,.12);
-      color: rgba(255,255,255,.86);
-      backdrop-filter: blur(6px);
-    }
-
-    /* Right panels */
-    .layerRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:12px 12px;
-      border-radius:8px;
-      background: rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.06);
-      color: rgba(255,255,255,.86);
-      font-size:14px;
-    }
-    .layerRow .left{
-      display:flex; gap:10px; align-items:center;
-    }
-    .check{
-      width:18px; height:18px;
-      border-radius:4px;
-      border:1px solid rgba(255,255,255,.20);
-      background: rgba(0,0,0,.35);
-      display:flex; align-items:center; justify-content:center;
-      font-size:14px; line-height:1;
-    }
-    .layerActions{
-      display:flex; gap:10px; align-items:center;
-    }
-    .iconCircle{
-      width:26px; height:26px;
-      border-radius:999px;
-      display:flex; align-items:center; justify-content:center;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.35);
-      cursor:pointer;
-      user-select:none;
-    }
-    .iconCircle.green{ color:#22c55e; }
-    .iconCircle.red{ color:#ef4444; }
-
-    .hsBtn{
-      width:100%;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:12px 12px;
-      border:none;
-      border-radius:8px;
-      background: rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.06);
-      color: rgba(255,255,255,.90);
-      font-size:14px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .hsBtn:hover{ background: rgba(255,255,255,.06); }
-    .hsBtn.active{
-      background: rgba(250,204,21,.12);
-      border-color: rgba(250,204,21,.22);
-    }
-    .hsBtn .ico{
-      width:18px; height:18px;
-      display:flex; align-items:center; justify-content:center;
-      opacity:.92;
-    }
-    .hsBtn .ico svg{width:18px;height:18px; fill: currentColor;}
-    .hsVolRow{
-      margin-top:12px;
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap:10px;
-      align-items:center;
-      color:rgba(255,255,255,.86);
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.05);
+      color:var(--fg);
       font-size:13px;
-    }
-    input[type="range"]{ width:100%; }
-
-    /* Bottom bar */
-    .bottom{
-      height:var(--bottomH);
-      display:grid;
-      grid-template-columns: var(--leftW) 1fr var(--rightW);
-      gap:14px;
-      padding:8px 14px;
-      background: rgba(18,20,26,.92);
-      border-top:1px solid var(--stroke2);
-      align-items:center;
+      font-weight:650;
       user-select:none;
     }
-    .bottom .left, .bottom .right{
-      display:flex; align-items:center; gap:16px;
+    .pillBtn:hover{ background:rgba(255,255,255,.07) }
+    .pillBtn.on{
+      border-color:rgba(52,212,255,.35);
+      background:rgba(52,212,255,.12);
     }
-    .bottom .mid{
-      display:flex; align-items:center; justify-content:center; gap:14px;
+
+    /* ===== Tool tray ===== */
+    .toolTray{
+      position:absolute;
+      left:12px; bottom:12px;
+      display:flex; gap:10px;
+      z-index:6;
+      user-select:none;
     }
-    .bBtn{
-      display:flex; align-items:center; gap:8px;
-      padding:8px 10px;
-      border-radius:8px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.25);
-      color: rgba(255,255,255,.88);
+    .toolBtn{
+      width:56px; height:56px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.28);
+      color:var(--muted);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:4px;
       cursor:pointer;
-      font-size:13px;
     }
-    .bBtn:hover{ background: rgba(0,0,0,.35); }
-    .bBtn.primary{
-      border-color: rgba(38,211,255,.30);
-      background: rgba(38,211,255,.12);
+    .toolBtn:hover{ background:rgba(255,255,255,.06) }
+    .toolBtn.active{
+      color:var(--fg);
+      border-color:rgba(52,212,255,.35);
+      background:rgba(52,212,255,.10);
     }
-    .bBtn.danger{
-      border-color: rgba(239,68,68,.26);
-      background: rgba(239,68,68,.10);
+    .toolBtn .kbd{font-family:var(--mono); font-size:11px; opacity:.95}
+    .toolBtn .lbl{font-size:11px; letter-spacing:.1px}
+
+    /* ===== Preview ===== */
+    .previewTop{
+      position:absolute;
+      top:12px; left:12px;
+      z-index:6;
+      display:flex; gap:10px;
+      align-items:center;
     }
-    .bBtn .plus{ font-weight:900; font-size:16px; color: var(--cyan2); }
+    .combo{
+      position:absolute;
+      inset:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:92px;
+      font-weight:800;
+      color:rgba(233,238,247,.75);
+      text-shadow:0 6px 24px rgba(0,0,0,.55);
+      letter-spacing:1px;
+      pointer-events:none;
+      user-select:none;
+      z-index:6;
+      font-family:var(--mono);
+    }
+
+    /* ===== Transport ===== */
     .transport{
-      display:flex; gap:10px; align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.28);
+      height:72px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:rgba(255,255,255,.03);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 14px;
+      gap:14px;
     }
-    .tBtn{
-      width:30px; height:30px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.35);
-      display:flex; align-items:center; justify-content:center;
-      cursor:pointer;
-    }
-    .tBtn svg{ width:16px; height:16px; fill: rgba(255,255,255,.92); }
-    .tBtn:hover{ background: rgba(0,0,0,.55); }
-
-    .chip{
-      display:flex; align-items:center; gap:8px;
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.28);
-      color: rgba(255,255,255,.86);
-      font-size:13px;
-    }
-    .chip b{ font-family:var(--mono); color:#fff; }
-    .chip .sep{ opacity:.35; margin:0 4px; }
-    .chip .link{
-      opacity:.92;
-      text-transform:uppercase;
-      letter-spacing:.4px;
+    .tLeft{
+      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+      color:var(--muted);
       font-size:12px;
     }
-
-    /* Modal */
-    .modalBackdrop{
-      position:fixed; inset:0;
-      background: rgba(0,0,0,.55);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:50;
-      padding:18px;
+    .mono{font-family:var(--mono)}
+    .tRight{
+      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
     }
-    .modalBackdrop.show{ display:flex; }
-
-    .modal{
-      width:min(980px, 96vw);
-      max-height: 92vh;
-      overflow:auto;
-      background: rgba(18,20,26,.96);
-      border:1px solid rgba(255,255,255,.12);
+    .iconBtn{
+      width:48px; height:48px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.24);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      user-select:none;
+    }
+    .iconBtn:hover{ background:rgba(255,255,255,.06) }
+    .iconBtn:active{ transform:translateY(1px) }
+    .iconBtn svg{width:20px; height:20px; fill:var(--fg); opacity:.95}
+    .rateGroup{
+      display:flex; gap:8px; align-items:center;
+    }
+    .rateBtn{
+      height:48px;
+      padding:0 12px;
       border-radius:14px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.55);
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.24);
+      color:var(--muted);
+      cursor:pointer;
+      user-select:none;
+      font-weight:650;
+      font-size:12px;
+    }
+    .rateBtn.active{
+      color:var(--fg);
+      border-color:rgba(52,212,255,.35);
+      background:rgba(52,212,255,.10);
+    }
+    .slider{
+      display:flex; flex-direction:column; gap:6px;
+      color:var(--muted);
+      font-size:12px;
+      min-width:180px;
+    }
+    input[type="range"]{ width:100% }
+
+    /* ===== Modal ===== */
+    .modalBack{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center; justify-content:center;
+      padding:18px;
+      z-index:100;
+    }
+    .modalBack.show{ display:flex }
+    .modal{
+      width:min(980px, 100%);
+      max-height:min(86vh, 900px);
+      overflow:hidden;
+      border-radius:20px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow:0 30px 120px rgba(0,0,0,.55);
+      display:flex; flex-direction:column;
     }
     .modalHd{
       padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
+      border-bottom:1px solid var(--line2);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
     }
-    .modalHd b{ letter-spacing:.6px; text-transform:uppercase; }
-    .modalBd{ padding:16px; }
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
-    .field{
-      display:flex; flex-direction:column; gap:8px;
-      color: rgba(255,255,255,.86);
-      font-size:13px;
+    .modalHd .title{
+      font-weight:800;
+      letter-spacing:.2px;
     }
-    .field input[type="text"],
-    .field input[type="number"],
-    .field select{
-      padding:10px 10px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.28);
-      color:#fff;
+    .modalBd{
+      padding:16px;
+      overflow:auto;
+      background:rgba(0,0,0,.22);
+    }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end }
+    label{
+      display:flex; flex-direction:column; gap:6px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    input[type="file"], input[type="number"], input[type="text"], select{
+      height:42px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.25);
+      color:var(--fg);
+      padding:0 12px;
       outline:none;
       font-size:14px;
     }
-    .field input[type="file"]{
-      color: rgba(255,255,255,.78);
-      font-size:13px;
+    .smallNote{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.45;
     }
-    .row{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.04);
-      color: rgba(255,255,255,.86);
-      font-size:13px;
+    .line{ height:1px; background:var(--line2); margin:14px 0 }
+    .btn{
+      height:42px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:var(--fg);
+      cursor:pointer;
+      user-select:none;
+      font-weight:700;
     }
-    .row input[type="checkbox"]{ transform: scale(1.1); }
-    .hint{
-      padding:12px;
-      border-radius:12px;
-      background: rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.08);
-      color: rgba(255,255,255,.72);
-      font-size:13px;
-      line-height:1.55;
-    }
+    .btn:hover{ background:rgba(255,255,255,.06) }
+    .btn.ok{ border-color:rgba(60,242,166,.35); background:rgba(60,242,166,.10) }
+    .btn.danger{ border-color:rgba(255,92,122,.35); background:rgba(255,92,122,.10) }
+    .btn.primary{ border-color:rgba(52,212,255,.35); background:rgba(52,212,255,.10) }
+    .btn:disabled{ opacity:.55; cursor:not-allowed }
 
-    /* Responsive */
-    @media (max-width: 1200px){
-      :root{ --leftW: 300px; --rightW: 300px; --waveW: 280px; }
+    .list{
+      border:1px solid var(--line2);
+      background:rgba(0,0,0,.25);
+      border-radius:16px;
+      overflow:hidden;
     }
-    @media (max-width: 980px){
-      .main{ grid-template-columns: 1fr; }
-      .bottom{ grid-template-columns: 1fr; height:auto; gap:10px; }
-      .bottom .left, .bottom .mid, .bottom .right{ justify-content:center; flex-wrap:wrap; }
-      .col.rightCol{ display:none; }
-      .col.leftCol{ order:2; }
+    .item{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line2);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .item:last-child{ border-bottom:none }
+    .item b{ color:var(--fg); font-family:var(--mono) }
+    .item .act{
+      cursor:pointer;
+      color:rgba(233,238,247,.8);
+      padding:6px 10px;
+      border-radius:12px;
+      border:1px solid var(--line2);
+      background:rgba(255,255,255,.03);
+    }
+    .item .act:hover{ background:rgba(255,255,255,.06) }
+
+    @media (max-width: 1100px){
+      .workspace{ grid-template-columns: 120px 1fr; }
+      .pane.preview{ display:none; }
+    }
+    @media (max-width: 800px){
       .workspace{ grid-template-columns: 1fr; }
+      .pane.timeline{ display:none; }
+      .hudStack{ right:10px }
     }
   </style>
 </head>
 
 <body>
-  <div id="bgLayer">
-    <img id="bgImg" alt="" />
-  </div>
+  <div class="topbar">
+    <button class="tbBtn" id="exitBtn">← <span>EXIT</span></button>
+    <button class="tbBtn" id="optBtn">⚙ <span>OPTIONS</span></button>
+    <button class="tbBtn primary" id="bmBtn">＋ <span>ADD BOOKMARK</span></button>
 
-  <div class="menubar">
-    <div class="item">File</div>
-    <div class="item">Edit</div>
-    <div class="item">View</div>
-    <div class="item">Audio</div>
-    <div class="item">Web</div>
-    <div class="item">Tools</div>
-    <div class="item">Plugins</div>
-    <div class="item">Help</div>
-    <div style="flex:1"></div>
-    <div class="item" style="opacity:.75;font-family:var(--mono)" id="topStatus">—</div>
+    <div class="spacer"></div>
+
+    <!-- quick status -->
+    <div class="statusPill" id="audioStatus">Áudio: <b id="audioName">—</b></div>
+    <div class="statusPill">BPM: <b id="bpmLbl">—</b></div>
+    <div class="statusPill">Snap: <b id="snapLbl">1/4</b></div>
   </div>
 
   <div class="main">
-    <!-- LEFT -->
-    <section class="col leftCol">
-      <div class="panel">
-        <div class="hd">DETAILS</div>
-        <div class="bd">
-          <div class="detailsGrid">
-            <div class="k">Object Count</div><div class="v" id="dCount">0</div>
-            <div class="k">Playback Speed</div><div class="v" id="dSpeed">100%</div>
-            <div class="k">BPM</div><div class="v" id="dBpm">—</div>
-            <div class="k">Beat Snap</div><div class="v accent" id="dSnap">1/4th</div>
-            <div class="k">Difficulty Rating</div><div class="v yellow" id="dDiff">—</div>
+    <div class="workspace" id="workspace">
+      <!-- TIMELINE -->
+      <div class="pane timeline" id="tlPane">
+        <div class="tlBadge">
+          <span class="mono" id="tlWinLbl">8</span>s • wf: <b id="wfStatus" class="mono">—</b>
+        </div>
+        <div class="zoomBtns">
+          <button class="zoomBtn" id="zoomInBtn" title="Zoom in (timeline window)">+</button>
+          <button class="zoomBtn" id="zoomOutBtn" title="Zoom out (timeline window)">−</button>
+        </div>
+        <canvas id="tlCanvas"></canvas>
+      </div>
+
+      <!-- EDITOR -->
+      <div class="pane editor" id="edPane">
+        <canvas id="edCanvas"></canvas>
+
+        <div class="hudStack">
+          <div class="pill">Time <span class="tag"><b id="hudTime">0</b> ms</span></div>
+          <div class="pill">Keys <span class="tag"><b id="hudKeys">4</b></span></div>
+          <div class="pill">Beat Snap <span class="tag"><b id="hudSnap">1/4</b></span></div>
+          <div class="pill">Tool <span class="tag"><b id="hudTool">Select</b></span></div>
+          <button class="pillBtn on" id="rtPreviewBtn">Realtime preview</button>
+          <div class="pill">Audio offset <span class="tag"><b id="hudOffset">0</b> ms</span></div>
+          <div class="smallNote" style="padding:0 8px; opacity:.9">
+            Wheel = scroll • Ctrl+Wheel = snap • Space = play/pause • Ctrl+Z = undo • Delete = delete • Ctrl+B = bookmark
+          </div>
+        </div>
+
+        <div class="toolTray">
+          <div class="toolBtn active" data-tool="select" title="Select (1)">
+            <div class="kbd">1</div>
+            <div class="lbl">Select</div>
+          </div>
+          <div class="toolBtn" data-tool="tap" title="Note (2)">
+            <div class="kbd">2</div>
+            <div class="lbl">Note</div>
+          </div>
+          <div class="toolBtn" data-tool="hold" title="Long Note (3)">
+            <div class="kbd">3</div>
+            <div class="lbl">LN</div>
+          </div>
+          <div class="toolBtn" data-tool="erase" title="Erase (4)">
+            <div class="kbd">4</div>
+            <div class="lbl">Erase</div>
           </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="hd">COMPOSITION TOOLS</div>
-        <div class="bd" style="padding:10px">
-          <button class="toolBtn active" data-tool="select">
-            <span class="toolIcon">
-              <svg viewBox="0 0 24 24"><path d="M4 4l7 17 2-7 7-2L4 4z"/></svg>
-            </span>
-            <span class="toolLabel">Select</span>
-            <span class="toolHint">1</span>
-          </button>
-          <button class="toolBtn" data-tool="note">
-            <span class="toolIcon">
-              <svg viewBox="0 0 24 24"><path d="M6 4h12v4H6zM6 10h12v10H6z"/></svg>
-            </span>
-            <span class="toolLabel">Note</span>
-            <span class="toolHint">2</span>
-          </button>
-          <button class="toolBtn" data-tool="ln">
-            <span class="toolIcon">
-              <svg viewBox="0 0 24 24"><path d="M7 4h10v16H7zM11 7h2v10h-2z"/></svg>
-            </span>
-            <span class="toolLabel">Long Note</span>
-            <span class="toolHint">3</span>
-          </button>
-          <button class="toolBtn" data-tool="erase">
-            <span class="toolIcon">
-              <svg viewBox="0 0 24 24"><path d="M20 20H8l-4-4L14 6l6 6-8 8M13 7l6 6" /></svg>
-            </span>
-            <span class="toolLabel">Erase</span>
-            <span class="toolHint">4</span>
-          </button>
+      <!-- PREVIEW -->
+      <div class="pane preview" id="pvPane">
+        <div class="previewTop">
+          <button class="pillBtn on" id="autoPlayBtn">AutoPlay</button>
         </div>
+        <div class="combo" id="comboLbl">0</div>
+        <canvas id="pvCanvas"></canvas>
       </div>
-
-      <div class="panel" style="flex:1; min-height:0">
-        <div class="bd">
-          <div class="hint">
-            <b>Atalhos</b><br>
-            • <span style="font-family:var(--mono)">Space</span> play/pause<br>
-            • <span style="font-family:var(--mono)">Wheel</span> rola o tempo<br>
-            • <span style="font-family:var(--mono)">Alt + arrastar</span> scrub (voltar/avançar com o mouse)<br>
-            • <span style="font-family:var(--mono)">Ctrl+Z</span> undo • <span style="font-family:var(--mono)">Delete</span> apagar seleção<br>
-            • <span style="font-family:var(--mono)">Ctrl+B</span> add bookmark
-          </div>
-          <div class="hint" style="margin-top:12px">
-            <b>Bookmarks</b> (clique para ir, botão direito para deletar)
-            <div id="bmList" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height: 28vh; overflow:auto;"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- CENTER -->
-    <section class="col">
-      <div class="workspace">
-        <!-- Waveform -->
-        <div class="wavePanel" id="wavePanel">
-          <div class="waveInner">
-            <div class="ampStrip" id="ampWrap">
-              <div class="snapBadge" id="snapBadge">4</div>
-              <canvas id="ampCanvas"></canvas>
-            </div>
-            <div class="waveMain" id="waveWrap">
-              <div class="zoomBtns">
-                <div class="zoomBtn" id="zoomIn">+</div>
-                <div class="zoomBtn" id="zoomOut">−</div>
-              </div>
-              <canvas id="waveCanvas"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Editor + optional realtime preview -->
-        <div class="editorPanel" id="editorPanel">
-          <div class="editorSplit" id="editorSplit">
-            <div class="editWrap" id="editWrap">
-              <div class="hudTop">
-                <span class="badge">Time: <b id="hudTime">0</b> ms</span>
-                <span class="badge">Keys: <b id="hudKeys">4</b></span>
-                <span class="badge">Snap: <b id="hudSnap">1/4</b></span>
-                <span class="badge">Tool: <b id="hudTool">Select</b></span>
-              </div>
-              <canvas id="editCanvas"></canvas>
-            </div>
-
-            <div class="previewWrap" id="previewWrap" style="display:none">
-              <div class="previewLabel">Realtime preview</div>
-              <canvas id="previewCanvas"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- RIGHT -->
-    <section class="col rightCol">
-      <div class="panel">
-        <div class="hd">
-          LAYERS
-          <div style="display:flex; gap:10px; align-items:center">
-            <div class="iconCircle" title="Visibility">👁</div>
-            <div class="iconCircle green" id="layerAdd" title="Add layer">+</div>
-            <div class="iconCircle red" id="layerDel" title="Remove layer">−</div>
-          </div>
-        </div>
-        <div class="bd">
-          <div class="layerRow">
-            <div class="left">
-              <div class="check">✓</div>
-              <div>Default Layer</div>
-            </div>
-            <div class="layerActions">
-              <div class="iconCircle" title="Rename">✎</div>
-            </div>
-          </div>
-          <div class="hint" style="margin-top:12px">
-            (Layers aqui é “visual” por enquanto — mas já deixei o esqueleto certinho pro layout.)
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" style="flex:1; min-height:0">
-        <div class="hd">HITSOUNDS</div>
-        <div class="bd" style="min-height:0; display:flex; flex-direction:column; gap:10px">
-          <button class="hsBtn" id="hsWhistle">
-            <span class="ico">
-              <svg viewBox="0 0 24 24"><path d="M3 12h10l4-4v8l-4-4H3z"/></svg>
-            </span>
-            Whistle
-          </button>
-          <button class="hsBtn" id="hsFinish">
-            <span class="ico">
-              <svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L5.5 20l2-7L2 9h7z"/></svg>
-            </span>
-            Finish
-          </button>
-          <button class="hsBtn" id="hsClap">
-            <span class="ico">
-              <svg viewBox="0 0 24 24"><path d="M7 11l1-5 3 1 1 6-5-2zM12 8l3-1 2 6-5 0zM6 14l7 3 5-2-2 5-8 2-3-3z"/></svg>
-            </span>
-            Clap
-          </button>
-
-          <div class="hsVolRow">
-            <div>Volume</div>
-            <div style="font-family:var(--mono)" id="hsVolVal">0</div>
-          </div>
-          <input id="hsVol" type="range" min="0" max="100" step="5" value="0"/>
-
-          <div class="hint" style="margin-top:8px">
-            Seleciona 1 nota (Select) e aplica hitsound/volume nela.
-          </div>
-
-          <div class="hint">
-            <b>Export</b> escreve hitsounds no formato osu!mania (hs flags + sample volume).
-          </div>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <!-- Bottom bar -->
-  <div class="bottom">
-    <div class="left">
-      <div class="bBtn" id="exitBtn">⟵ EXIT</div>
-      <div class="bBtn" id="optionsBtn">⚙ OPTIONS</div>
-      <div class="bBtn primary" id="addBmBtn"><span class="plus">+</span> ADD BOOKMARK</div>
     </div>
 
-    <div class="mid">
-      <div class="transport" title="Transport">
-        <div class="tBtn" id="prevBtn" title="Seek -1 beat">
-          <svg viewBox="0 0 24 24"><path d="M11 18V6h2v12h-2zM21 18L12 12l9-6v12z"/></svg>
+    <div class="transport">
+      <div class="tLeft">
+        <span class="mono" id="timeFmt">00:00:000</span>
+        <span class="mono" id="pctFmt">0.0%</span>
+        <span class="mono" id="noteFmt">notes: 0</span>
+        <span class="mono" id="selFmt">sel: 0</span>
+        <span class="mono" id="bookmarkFmt">bm: 0</span>
+      </div>
+
+      <div class="tRight">
+        <div class="iconBtn" id="playBtn" title="Play/Pause (Space)">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </div>
-        <div class="tBtn" id="playBtn" title="Play/Pause (Space)">
-          <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </div>
-        <div class="tBtn" id="stopBtn" title="Stop">
+        <div class="iconBtn" id="stopBtn" title="Stop">
           <svg viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></svg>
         </div>
-        <div class="tBtn" id="nextBtn" title="Seek +1 beat">
-          <svg viewBox="0 0 24 24"><path d="M11 18V6h2v12h-2zM3 18V6l9 6-9 6z"/></svg>
+
+        <div class="rateGroup" title="Playback rate">
+          <button class="rateBtn" data-rate="0.50">50%</button>
+          <button class="rateBtn" data-rate="0.75">75%</button>
+          <button class="rateBtn active" data-rate="1.00">100%</button>
         </div>
-      </div>
 
-      <div class="chip">
-        <span class="link">Playback Speed</span>
-        <span class="sep">•</span>
-        <b id="chipRate">100%</b>
-      </div>
-
-      <div class="chip">
-        <span class="link">Beat Snap</span>
-        <span class="sep">•</span>
-        <b id="chipSnap">1/4</b>
-      </div>
-    </div>
-
-    <div class="right">
-      <div class="bBtn" id="testPlayBtn">▶ TEST PLAY</div>
-      <div class="chip" style="gap:10px">
-        <span style="opacity:.85">Time</span>
-        <b id="timeStr">00:00:000</b>
+        <div class="slider">
+          <div>Volume</div>
+          <input id="vol" type="range" min="0" max="1" step="0.01" value="1" />
+        </div>
       </div>
     </div>
   </div>
 
   <!-- OPTIONS MODAL -->
-  <div class="modalBackdrop" id="modalBackdrop">
+  <div class="modalBack" id="optBack">
     <div class="modal">
       <div class="modalHd">
-        <b>OPTIONS</b>
-        <div style="display:flex; gap:10px; align-items:center">
-          <button class="bBtn" id="exportBtn">Export .osu</button>
-          <button class="bBtn" id="closeModal">Fechar</button>
-        </div>
+        <div class="title">OPTIONS</div>
+        <button class="btn" id="optClose">Close</button>
       </div>
-
       <div class="modalBd">
         <div class="grid2">
-          <div class="field">
-            <div>Áudio</div>
-            <input id="audioFile" type="file" accept="audio/*"/>
-            <div class="hint">
-              O navegador não pode “abrir pelo nome do .osu”. Então: importe o .osu (se quiser), e carregue o áudio manualmente aqui.
-            </div>
-          </div>
-
-          <div class="field">
-            <div>Background (opcional)</div>
-            <input id="bgFile" type="file" accept="image/*"/>
-            <div class="grid2" style="margin-top:10px">
-              <div class="field">
-                <div>BG Opacity (0..1)</div>
-                <input id="bgOpacity" type="number" min="0" max="1" step="0.05" value="0.35"/>
-              </div>
-              <div class="field">
-                <div>BG Blur (px)</div>
-                <input id="bgBlur" type="number" min="0" max="20" step="1" value="0"/>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style="height:14px"></div>
-
-        <div class="grid3">
-          <div class="field">
-            <div>Title</div>
-            <input id="mTitle" type="text" value="WebManiaEditor"/>
-          </div>
-          <div class="field">
-            <div>Artist</div>
-            <input id="mArtist" type="text" value="Unknown"/>
-          </div>
-          <div class="field">
-            <div>Creator</div>
-            <input id="mCreator" type="text" value="reze"/>
-          </div>
-        </div>
-
-        <div style="height:14px"></div>
-
-        <div class="grid3">
-          <div class="field">
-            <div>Version</div>
-            <input id="mVersion" type="text" value="Easy"/>
-          </div>
-
-          <div class="field">
-            <div>Keys</div>
+          <label>Áudio
+            <input id="audioFile" type="file" accept="audio/*" />
+          </label>
+          <label>Keys (4–7)
             <select id="keysSel">
               <option>4</option><option>5</option><option>6</option><option>7</option>
             </select>
-          </div>
+          </label>
 
-          <div class="field">
-            <div>Beat Snap</div>
-            <select id="snapSel">
-              <option value="1">1/1</option>
-              <option value="2">1/2</option>
-              <option value="3">1/3</option>
-              <option value="4" selected>1/4</option>
-              <option value="6">1/6</option>
-              <option value="8">1/8</option>
-              <option value="12">1/12</option>
-              <option value="16">1/16</option>
+          <label>Scroll speed (px/s)
+            <input id="scrollIn" type="number" min="250" max="9000" step="50" value="1700" />
+          </label>
+          <label>Timeline window (s)
+            <input id="tlWinIn" type="number" min="3" max="30" step="1" value="8" />
+          </label>
+
+          <label>Audio offset (ms) (só som — não altera o mapa)
+            <input id="offsetIn" type="number" step="1" value="0" />
+          </label>
+          <label>Snap On/Off
+            <select id="snapOnSel">
+              <option value="on" selected>On</option>
+              <option value="off">Off</option>
             </select>
-          </div>
+          </label>
+
+          <label>Performance mode (cap DPR)
+            <select id="perfSel">
+              <option value="off">Off (full quality)</option>
+              <option value="1.25" selected>On (cap 1.25)</option>
+              <option value="1.5">On (cap 1.5)</option>
+              <option value="1">On (cap 1.0)</option>
+            </select>
+          </label>
+
+          <label>Autoplay (preview)
+            <select id="autoSel">
+              <option value="on" selected>On</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
         </div>
 
-        <div style="height:14px"></div>
+        <div class="line"></div>
 
-        <div class="grid3">
-          <div class="field">
-            <div>BPM</div>
-            <input id="bpmIn" type="number" min="30" max="400" step="0.001" value="180"/>
-          </div>
-          <div class="field">
-            <div>Offset (ms)</div>
-            <input id="offIn" type="number" min="0" step="1" value="0"/>
-          </div>
-          <div class="field">
-            <div>Playback Speed</div>
-            <select id="rateSel">
-              <option value="0.25">25%</option>
-              <option value="0.50">50%</option>
-              <option value="0.75">75%</option>
-              <option value="1.00" selected>100%</option>
-            </select>
-          </div>
+        <div class="row">
+          <button class="btn primary" id="exportBtn" disabled>Exportar .osu</button>
+          <button class="btn" id="undoBtn" disabled>Undo</button>
+          <button class="btn danger" id="deleteBtn" disabled>Delete sel.</button>
+          <button class="btn danger" id="clearBtn" disabled>Clear notes</button>
+          <button class="btn" id="resetViewBtn">Reset view</button>
         </div>
 
-        <div style="height:14px"></div>
+        <div class="smallNote" style="margin-top:10px">
+          <b>Beat Snap:</b> use <span class="mono">Ctrl + Wheel</span> a qualquer momento. <b>LN:</b> com tool LN, clique e segure, arraste para definir o tamanho, solte pra confirmar (igual osu).<br/>
+          <b>Offset:</b> típico pra fone com delay (ex: -220). Só mexe no áudio.
+        </div>
+
+        <div class="line"></div>
 
         <div class="grid2">
-          <div class="row">
-            <div>
-              <b>Realtime Preview</b><br>
-              <span style="opacity:.75">Mostra o “in-game” ao lado (círculos + LNs) e só o combo.</span>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+              <div style="font-weight:800">Timing points</div>
+              <div style="display:flex; gap:10px">
+                <button class="btn ok" id="tpAddBtn" disabled>Add TP @ time</button>
+                <button class="btn danger" id="tpResetBtn" disabled>Reset</button>
+              </div>
             </div>
-            <input id="previewToggle" type="checkbox"/>
+            <div class="list" id="tpList"></div>
           </div>
 
-          <div class="row">
-            <div>
-              <b>Quantize/Snap</b><br>
-              <span style="opacity:.75">Quando ligado, notas colocadas/movidas são quantizadas no grid.</span>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+              <div style="font-weight:800">Bookmarks</div>
+              <button class="btn" id="bmClearBtn">Clear</button>
             </div>
-            <input id="snapOnToggle" type="checkbox" checked/>
-          </div>
-        </div>
+            <div class="list" id="bmList"></div>
 
-        <div style="height:14px"></div>
+            <div class="line"></div>
 
-        <div class="grid2">
-          <div class="field">
-            <div>Import .osu (mania)</div>
-            <input id="osuIn" type="file" accept=".osu"/>
-            <div class="hint">
-              Importa notas/timing/metadados. Se o áudio não existir aqui no navegador, você carrega manualmente em “Áudio”.
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+              <div style="font-weight:800">Auto BPM (beta)</div>
+              <div style="display:flex; gap:10px; align-items:center">
+                <label style="flex-direction:row; align-items:center; gap:8px; color:var(--muted); font-size:12px">
+                  <input id="autoChanges" type="checkbox" />
+                  detectar mudanças
+                </label>
+                <button class="btn primary" id="autoBpmBtn" disabled>Detect</button>
+              </div>
             </div>
-          </div>
-
-          <div class="field">
-            <div>Ações</div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap">
-              <button class="bBtn danger" id="clearBtn">Clear notes</button>
-              <button class="bBtn" id="undoBtn">Undo</button>
-            </div>
-            <div class="hint" style="margin-top:10px">
-              Dica: timeline/waveform e editor aceitam drag pra seek. Use <span style="font-family:var(--mono)">Alt</span>+drag no editor pra scrub.
-            </div>
+            <div class="smallNote" id="autoBpmStatus">Carregue um áudio para habilitar.</div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 
 <script>
 (() => {
+  /* ==========================
+     Utilities
+  ========================== */
   const $ = (id) => document.getElementById(id);
-  const clamp = (v,a,b)=> Math.max(a, Math.min(b, v));
-  const uid = ()=> Math.random().toString(36).slice(2,10);
+  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
+  const clamp = (v,a,b)=>Math.max(a, Math.min(b, v));
+  const uid = ()=>Math.random().toString(36).slice(2,10);
+  const lerp=(a,b,t)=>a+(b-a)*t;
 
-  /* UI */
-  const topStatus = $("topStatus");
+  const SNAP_OPTS = [1,2,3,4,6,8,12,16];
 
-  const dCount = $("dCount");
-  const dSpeed = $("dSpeed");
-  const dBpm = $("dBpm");
-  const dSnap = $("dSnap");
-  const dDiff = $("dDiff");
+  function fmtTime(ms){
+    ms = Math.max(0, Math.floor(ms));
+    const m = Math.floor(ms/60000);
+    const s = Math.floor((ms%60000)/1000);
+    const t = ms%1000;
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}:${String(t).padStart(3,"0")}`;
+  }
 
-  const toolBtns = Array.from(document.querySelectorAll(".toolBtn"));
+  function lowerBound(arr, x){
+    // arr sorted by .t
+    let lo=0, hi=arr.length;
+    while(lo<hi){
+      const mid=(lo+hi)>>1;
+      if(arr[mid].t <= x) lo=mid+1;
+      else hi=mid;
+    }
+    return lo; // first index with t > x
+  }
 
-  const wavePanel = $("wavePanel");
-  const ampWrap = $("ampWrap");
-  const waveWrap = $("waveWrap");
-  const ampCanvas = $("ampCanvas");
-  const waveCanvas = $("waveCanvas");
+  /* ==========================
+     Elements
+  ========================== */
+  const exitBtn = $("exitBtn");
+  const optBtn = $("optBtn");
+  const bmBtn = $("bmBtn");
 
-  const editorPanel = $("editorPanel");
-  const editorSplit = $("editorSplit");
-  const editWrap = $("editWrap");
-  const editCanvas = $("editCanvas");
+  const audioName = $("audioName");
+  const bpmLbl = $("bpmLbl");
+  const snapLbl = $("snapLbl");
 
-  const previewWrap = $("previewWrap");
-  const previewCanvas = $("previewCanvas");
+  const tlPane = $("tlPane");
+  const tlCanvas = $("tlCanvas");
+  const edPane = $("edPane");
+  const edCanvas = $("edCanvas");
+  const pvPane = $("pvPane");
+  const pvCanvas = $("pvCanvas");
 
-  const zoomIn = $("zoomIn");
-  const zoomOut = $("zoomOut");
+  const zoomInBtn = $("zoomInBtn");
+  const zoomOutBtn = $("zoomOutBtn");
+  const tlWinLbl = $("tlWinLbl");
+  const wfStatus = $("wfStatus");
 
   const hudTime = $("hudTime");
   const hudKeys = $("hudKeys");
   const hudSnap = $("hudSnap");
   const hudTool = $("hudTool");
+  const hudOffset = $("hudOffset");
 
-  const bmList = $("bmList");
-  const addBmBtn = $("addBmBtn");
+  const rtPreviewBtn = $("rtPreviewBtn");
+  const autoPlayBtn = $("autoPlayBtn");
+  const comboLbl = $("comboLbl");
 
-  const hsWhistle = $("hsWhistle");
-  const hsFinish = $("hsFinish");
-  const hsClap = $("hsClap");
-  const hsVol = $("hsVol");
-  const hsVolVal = $("hsVolVal");
+  const toolBtns = qsa(".toolBtn");
 
-  const exitBtn = $("exitBtn");
-  const optionsBtn = $("optionsBtn");
-
-  const prevBtn = $("prevBtn");
   const playBtn = $("playBtn");
   const stopBtn = $("stopBtn");
-  const nextBtn = $("nextBtn");
-  const playIcon = $("playIcon");
+  const vol = $("vol");
+  const rateBtns = qsa(".rateBtn");
 
-  const chipRate = $("chipRate");
-  const chipSnap = $("chipSnap");
-  const timeStr = $("timeStr");
-  const testPlayBtn = $("testPlayBtn");
+  const timeFmt = $("timeFmt");
+  const pctFmt = $("pctFmt");
+  const noteFmt = $("noteFmt");
+  const selFmt = $("selFmt");
+  const bookmarkFmt = $("bookmarkFmt");
 
-  /* Modal */
-  const modalBackdrop = $("modalBackdrop");
-  const closeModal = $("closeModal");
-  const exportBtn = $("exportBtn");
+  // Options modal
+  const optBack = $("optBack");
+  const optClose = $("optClose");
+
   const audioFile = $("audioFile");
-  const bgFile = $("bgFile");
-  const bgOpacity = $("bgOpacity");
-  const bgBlur = $("bgBlur");
-  const bgImg = $("bgImg");
-
-  const mTitle = $("mTitle");
-  const mArtist = $("mArtist");
-  const mCreator = $("mCreator");
-  const mVersion = $("mVersion");
-
   const keysSel = $("keysSel");
-  const snapSel = $("snapSel");
-  const bpmIn = $("bpmIn");
-  const offIn = $("offIn");
-  const rateSel = $("rateSel");
+  const scrollIn = $("scrollIn");
+  const tlWinIn = $("tlWinIn");
+  const offsetIn = $("offsetIn");
+  const snapOnSel = $("snapOnSel");
+  const perfSel = $("perfSel");
+  const autoSel = $("autoSel");
 
-  const previewToggle = $("previewToggle");
-  const snapOnToggle = $("snapOnToggle");
-
-  const osuIn = $("osuIn");
-  const clearBtn = $("clearBtn");
+  const exportBtn = $("exportBtn");
   const undoBtn = $("undoBtn");
+  const deleteBtn = $("deleteBtn");
+  const clearBtn = $("clearBtn");
+  const resetViewBtn = $("resetViewBtn");
 
-  const snapBadge = $("snapBadge");
+  const tpAddBtn = $("tpAddBtn");
+  const tpResetBtn = $("tpResetBtn");
+  const tpList = $("tpList");
 
-  /* Canvas contexts */
-  const actx = ampCanvas.getContext("2d");
-  const wctx = waveCanvas.getContext("2d");
-  const ectx = editCanvas.getContext("2d");
-  const prctx = previewCanvas.getContext("2d");
+  const bmList = $("bmList");
+  const bmClearBtn = $("bmClearBtn");
 
-  function fitCanvas(canvas){
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
-    canvas.width = Math.floor(r.width * dpr);
-    canvas.height = Math.floor(r.height * dpr);
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
+  const autoBpmBtn = $("autoBpmBtn");
+  const autoChanges = $("autoChanges");
+  const autoBpmStatus = $("autoBpmStatus");
 
-  const ro = new ResizeObserver(() => {
-    fitCanvas(ampCanvas);
-    fitCanvas(waveCanvas);
-    fitCanvas(editCanvas);
-    if(state.preview.enabled) fitCanvas(previewCanvas);
-  });
-  ro.observe(wavePanel);
-  ro.observe(editorPanel);
-
-  /* State */
+  /* ==========================
+     State
+  ========================== */
   const state = {
     tool: "select",
-
     keys: 4,
-    snap: 4,
+    snapIndex: 3, // 1/4
     snapOn: true,
 
-    // view scaling (px per ms)
-    view: {
-      pxPerMs: 0.40, // default zoom
-      min: 0.12,
-      max: 1.40,
-      zoomStep: 1.18,
-    },
+    scrollPxPerSec: 1700,
+    tlWinSec: 8,
 
-    timing: [{ id: uid(), t: 0, bpm: 180, meter: 4 }],
+    perfCap: 1.25,
 
-    notes: [],
-    bookmarks: [],
-    selected: new Set(),
-    undo: [],
+    audioOffsetMs: 0,
 
-    // audio
-    ac: null,
     buffer: null,
+    ac: null,
     gain: null,
     source: null,
-    startedAt: 0,
-    startOffsetSec: 0,
-    timeMs: 0,
     isPlaying: false,
+    startedAt: 0,
+    startAudioOffsetSec: 0,
     rate: 1,
-    playRateAtStart: 1, // critical fix
 
-    // waveform
-    wf: { ready:false, peaks:null, blockSec:0, max:1, progress:0 },
+    timeMs: 0,
 
-    // background
-    bg: { opacity: 0.35, blur: 0 },
+    timing: [{ id: uid(), t:0, bpm:180, meter:4 }],
+    notes: [],
+    selected: new Set(),
 
-    // editor drag
-    drag: { down:false, mode:"none", x0:0, y0:0, holdId:null, moveSnap:null },
+    bookmarks: [],
 
-    // scrub (Alt+drag)
-    scrub: { on:false, wasPlaying:false },
+    // waveform data
+    wf: {
+      ready:false,
+      peaks:null,
+      blockSize:2048,
+      blockSec:0,
+      robustMax:1,
+      progress:0
+    },
+
+    // caches
+    dpr: 1,
+    caches: {
+      edStatic: makeOffscreen(),
+      edWave: makeOffscreen(),
+      tlStatic: makeOffscreen(),
+      tlWave: makeOffscreen(),
+      pvStatic: makeOffscreen(), // receptors etc.
+    },
+    cacheMeta: {
+      edStaticKey:"",
+      edWaveKey:"",
+      tlStaticKey:"",
+      tlWaveKey:"",
+      pvStaticKey:"",
+      edWaveLastMsBucket:-1,
+      tlWaveLastMsBucket:-1,
+      edWaveLastPaint:0,
+      tlWaveLastPaint:0,
+    },
+
+    // interactions
+    drag: {
+      down:false,
+      pointerId:null,
+      mode:"none", // box, move, holdCreate, seekTL
+      x0:0, y0:0,
+      moveSnap:null,
+      holdId:null,
+      box:null
+    },
+    tlDrag:false,
+    lastPointerLane:0,
 
     // preview
     preview: {
-      enabled: false,
-      speedFactor: 0.85,   // how fast notes fall in preview vs editor scroll
-      lookAheadMs: 2300,
-      hitLinePad: 92,
+      enabled:true,
+      realtime:true,
+      autoplay:true,
+      combo:0,
+      autoIndex:0,
+      lastSeekTime:0,
+      lookAheadMs:2200,
+      lookBackMs:250,
+      hitPad:86,
+      speedFactor:0.75
     },
-    previewRuntime: {
-      dirty: true,
-      sorted: [],
-      idx: 0,
-      combo: 0,
-      lastMs: 0,
-    }
+
+    undo: []
   };
 
-  /* ===== Timing / Snap ===== */
+  function makeOffscreen(){
+    const c = document.createElement("canvas");
+    const ctx = c.getContext("2d");
+    return { c, ctx };
+  }
+
+  /* ==========================
+     DPR / Resize
+  ========================== */
+  const edCtx = edCanvas.getContext("2d");
+  const tlCtx = tlCanvas.getContext("2d");
+  const pvCtx = pvCanvas.getContext("2d");
+
+  function effectiveDPR(){
+    const d = window.devicePixelRatio || 1;
+    if(state.perfCap === 0) return d;
+    return Math.min(d, state.perfCap);
+  }
+
+  function resizeCanvas(canvas, wrap){
+    const r = wrap.getBoundingClientRect();
+    const dpr = state.dpr;
+    canvas.width = Math.max(1, Math.floor(r.width * dpr));
+    canvas.height = Math.max(1, Math.floor(r.height * dpr));
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.imageSmoothingEnabled = true;
+  }
+
+  function resizeOffscreen(off, w, h){
+    const dpr = state.dpr;
+    off.c.width = Math.max(1, Math.floor(w * dpr));
+    off.c.height = Math.max(1, Math.floor(h * dpr));
+    off.ctx.setTransform(dpr,0,0,dpr,0,0);
+    off.ctx.imageSmoothingEnabled = true;
+  }
+
+  function doResizeAll(){
+    state.dpr = effectiveDPR();
+
+    resizeCanvas(edCanvas, edPane);
+    resizeCanvas(tlCanvas, tlPane);
+    resizeCanvas(pvCanvas, pvPane);
+
+    // reset caches to fit
+    const EW = edCanvas.width / state.dpr;
+    const EH = edCanvas.height / state.dpr;
+    const TW = tlCanvas.width / state.dpr;
+    const TH = tlCanvas.height / state.dpr;
+    const PW = pvCanvas.width / state.dpr;
+    const PH = pvCanvas.height / state.dpr;
+
+    resizeOffscreen(state.caches.edStatic, EW, EH);
+    resizeOffscreen(state.caches.edWave, EW, EH);
+    resizeOffscreen(state.caches.tlStatic, TW, TH);
+    resizeOffscreen(state.caches.tlWave, TW, TH);
+    resizeOffscreen(state.caches.pvStatic, PW, PH);
+
+    state.cacheMeta.edStaticKey = "";
+    state.cacheMeta.edWaveKey = "";
+    state.cacheMeta.tlStaticKey = "";
+    state.cacheMeta.tlWaveKey = "";
+    state.cacheMeta.pvStaticKey = "";
+  }
+
+  const ro = new ResizeObserver(doResizeAll);
+  ro.observe(edPane);
+  ro.observe(tlPane);
+  ro.observe(pvPane);
+  window.addEventListener("resize", doResizeAll);
+
+  /* ==========================
+     Timing / Snap
+  ========================== */
   function normalizeTiming(){
     state.timing.sort((a,b)=>a.t-b.t);
     const out=[];
     for(const tp of state.timing){
-      if(out.length && out[out.length-1].t === tp.t) out[out.length-1]=tp;
+      if(out.length && out[out.length-1].t === tp.t) out[out.length-1] = tp;
       else out.push(tp);
     }
     state.timing = out;
   }
+
   function activeTP(ms){
     normalizeTiming();
     let best = state.timing[0];
@@ -1163,278 +912,116 @@
     }
     return best;
   }
-  function snapStepMsAt(ms){
+
+  function snapDiv(){ return SNAP_OPTS[state.snapIndex] || 4; }
+
+  function snapMsAt(ms){
     const tp = activeTP(ms);
     const beatLen = 60000 / tp.bpm;
-    return beatLen / state.snap;
+    return beatLen / snapDiv();
   }
+
   function quantizeAt(ms){
     if(!state.snapOn) return ms;
     const tp = activeTP(ms);
     const beatLen = 60000 / tp.bpm;
-    const step = beatLen / state.snap;
+    const step = beatLen / snapDiv();
     const base = tp.t;
     const n = Math.round((ms - base) / step);
     return base + n*step;
   }
 
-  /* ===== Audio (FIXED) ===== */
-  async function ensureAC(){
-    if(state.ac) return state.ac;
-    state.ac = new (window.AudioContext || window.webkitAudioContext)();
-    state.gain = state.ac.createGain();
-    state.gain.gain.value = 1;
-    state.gain.connect(state.ac.destination);
-    return state.ac;
+  function setSnapIndex(i){
+    state.snapIndex = clamp(i, 0, SNAP_OPTS.length-1);
+    const label = `1/${snapDiv()}`;
+    snapLbl.textContent = label;
+    hudSnap.textContent = label;
+    state.cacheMeta.tlStaticKey = ""; // grid changes
+    state.cacheMeta.edStaticKey = "";
   }
 
-  function cleanupSource(){
-    const src = state.source;
-    if(!src) return;
-    try{ src.onended = null; }catch(e){}
-    try{ src.stop(0); }catch(e){}
-    try{ src.disconnect(); }catch(e){}
-    state.source = null;
+  function setKeys(k){
+    state.keys = clamp(k,4,7);
+    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
+    // selection might contain out-of-range lane notes fixed above
+    hudKeys.textContent = String(state.keys);
+    state.cacheMeta.edStaticKey = "";
+    state.cacheMeta.tlStaticKey = "";
+    state.cacheMeta.pvStaticKey = "";
   }
 
-  async function play(){
-    if(!state.buffer) return;
-    const ac = await ensureAC();
-    if(ac.state === "suspended") await ac.resume();
+  /* ==========================
+     Geometry
+  ========================== */
+  const EW = ()=> edCanvas.width / state.dpr;
+  const EH = ()=> edCanvas.height / state.dpr;
+  const TW = ()=> tlCanvas.width / state.dpr;
+  const TH = ()=> tlCanvas.height / state.dpr;
+  const PW = ()=> pvCanvas.width / state.dpr;
+  const PH = ()=> pvCanvas.height / state.dpr;
 
-    if(state.isPlaying) pause();
+  const pxPerMs = ()=> state.scrollPxPerSec / 1000;
+  const centerY = ()=> Math.floor(EH()*0.58);
+  const laneW = ()=> EW() / state.keys;
 
-    state.startOffsetSec = clamp(state.startOffsetSec, 0, state.buffer.duration || 0);
-    if(state.startOffsetSec >= (state.buffer.duration || 0)) state.startOffsetSec = 0;
+  function xFromLane(lane){ return lane * laneW(); }
 
-    cleanupSource();
-
-    const src = ac.createBufferSource();
-    src.buffer = state.buffer;
-    src.playbackRate.value = state.rate;
-    src.connect(state.gain);
-
-    state.playRateAtStart = state.rate; // FIX
-    state.startedAt = ac.currentTime;
-    state.isPlaying = true;
-
-    src.onended = () => {
-      if(state.source === src){
-        state.isPlaying = false;
-        state.source = null;
-      }
-    };
-
-    state.source = src;
-    src.start(0, state.startOffsetSec);
-
-    updatePlayIcon();
+  function laneFromX(x){
+    // important: x is in CSS coords already
+    return clamp(Math.floor(x / laneW()), 0, state.keys-1);
   }
 
-  function pause(){
-    if(!state.ac || !state.isPlaying) return;
-
-    const ac = state.ac;
-    const elapsedReal = ac.currentTime - state.startedAt;
-    const playedSec = elapsedReal * state.playRateAtStart; // FIX
-
-    state.startOffsetSec = clamp(state.startOffsetSec + playedSec, 0, state.buffer?.duration || 0);
-    state.timeMs = Math.round(state.startOffsetSec * 1000);
-
-    state.isPlaying = false;
-    cleanupSource();
-
-    updatePlayIcon();
+  function yFromTime(ms){
+    return centerY() - (ms - state.timeMs) * pxPerMs();
   }
 
-  function stop(){
-    pause();
-    state.startOffsetSec = 0;
-    state.timeMs = 0;
-    resetPreviewRuntime();
-    updatePlayIcon();
+  function timeFromY(y){
+    return state.timeMs + (centerY() - y) / pxPerMs();
   }
 
-  function updateTimeFromAudio(){
-    if(!state.isPlaying || !state.ac) return;
-    const ac = state.ac;
-
-    const elapsedReal = ac.currentTime - state.startedAt;
-    const playedSec = elapsedReal * state.playRateAtStart; // FIX
-    const tSec = state.startOffsetSec + playedSec;
-
-    const dur = (state.buffer?.duration || 0);
-    const clamped = clamp(tSec, 0, dur);
-
-    state.timeMs = Math.round(clamped * 1000);
-
-    if(dur > 0 && clamped >= dur - 0.0005){
-      state.isPlaying = false;
-      cleanupSource();
-      updatePlayIcon();
-    }
+  function tlRange(){
+    const half = (state.tlWinSec*1000)/2;
+    return { start: state.timeMs - half, end: state.timeMs + half };
+  }
+  function yFromTimeTL(ms){
+    const {start,end} = tlRange();
+    const h = TH();
+    return ((ms - start) / (end - start)) * h;
+  }
+  function timeFromYTL(y){
+    const {start,end} = tlRange();
+    const h = TH();
+    return start + (y / h) * (end - start);
   }
 
-  function seekMs(ms){
-    if(!state.buffer) return;
-    ms = Math.round(ms);
-    const max = state.buffer.duration * 1000;
-    state.timeMs = clamp(ms, 0, max);
-    state.startOffsetSec = state.timeMs / 1000;
-
-    resetPreviewRuntime();
-
-    if(state.isPlaying){
-      pause();
-      play();
-    }
+  function mousePosOnCanvas(e, canvas){
+    const r = canvas.getBoundingClientRect();
+    const x = (e.clientX - r.left);
+    const y = (e.clientY - r.top);
+    return { x, y };
   }
 
-  async function loadAudio(file){
-    const ac = await ensureAC();
-    const arr = await file.arrayBuffer();
-    state.buffer = await ac.decodeAudioData(arr);
-
-    state.timeMs = 0;
-    state.startOffsetSec = 0;
-    state.isPlaying = false;
-    cleanupSource();
-
-    state.wf.ready = false;
-    state.wf.peaks = null;
-    state.wf.progress = 0;
-
-    resetPreviewRuntime();
-    buildPeaks();
-
-    topStatus.textContent = `${file.name} • ${Math.round(state.buffer.duration)}s`;
-  }
-
-  function updatePlayIcon(){
-    if(state.isPlaying){
-      playIcon.innerHTML = `<path d="M7 6h4v12H7zM13 6h4v12h-4z"/>`;
-    } else {
-      playIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
-    }
-  }
-
-  /* ===== Waveform peaks (vertical time) ===== */
-  function buildPeaks(){
-    const buf = state.buffer;
-    if(!buf) return;
-
-    const wf = state.wf;
-    const dur = buf.duration;
-    const sr = buf.sampleRate;
-
-    // choose block size
-    const block = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
-    const len = buf.length;
-    const blocks = Math.ceil(len / block);
-
-    wf.peaks = new Float32Array(blocks);
-    wf.blockSec = block / sr;
-
-    const chN = buf.numberOfChannels;
-    const ch = [];
-    for(let c=0;c<chN;c++) ch.push(buf.getChannelData(c));
-
-    let i = 0;
-    let max = 0;
-
-    function step(){
-      const t0 = performance.now();
-      const budget = 12;
-
-      while(i < blocks && performance.now() - t0 < budget){
-        const start = i * block;
-        const end = Math.min(len, start + block);
-
-        let peak = 0;
-        for(let s=start; s<end; s++){
-          let v = 0;
-          for(let c=0;c<chN;c++) v += ch[c][s];
-          v /= chN;
-          const a = Math.abs(v);
-          if(a > peak) peak = a;
-        }
-        wf.peaks[i] = peak;
-        if(peak > max) max = peak;
-        i++;
-      }
-
-      wf.progress = i / blocks;
-
-      if(i < blocks){
-        requestAnimationFrame(step);
-      } else {
-        wf.max = max || 1;
-        wf.ready = true;
-      }
-    }
-    requestAnimationFrame(step);
-  }
-
-  function ampAtMs(ms){
-    const wf = state.wf;
-    if(!wf.ready || !wf.peaks) return 0;
-    const sec = ms / 1000;
-    const idx = Math.floor(sec / wf.blockSec);
-    if(idx < 0 || idx >= wf.peaks.length) return 0;
-    return wf.peaks[idx] / wf.max;
-  }
-
-  /* ===== Editor geometry ===== */
-  const EW = ()=> editCanvas.width / (window.devicePixelRatio||1);
-  const EH = ()=> editCanvas.height / (window.devicePixelRatio||1);
-  const WW = ()=> waveCanvas.width / (window.devicePixelRatio||1);
-  const WH = ()=> waveCanvas.height / (window.devicePixelRatio||1);
-  const AW = ()=> ampCanvas.width / (window.devicePixelRatio||1);
-  const AH = ()=> ampCanvas.height / (window.devicePixelRatio||1);
-  const PW = ()=> previewCanvas.width / (window.devicePixelRatio||1);
-  const PH = ()=> previewCanvas.height / (window.devicePixelRatio||1);
-
-  function centerYEditor(){ return Math.floor(EH() * 0.50); }
-  function centerYWave(){ return Math.floor(WH() * 0.50); }
-
-  function laneW(){ return EW() / state.keys; }
-  function laneFromX(x){ return clamp(Math.floor(x / laneW()), 0, state.keys-1); }
-  function xFromLane(l){ return l * laneW(); }
-
-  function yFromTimeEditor(ms){
-    return centerYEditor() - (ms - state.timeMs) * state.view.pxPerMs;
-  }
-  function timeFromYEditor(y){
-    return state.timeMs + (centerYEditor() - y) / state.view.pxPerMs;
-  }
-
-  function yFromTimeWave(ms){
-    return centerYWave() - (ms - state.timeMs) * state.view.pxPerMs;
-  }
-  function timeFromYWave(y){
-    return state.timeMs + (centerYWave() - y) / state.view.pxPerMs;
-  }
-
-  /* ===== Notes + selection ===== */
-  function sortNotes(){ state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane); }
-  function markPreviewDirty(){ state.previewRuntime.dirty = true; }
-
+  /* ==========================
+     Undo
+  ========================== */
   function pushUndo(){
     state.undo.push(JSON.stringify({
       keys: state.keys,
-      snap: state.snap,
+      snapIndex: state.snapIndex,
       snapOn: state.snapOn,
-      view: state.view,
+      scrollPxPerSec: state.scrollPxPerSec,
+      tlWinSec: state.tlWinSec,
+      audioOffsetMs: state.audioOffsetMs,
       timing: state.timing,
       notes: state.notes,
       bookmarks: state.bookmarks,
-      meta: getMeta(),
-      rate: state.rate,
-      bg: state.bg,
-      preview: state.preview,
+      preview: {
+        realtime: state.preview.realtime,
+        autoplay: state.preview.autoplay
+      }
     }));
-    if(state.undo.length > 250) state.undo.shift();
-    undoBtn.textContent = `Undo (${state.undo.length})`;
+    if(state.undo.length > 200) state.undo.shift();
+    undoBtn.disabled = state.undo.length === 0;
   }
 
   function doUndo(){
@@ -1443,135 +1030,150 @@
     const s = JSON.parse(raw);
 
     state.keys = s.keys ?? state.keys;
-    state.snap = s.snap ?? state.snap;
+    state.snapIndex = s.snapIndex ?? state.snapIndex;
     state.snapOn = s.snapOn ?? state.snapOn;
-    state.view = s.view ?? state.view;
+    state.scrollPxPerSec = s.scrollPxPerSec ?? state.scrollPxPerSec;
+    state.tlWinSec = s.tlWinSec ?? state.tlWinSec;
+    state.audioOffsetMs = s.audioOffsetMs ?? state.audioOffsetMs;
+
     state.timing = s.timing ?? state.timing;
     state.notes = s.notes ?? state.notes;
     state.bookmarks = s.bookmarks ?? state.bookmarks;
-    if(s.meta) setMeta(s.meta);
-    state.rate = s.rate ?? state.rate;
-    state.bg = s.bg ?? state.bg;
-    state.preview = s.preview ?? state.preview;
+
+    state.preview.realtime = s.preview?.realtime ?? state.preview.realtime;
+    state.preview.autoplay = s.preview?.autoplay ?? state.preview.autoplay;
 
     // sync UI
     keysSel.value = String(state.keys);
-    snapSel.value = String(state.snap);
-    snapOnToggle.checked = !!state.snapOn;
+    scrollIn.value = String(state.scrollPxPerSec);
+    tlWinIn.value = String(state.tlWinSec);
+    offsetIn.value = String(state.audioOffsetMs);
+    snapOnSel.value = state.snapOn ? "on":"off";
+    autoSel.value = state.preview.autoplay ? "on":"off";
 
-    const tp0 = state.timing[0] || {bpm:180,t:0};
-    bpmIn.value = String(tp0.bpm);
-    offIn.value = String(tp0.t);
+    setKeys(state.keys);
+    setSnapIndex(state.snapIndex);
+    setSnapOn(state.snapOn);
+    setAudioOffset(state.audioOffsetMs);
+    setRealtimePreview(state.preview.realtime);
+    setAutoplay(state.preview.autoplay);
 
-    rateSel.value = String(state.rate);
-    chipRate.textContent = `${Math.round(state.rate*100)}%`;
+    normalizeTiming();
+    sortNotes();
+    rebuildAutoplayIndexForTime();
+    renderTPList();
+    renderBMList();
+    updateSelectionUI();
 
-    bgOpacity.value = String(state.bg.opacity);
-    bgBlur.value = String(state.bg.blur);
-    bgImg.style.opacity = String(state.bg.opacity);
-    bgImg.style.filter = `blur(${state.bg.blur}px)`;
+    undoBtn.disabled = state.undo.length === 0;
+  }
 
-    previewToggle.checked = !!state.preview.enabled;
-    applyPreviewLayout();
+  /* ==========================
+     Notes
+  ========================== */
+  function sortNotes(){
+    state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
+  }
 
-    // clamp lanes
-    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
-
+  function addNote(n){
+    pushUndo();
+    state.notes.push(n);
+    sortNotes();
     state.selected.clear();
-    markPreviewDirty();
-    resetPreviewRuntime();
-    renderBookmarks();
+    state.selected.add(n.id);
+    updateSelectionUI();
+    rebuildAutoplayIndexForTime();
+    exportBtn.disabled = false;
+  }
+
+  function deleteSelection(){
+    if(state.selected.size===0) return;
+    pushUndo();
+    state.notes = state.notes.filter(n => !state.selected.has(n.id));
+    state.selected.clear();
+    updateSelectionUI();
+    rebuildAutoplayIndexForTime();
   }
 
   function clearNotes(){
     pushUndo();
     state.notes = [];
     state.selected.clear();
-    markPreviewDirty();
-    resetPreviewRuntime();
-  }
-
-  function addNote(note){
-    pushUndo();
-    state.notes.push(note);
-    sortNotes();
-    state.selected.clear();
-    state.selected.add(note.id);
-    markPreviewDirty();
-    resetPreviewRuntime();
-  }
-
-  function deleteSelection(){
-    if(state.selected.size === 0) return;
-    pushUndo();
-    state.notes = state.notes.filter(n => !state.selected.has(n.id));
-    state.selected.clear();
-    markPreviewDirty();
-    resetPreviewRuntime();
+    updateSelectionUI();
+    rebuildAutoplayIndexForTime();
   }
 
   function getSelectedOne(){
-    if(state.selected.size !== 1) return null;
+    if(state.selected.size!==1) return null;
     const id = [...state.selected][0];
-    return state.notes.find(n => n.id === id) || null;
+    return state.notes.find(n => n.id===id) || null;
   }
 
-  function toggleHs(bit){
-    const n = getSelectedOne();
-    if(!n) return;
-    pushUndo();
-    n.hs = (n.hs ?? 0) ^ bit;
-    syncHitsoundUI();
+  function updateSelectionUI(){
+    selFmt.textContent = `sel: ${state.selected.size}`;
+    deleteBtn.disabled = state.selected.size===0;
+
+    // also show selection count in transport
+    // (no big props panel — keeping osu-like minimal)
   }
 
-  function setHsVol(v){
-    const n = getSelectedOne();
-    if(!n) return;
-    pushUndo();
-    n.vol = clamp(v, 0, 100);
-    syncHitsoundUI();
+  function rectNorm(b){
+    return {
+      x0: Math.min(b.x0,b.x1),
+      y0: Math.min(b.y0,b.y1),
+      x1: Math.max(b.x0,b.x1),
+      y1: Math.max(b.y0,b.y1),
+    };
   }
 
-  function syncHitsoundUI(){
-    const n = getSelectedOne();
-    const hs = n?.hs ?? 0;
-    hsWhistle.classList.toggle("active", (hs & 2) !== 0);
-    hsFinish.classList.toggle("active", (hs & 4) !== 0);
-    hsClap.classList.toggle("active", (hs & 8) !== 0);
-    const vol = n?.vol ?? 0;
-    hsVol.value = String(vol);
-    hsVolVal.textContent = String(vol);
-  }
-
-  function findNoteAt(x,y){
-    const l = laneFromX(x);
+  function findNoteAt(mx, my){
     const lw = laneW();
-    const x0 = xFromLane(l);
+    const lane = laneFromX(mx);
+    const x0 = xFromLane(lane);
 
     for(let i=state.notes.length-1; i>=0; i--){
       const n = state.notes[i];
-      if(n.lane !== l) continue;
+      if(n.lane !== lane) continue;
+      const y = yFromTime(n.t);
 
-      const yHead = yFromTimeEditor(n.t);
-      const pad = 8;
-      const rw = lw - pad*2;
-      const rh = 12;
+      const pad = 7;
+      const rectW = lw - pad*2;
+      const rectH = 12;
 
-      // head rect
-      const rx = x0 + pad;
-      const ry = yHead - rh/2;
+      const rx = x0+pad, ry = y-rectH/2;
+      if(mx>=rx && mx<=rx+rectW && my>=ry && my<=ry+rectH) return n;
 
-      if(x>=rx && x<=rx+rw && y>=ry && y<=ry+rh) return n;
-
-      if(n.type === "hold"){
-        const yTail = yFromTimeEditor(n.end);
-        const top = Math.min(yHead, yTail);
-        const bot = Math.max(yHead, yTail);
-        const cx = x0 + lw/2;
-        if(x>=cx-10 && x<=cx+10 && y>=top-8 && y<=bot+8) return n;
+      if(n.type==="hold"){
+        const y2 = yFromTime(n.end);
+        const top = Math.min(y,y2);
+        const bot = Math.max(y,y2);
+        const barX = x0 + lw/2 - 3;
+        if(mx >= barX-10 && mx <= barX+16 && my >= top-10 && my <= bot+10) return n;
       }
     }
     return null;
+  }
+
+  function selectByBox(box, additive=false){
+    const b = rectNorm(box);
+    const tA = state.snapOn ? quantizeAt(timeFromY(b.y1)) : timeFromY(b.y1);
+    const tB = state.snapOn ? quantizeAt(timeFromY(b.y0)) : timeFromY(b.y0);
+    const tMin = Math.min(tA,tB), tMax = Math.max(tA,tB);
+
+    const laneMin = laneFromX(b.x0);
+    const laneMax = laneFromX(b.x1);
+
+    if(!additive) state.selected.clear();
+
+    for(const n of state.notes){
+      if(n.lane < laneMin || n.lane > laneMax) continue;
+      if(n.type==="tap"){
+        if(n.t >= tMin && n.t <= tMax) state.selected.add(n.id);
+      } else {
+        if(!(n.end < tMin || n.t > tMax)) state.selected.add(n.id);
+      }
+    }
+    updateSelectionUI();
   }
 
   function beginMoveSelection(){
@@ -1587,882 +1189,941 @@
   function applyMoveSelection(deltaLane, deltaMs){
     const snap = state.drag.moveSnap;
     if(!snap) return;
-
     for(const n of state.notes){
       if(!state.selected.has(n.id)) continue;
       const base = snap.get(n.id);
       if(!base) continue;
 
-      let lane = clamp(base.lane + deltaLane, 0, state.keys-1);
+      const lane = clamp(base.lane + deltaLane, 0, state.keys-1);
       let t = base.t + deltaMs;
       t = state.snapOn ? quantizeAt(t) : t;
 
       n.lane = lane;
       n.t = t;
 
-      if(n.type === "hold"){
+      if(n.type==="hold"){
         let end = base.end + deltaMs;
         end = state.snapOn ? quantizeAt(end) : end;
-        n.end = Math.max(n.t + 1, end);
+        n.end = Math.max(n.t+1, end);
       } else {
         n.end = n.t;
       }
     }
     sortNotes();
-    markPreviewDirty();
-    resetPreviewRuntime();
+    rebuildAutoplayIndexForTime();
   }
 
-  /* ===== Bookmarks ===== */
-  function addBookmark(){
+  /* ==========================
+     Bookmarks
+  ========================== */
+  function addBookmarkAt(ms){
     pushUndo();
-    state.bookmarks.push({ id: uid(), t: Math.round(state.timeMs), label: `BM @ ${fmtTime(state.timeMs)}` });
+    const t = Math.round(ms);
+    state.bookmarks.push({ id: uid(), t });
     state.bookmarks.sort((a,b)=>a.t-b.t);
-    renderBookmarks();
+    renderBMList();
   }
 
-  function renderBookmarks(){
-    bmList.innerHTML = "";
-    if(state.bookmarks.length === 0){
-      const div = document.createElement("div");
-      div.style.opacity = ".72";
-      div.style.fontFamily = "var(--mono)";
-      div.textContent = "—";
-      bmList.appendChild(div);
+  function clearBookmarks(){
+    pushUndo();
+    state.bookmarks = [];
+    renderBMList();
+  }
+
+  function renderBMList(){
+    bookmarkFmt.textContent = `bm: ${state.bookmarks.length}`;
+    if(state.bookmarks.length===0){
+      bmList.innerHTML = `<div class="item"><span>—</span><span class="mono">sem bookmarks</span></div>`;
       return;
     }
-    for(const bm of state.bookmarks){
-      const row = document.createElement("div");
-      row.className = "row";
-      row.style.cursor = "pointer";
-      row.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:2px">
-          <b style="font-family:var(--mono)">${fmtTime(bm.t)}</b>
-          <span style="opacity:.72; font-size:12px">${bm.label}</span>
-        </div>
-        <div style="opacity:.7; font-family:var(--mono)">${bm.t}ms</div>
-      `;
-      row.addEventListener("click", () => seekMs(bm.t));
-      row.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        pushUndo();
-        state.bookmarks = state.bookmarks.filter(x => x.id !== bm.id);
-        renderBookmarks();
+    bmList.innerHTML = state.bookmarks.map(b => `
+      <div class="item" data-id="${b.id}">
+        <span><b>${b.t}</b> ms</span>
+        <span style="display:flex; gap:10px; align-items:center">
+          <span class="act" data-act="go">go</span>
+          <span class="act" data-act="del">del</span>
+        </span>
+      </div>
+    `).join("");
+
+    bmList.querySelectorAll(".item").forEach(row=>{
+      const id = row.getAttribute("data-id");
+      row.querySelector('[data-act="go"]').addEventListener("click", (e)=>{
+        e.stopPropagation();
+        const b = state.bookmarks.find(x=>x.id===id);
+        if(b) seekMs(b.t);
       });
-      bmList.appendChild(row);
+      row.querySelector('[data-act="del"]').addEventListener("click", (e)=>{
+        e.stopPropagation();
+        pushUndo();
+        state.bookmarks = state.bookmarks.filter(x=>x.id!==id);
+        renderBMList();
+      });
+    });
+  }
+
+  /* ==========================
+     Audio engine (fixed pause/seek/offset)
+  ========================== */
+  async function ensureAC(){
+    if(state.ac) return state.ac;
+    state.ac = new (window.AudioContext || window.webkitAudioContext)();
+    state.gain = state.ac.createGain();
+    state.gain.gain.value = parseFloat(vol.value) || 1;
+    state.gain.connect(state.ac.destination);
+    return state.ac;
+  }
+
+  function cleanupSource(){
+    try{ if(state.source) state.source.stop(); }catch(e){}
+    state.source = null;
+  }
+
+  function setAudioOffset(ms){
+    state.audioOffsetMs = Math.round(ms||0);
+    hudOffset.textContent = String(state.audioOffsetMs);
+    offsetIn.value = String(state.audioOffsetMs);
+    if(state.isPlaying){
+      pause();
+      play();
+    } else {
+      rebuildAutoplayIndexForTime();
     }
   }
 
-  /* ===== Preview runtime ===== */
-  function rebuildPreviewSorted(){
-    state.previewRuntime.sorted = state.notes
-      .slice()
-      .map(n => ({ id:n.id, t:n.t, lane:n.lane, type:n.type, end:n.end }))
-      .sort((a,b)=>a.t-b.t || a.lane-b.lane);
-    state.previewRuntime.dirty = false;
+  function setSnapOn(on){
+    state.snapOn = !!on;
+    snapOnSel.value = state.snapOn ? "on":"off";
   }
 
-  function resetPreviewRuntime(){
-    state.previewRuntime.idx = 0;
-    state.previewRuntime.combo = 0;
-    state.previewRuntime.lastMs = state.timeMs;
-    state.previewRuntime.dirty = true;
-  }
+  async function loadAudio(file){
+    const ac = await ensureAC();
+    const arr = await file.arrayBuffer();
+    state.buffer = await ac.decodeAudioData(arr);
 
-  function syncPreviewRuntimeToTime(){
-    if(state.previewRuntime.dirty) rebuildPreviewSorted();
-    // recompute combo deterministically up to current time
-    let combo = 0;
-    let idx = 0;
-    const arr = state.previewRuntime.sorted;
-    while(idx < arr.length && arr[idx].t <= state.timeMs){
-      combo++;
-      idx++;
+    // reset playback
+    cleanupSource();
+    state.isPlaying = false;
+    state.timeMs = 0;
+    state.startedAt = 0;
+    state.startAudioOffsetSec = 0;
+
+    // UI enable
+    exportBtn.disabled = false;
+    clearBtn.disabled = false;
+    tpAddBtn.disabled = false;
+    tpResetBtn.disabled = false;
+    autoBpmBtn.disabled = false;
+    autoBpmStatus.textContent = "Pronto. Clique Detect para estimar BPM.";
+    audioName.textContent = file.name;
+
+    // waveform build
+    state.wf.ready = false;
+    state.wf.peaks = null;
+    wfStatus.textContent = "…";
+    buildPeaks();
+
+    // reset timing if empty
+    if(!state.timing || !state.timing.length){
+      state.timing = [{id:uid(), t:0, bpm:180, meter:4}];
     }
-    state.previewRuntime.combo = combo;
-    state.previewRuntime.idx = idx;
-    state.previewRuntime.lastMs = state.timeMs;
-  }
-
-  /* ===== Drawing ===== */
-  function crispY(y){ return Math.round(y) + 0.5; }
-
-  function drawAmpStrip(){
-    const w = AW(), h = AH();
-    actx.clearRect(0,0,w,h);
-    actx.fillStyle = "rgba(0,0,0,.15)";
-    actx.fillRect(0,0,w,h);
-
-    // colored bars from waveform amplitude
-    const stepY = 3;
-    for(let y=0; y<h; y+=stepY){
-      const ms = timeFromYWave(y);
-      const a = ampAtMs(ms);
-      // map amplitude to a heat color
-      const t = clamp(a,0,1);
-      const r = Math.round(60 + 180*t);
-      const g = Math.round(120 + 80*(1-t));
-      const b = Math.round(220 - 120*t);
-      actx.fillStyle = `rgba(${r},${g},${b},0.85)`;
-      const barW = 8 + t*(w-12);
-      actx.fillRect(w - barW, y, barW, stepY-1);
-    }
-
-    // playhead
-    const yph = crispY(yFromTimeWave(state.timeMs));
-    actx.strokeStyle = "rgba(255,255,255,.55)";
-    actx.lineWidth = 1;
-    actx.beginPath();
-    actx.moveTo(0, yph);
-    actx.lineTo(w, yph);
-    actx.stroke();
-  }
-
-  function drawWaveform(){
-    const w = WW(), h = WH();
-    wctx.clearRect(0,0,w,h);
-
-    // background
-    wctx.fillStyle = "rgba(0,0,0,.22)";
-    wctx.fillRect(0,0,w,h);
-
-    // grid lines (snap + measures) with timing segments
     normalizeTiming();
-    const startMs = timeFromYWave(h);
-    const endMs = timeFromYWave(0);
-    const tps = state.timing.slice();
+    renderTPList();
+    renderBMList();
 
-    for(let i=0;i<tps.length;i++){
-      const tp = tps[i];
-      const next = tps[i+1];
-      const segStart = Math.max(startMs, tp.t);
-      const segEnd = Math.min(endMs, next ? next.t : Infinity);
-      if(segEnd <= segStart) continue;
-
-      const beatLen = 60000 / tp.bpm;
-      const meter = tp.meter || 4;
-      const step = beatLen / state.snap;
-      const base = tp.t;
-
-      const n0 = Math.ceil((segStart - base) / step);
-      for(let t = base + n0*step; t <= segEnd; t += step){
-        const y = crispY(yFromTimeWave(t));
-        const rel = t - base;
-        const beatIndex = Math.round(rel / beatLen);
-        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
-        const isBar = isBeat && (beatIndex % meter === 0);
-
-        const a = isBar ? 0.22 : isBeat ? 0.14 : 0.08;
-        wctx.strokeStyle = `rgba(255,255,255,${a})`;
-        wctx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
-
-        wctx.beginPath();
-        wctx.moveTo(0,y);
-        wctx.lineTo(w,y);
-        wctx.stroke();
-      }
-    }
-
-    // waveform
-    if(state.wf.ready){
-      wctx.globalAlpha = 0.92;
-      wctx.strokeStyle = "rgba(38,211,255,.75)";
-      wctx.lineWidth = 1;
-      const mid = w*0.55;
-      const stepY = 2;
-      for(let y=0; y<h; y+=stepY){
-        const ms = timeFromYWave(y);
-        const a = ampAtMs(ms);
-        const amp = a*(w*0.42);
-        wctx.beginPath();
-        wctx.moveTo(mid-amp, y);
-        wctx.lineTo(mid+amp, y);
-        wctx.stroke();
-      }
-      wctx.globalAlpha = 1;
-    } else if(state.buffer){
-      wctx.fillStyle = "rgba(255,255,255,.10)";
-      wctx.fillText("gerando waveform…", 12, 18);
-    }
-
-    // notes as blocks in waveform (like screenshot)
-    const laneWv = w / Math.max(1,state.keys);
-    for(const n of state.notes){
-      const y = yFromTimeWave(n.t);
-      if(y < -80 || y > h+80) continue;
-      const x = (n.lane + 0.15) * laneWv;
-      const bw = laneWv * 0.72;
-      const bh = 12;
-
-      wctx.fillStyle = "rgba(38,211,255,.85)";
-      wctx.fillRect(x, y - bh/2, bw, bh);
-
-      if(n.type === "hold"){
-        const y2 = yFromTimeWave(n.end);
-        const top = Math.min(y, y2);
-        const bot = Math.max(y, y2);
-        wctx.fillStyle = "rgba(38,211,255,.35)";
-        wctx.fillRect(x + bw*0.42, top, bw*0.16, bot-top);
-      }
-    }
-
-    // bookmarks ticks
-    for(const bm of state.bookmarks){
-      const y = crispY(yFromTimeWave(bm.t));
-      if(y < -20 || y > h+20) continue;
-      wctx.strokeStyle = "rgba(255,255,255,.85)";
-      wctx.lineWidth = 2;
-      wctx.beginPath();
-      wctx.moveTo(0, y);
-      wctx.lineTo(w, y);
-      wctx.stroke();
-    }
-
-    // playhead
-    const yph = crispY(yFromTimeWave(state.timeMs));
-    wctx.strokeStyle = "rgba(239,68,68,.85)"; // red-ish like osu
-    wctx.lineWidth = 2;
-    wctx.beginPath();
-    wctx.moveTo(0, yph);
-    wctx.lineTo(w, yph);
-    wctx.stroke();
+    rebuildAutoplayIndexForTime();
   }
 
-  function drawEditor(){
+  async function play(){
+    if(!state.buffer) return;
+    const ac = await ensureAC();
+    if(ac.state === "suspended") await ac.resume();
+
+    cleanupSource();
+
+    // audio should play at (editorTime + offset)
+    const durSec = state.buffer.duration;
+    const audioStartSec = clamp((state.timeMs + state.audioOffsetMs) / 1000, 0, durSec);
+
+    const src = ac.createBufferSource();
+    src.buffer = state.buffer;
+    src.playbackRate.value = state.rate;
+    src.connect(state.gain);
+
+    state.startedAt = ac.currentTime;
+    state.startAudioOffsetSec = audioStartSec;
+
+    src.start(0, audioStartSec);
+    state.source = src;
+    state.isPlaying = true;
+
+    src.onended = () => {
+      // stop state when finished
+      if(state.isPlaying){
+        state.isPlaying = false;
+        cleanupSource();
+      }
+    };
+  }
+
+  function pause(){
+    if(!state.ac || !state.isPlaying) return;
+    const ac = state.ac;
+
+    // where audio is now:
+    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
+    const audioPosSec = state.startAudioOffsetSec + playedSec;
+
+    // update editor time from audio pos - offset
+    const ms = audioPosSec * 1000 - state.audioOffsetMs;
+    state.timeMs = clamp(ms, 0, state.buffer ? state.buffer.duration*1000 : ms);
+
+    cleanupSource();
+    state.isPlaying = false;
+    rebuildAutoplayIndexForTime();
+  }
+
+  function stop(){
+    if(!state.buffer) return;
+    if(state.isPlaying) pause();
+    state.timeMs = 0;
+    rebuildAutoplayIndexForTime();
+  }
+
+  function updateTimeFromAudio(){
+    if(!state.isPlaying || !state.ac || !state.buffer) return;
+    const ac = state.ac;
+    const durMs = state.buffer.duration * 1000;
+
+    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
+    const audioPosSec = state.startAudioOffsetSec + playedSec;
+    const ms = audioPosSec * 1000 - state.audioOffsetMs;
+
+    state.timeMs = clamp(ms, 0, durMs);
+    if(state.timeMs >= durMs-1){
+      state.isPlaying = false;
+      cleanupSource();
+    }
+  }
+
+  function seekMs(ms){
+    if(!state.buffer) return;
+    const durMs = state.buffer.duration * 1000;
+    state.timeMs = clamp(ms, 0, durMs);
+
+    if(state.isPlaying){
+      pause();
+      play();
+    } else {
+      rebuildAutoplayIndexForTime();
+    }
+  }
+
+  /* ==========================
+     Waveform (robust normalization + throttled cache)
+  ========================== */
+  function buildPeaks(){
+    const buf = state.buffer;
+    if(!buf) return;
+    const wf = state.wf;
+
+    const dur = buf.duration;
+    wf.blockSize = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
+
+    const channels = buf.numberOfChannels;
+    const len = buf.length;
+    const block = wf.blockSize;
+    const blocks = Math.ceil(len / block);
+
+    wf.peaks = new Float32Array(blocks);
+    wf.blockSec = block / buf.sampleRate;
+
+    const ch = [];
+    for(let c=0;c<channels;c++) ch.push(buf.getChannelData(c));
+
+    let i=0;
+    function step(){
+      const t0 = performance.now();
+      const budget = 12;
+
+      while(i < blocks && performance.now() - t0 < budget){
+        const start = i * block;
+        const end = Math.min(len, start + block);
+        let peak=0;
+
+        for(let s=start; s<end; s++){
+          let v=0;
+          for(let c=0;c<channels;c++) v += ch[c][s];
+          v /= channels;
+          const a = Math.abs(v);
+          if(a > peak) peak = a;
+        }
+        wf.peaks[i] = peak;
+        i++;
+      }
+
+      wf.progress = i/blocks;
+      wfStatus.textContent = wf.progress >= 1 ? "ok" : Math.round(wf.progress*100) + "%";
+
+      if(i < blocks){
+        requestAnimationFrame(step);
+      } else {
+        // robust max by sampling (p99)
+        const peaks = wf.peaks;
+        const sample = [];
+        const stride = Math.max(1, Math.floor(peaks.length / 5000));
+        for(let k=0; k<peaks.length; k+=stride) sample.push(peaks[k]);
+        sample.sort((a,b)=>a-b);
+        const idx = Math.floor(sample.length * 0.99);
+        wf.robustMax = sample[idx] || 1;
+        wf.ready = true;
+        wfStatus.textContent = "ok";
+
+        // invalidate wave caches
+        state.cacheMeta.edWaveKey = "";
+        state.cacheMeta.tlWaveKey = "";
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function ampAtMs(ms){
+    const wf = state.wf;
+    if(!wf.ready || !wf.peaks) return 0;
+    const sec = ms / 1000;
+    const idx = Math.floor(sec / wf.blockSec);
+    if(idx < 0 || idx >= wf.peaks.length) return 0;
+    let a = wf.peaks[idx] / (wf.robustMax || 1);
+    a = clamp(a, 0, 1);
+    // gamma for nicer detail (osu-like)
+    a = Math.pow(a, 0.65);
+    return a;
+  }
+
+  /* ==========================
+     Preview autoplay index / combo
+  ========================== */
+  function rebuildAutoplayIndexForTime(){
+    if(!state.preview.autoplay){
+      state.preview.combo = 0;
+      comboLbl.textContent = "0";
+      return;
+    }
+    sortNotes();
+    const idx = lowerBound(state.notes, state.timeMs); // first note with t > time
+    state.preview.autoIndex = idx;
+    state.preview.combo = idx;
+    comboLbl.textContent = String(state.preview.combo);
+  }
+
+  function advanceAutoplay(){
+    if(!state.preview.realtime || !state.preview.autoplay) return;
+    // only advance while playing forward
+    if(!state.isPlaying) {
+      // still show combo based on current time (for seeking / scrubbing)
+      rebuildAutoplayIndexForTime();
+      return;
+    }
+    // catch up (in case frames drop)
+    sortNotes();
+    const idxNow = lowerBound(state.notes, state.timeMs);
+    if(idxNow !== state.preview.autoIndex){
+      state.preview.autoIndex = idxNow;
+      state.preview.combo = idxNow;
+      comboLbl.textContent = String(state.preview.combo);
+    }
+  }
+
+  /* ==========================
+     Rendering (cached layers)
+  ========================== */
+  function drawEdStatic(){
+    const key = `${EW()}x${EH()}|k${state.keys}|snap${snapDiv()}|bpm${activeTP(state.timeMs).bpm.toFixed(3)}|so${state.snapOn?1:0}`;
+    if(state.cacheMeta.edStaticKey === key) return;
+    state.cacheMeta.edStaticKey = key;
+
+    const {ctx} = state.caches.edStatic;
     const w = EW(), h = EH();
-    ectx.clearRect(0,0,w,h);
+    ctx.clearRect(0,0,w,h);
 
-    // bg
-    ectx.fillStyle = "rgba(0,0,0,.18)";
-    ectx.fillRect(0,0,w,h);
+    // base
+    ctx.fillStyle = "#070a0f";
+    ctx.fillRect(0,0,w,h);
 
-    // lanes shading
+    // lanes
     const lw = laneW();
     for(let i=0;i<state.keys;i++){
-      ectx.fillStyle = "rgba(255,255,255,.03)";
-      ectx.fillRect(i*lw, 0, lw-1, h);
-      ectx.fillStyle = "rgba(255,255,255,.08)";
-      ectx.fillRect(i*lw, 0, 1, h);
+      ctx.fillStyle = "rgba(255,255,255,.04)";
+      ctx.fillRect(i*lw, 0, lw-1, h);
+      ctx.fillStyle = "rgba(255,255,255,.09)";
+      ctx.fillRect(i*lw, 0, 1, h);
     }
-    ectx.fillStyle = "rgba(255,255,255,.12)";
-    ectx.fillRect(w-1,0,1,h);
+    ctx.fillStyle = "rgba(255,255,255,.12)";
+    ctx.fillRect(w-1,0,1,h);
 
-    // grid lines
+    // subtle center waveform lane backdrop area
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = "rgba(0,0,0,1)";
+    ctx.fillRect(w*0.33, 0, w*0.34, h);
+    ctx.globalAlpha = 1;
+
+    // hitline (red like osu editor)
+    ctx.strokeStyle = "rgba(255,51,85,.88)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, centerY());
+    ctx.lineTo(w, centerY());
+    ctx.stroke();
+  }
+
+  function drawEdWaveCache(){
+    // waveform depends on time; throttle to reduce lag
+    if(!state.wf.ready) return;
+    const now = performance.now();
+    if(now - state.cacheMeta.edWaveLastPaint < 70) return; // ~14 fps
+
+    const bucket = Math.floor(state.timeMs / 40);
+    const key = `${EW()}x${EH()}|bucket${bucket}|spd${state.scrollPxPerSec}|off${state.audioOffsetMs}`;
+    if(state.cacheMeta.edWaveKey === key) return;
+    state.cacheMeta.edWaveKey = key;
+    state.cacheMeta.edWaveLastPaint = now;
+
+    const {ctx} = state.caches.edWave;
+    const w = EW(), h = EH();
+    ctx.clearRect(0,0,w,h);
+
+    // waveform “osu-like” centered
+    const midX = Math.floor(w*0.5);
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = "rgba(34,201,255,.95)";
+    ctx.lineWidth = 1;
+
+    for(let y=0; y<=h; y+=2){
+      const ms = timeFromY(y);
+      const a = ampAtMs(ms);
+      // gentle smoothing with neighbor sampling
+      const a2 = ampAtMs(ms + 10);
+      const a3 = ampAtMs(ms - 10);
+      const amp = Math.max(a, a2*0.92, a3*0.92);
+      const ww = amp * (w*0.22);
+      ctx.beginPath();
+      ctx.moveTo(midX - ww, y);
+      ctx.lineTo(midX + ww, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawEdDynamic(){
+    const w = EW(), h = EH();
+    edCtx.clearRect(0,0,w,h);
+
+    // static + wave cache
+    drawEdStatic();
+    if(state.wf.ready) drawEdWaveCache();
+
+    edCtx.drawImage(state.caches.edStatic.c, 0,0, w,h);
+    if(state.wf.ready) edCtx.drawImage(state.caches.edWave.c, 0,0, w,h);
+
+    // grid lines (beat/snap) dynamic
     normalizeTiming();
-    const startMs = timeFromYEditor(h);
-    const endMs = timeFromYEditor(0);
-    const tps = state.timing.slice();
+    const viewMs = h / pxPerMs();
+    const tMin = state.timeMs - viewMs*0.70;
+    const tMax = state.timeMs + viewMs*0.50;
 
+    const tps = state.timing.slice();
     for(let i=0;i<tps.length;i++){
       const tp = tps[i];
       const next = tps[i+1];
-      const segStart = Math.max(startMs, tp.t);
-      const segEnd = Math.min(endMs, next ? next.t : Infinity);
+      const segStart = Math.max(tMin, tp.t);
+      const segEnd = Math.min(tMax, next ? next.t : Infinity);
       if(segEnd <= segStart) continue;
 
       const beatLen = 60000 / tp.bpm;
       const meter = tp.meter || 4;
-      const step = beatLen / state.snap;
+      const step = beatLen / snapDiv();
       const base = tp.t;
 
       const n0 = Math.ceil((segStart - base) / step);
       for(let t = base + n0*step; t <= segEnd; t += step){
-        const y = crispY(yFromTimeEditor(t));
+        const y = yFromTime(t);
+        if(y < -60 || y > h+60) continue;
+
         const rel = t - base;
         const beatIndex = Math.round(rel / beatLen);
         const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
         const isBar = isBeat && (beatIndex % meter === 0);
 
-        const a = isBar ? 0.22 : isBeat ? 0.14 : 0.08;
-        ectx.strokeStyle = `rgba(255,255,255,${a})`;
-        ectx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
-
-        ectx.beginPath();
-        ectx.moveTo(0,y);
-        ectx.lineTo(w,y);
-        ectx.stroke();
+        const a = isBar ? 0.20 : isBeat ? 0.13 : 0.07;
+        edCtx.strokeStyle = `rgba(255,255,255,${a})`;
+        edCtx.lineWidth = isBar ? 1.8 : isBeat ? 1.2 : 1;
+        edCtx.beginPath();
+        edCtx.moveTo(0,y);
+        edCtx.lineTo(w,y);
+        edCtx.stroke();
       }
+    }
+
+    // bookmarks (white small line)
+    if(state.bookmarks.length){
+      edCtx.globalAlpha = 0.35;
+      edCtx.fillStyle = "rgba(233,238,247,1)";
+      for(const b of state.bookmarks){
+        const y = yFromTime(b.t);
+        if(y < -40 || y > h+40) continue;
+        edCtx.fillRect(0, y-1, w, 2);
+      }
+      edCtx.globalAlpha = 1;
+    }
+
+    // notes
+    const lw = laneW();
+    for(const n of state.notes){
+      const y = yFromTime(n.t);
+      if(y < -160 || y > h+160) continue;
+
+      const x0 = xFromLane(n.lane);
+      const pad = 7;
+      const rectW = lw - pad*2;
+      const rectH = 12;
+      const sel = state.selected.has(n.id);
+
+      if(n.type==="hold"){
+        const y2 = yFromTime(n.end);
+        const top = Math.min(y,y2);
+        const bot = Math.max(y,y2);
+
+        edCtx.fillStyle = sel ? "rgba(167,139,250,.36)" : "rgba(255,255,255,.14)";
+        edCtx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
+
+        edCtx.fillStyle = sel ? "rgba(167,139,250,.86)" : "rgba(255,255,255,.70)";
+        edCtx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
+      }
+
+      edCtx.fillStyle = sel ? "rgba(52,212,255,.95)" : "rgba(255,255,255,.78)";
+      edCtx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
+
+      if(sel){
+        edCtx.strokeStyle = "rgba(52,212,255,.95)";
+        edCtx.lineWidth = 1.2;
+        edCtx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
+      }
+    }
+
+    // selection box
+    if(state.drag.mode==="box" && state.drag.box){
+      const b = rectNorm(state.drag.box);
+      edCtx.fillStyle = "rgba(52,212,255,.10)";
+      edCtx.strokeStyle = "rgba(52,212,255,.70)";
+      edCtx.lineWidth = 1.4;
+      edCtx.fillRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+      edCtx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+    }
+  }
+
+  function drawTlStatic(){
+    const key = `${TW()}x${TH()}|k${state.keys}|snap${snapDiv()}|win${state.tlWinSec}`;
+    if(state.cacheMeta.tlStaticKey === key) return;
+    state.cacheMeta.tlStaticKey = key;
+
+    const {ctx} = state.caches.tlStatic;
+    const w = TW(), h = TH();
+    ctx.clearRect(0,0,w,h);
+
+    ctx.fillStyle = "#070a0f";
+    ctx.fillRect(0,0,w,h);
+
+    // subtle grid
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = "rgba(255,255,255,1)";
+    for(let y=0; y<h; y+=44){
+      ctx.fillRect(0, y, w, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    // right border
+    ctx.strokeStyle = "rgba(255,255,255,.08)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(w-0.5,0);
+    ctx.lineTo(w-0.5,h);
+    ctx.stroke();
+  }
+
+  function drawTlWaveCache(){
+    if(!state.wf.ready) return;
+    const now = performance.now();
+    if(now - state.cacheMeta.tlWaveLastPaint < 70) return;
+
+    const bucket = Math.floor(state.timeMs / 40);
+    const key = `${TW()}x${TH()}|bucket${bucket}|win${state.tlWinSec}`;
+    if(state.cacheMeta.tlWaveKey === key) return;
+    state.cacheMeta.tlWaveKey = key;
+    state.cacheMeta.tlWaveLastPaint = now;
+
+    const {ctx} = state.caches.tlWave;
+    const w = TW(), h = TH();
+    ctx.clearRect(0,0,w,h);
+
+    // waveform
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = "rgba(34,201,255,.95)";
+    ctx.lineWidth = 1;
+
+    const mid = w*0.55;
+    for(let y=0; y<=h; y+=2){
+      const ms = timeFromYTL(y);
+      const a = ampAtMs(ms);
+      const a2 = ampAtMs(ms+10), a3 = ampAtMs(ms-10);
+      const amp = Math.max(a, a2*0.92, a3*0.92);
+      const ww = amp*(w*0.40);
+      ctx.beginPath();
+      ctx.moveTo(mid-ww, y);
+      ctx.lineTo(mid+ww, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawTimeline(){
+    const w = TW(), h = TH();
+    tlCtx.clearRect(0,0,w,h);
+
+    drawTlStatic();
+    if(state.wf.ready) drawTlWaveCache();
+
+    tlCtx.drawImage(state.caches.tlStatic.c, 0,0, w,h);
+    if(state.wf.ready) tlCtx.drawImage(state.caches.tlWave.c, 0,0, w,h);
+
+    const {start,end} = tlRange();
+
+    // grid lines (snap)
+    const tp = activeTP(state.timeMs);
+    const beatLen = 60000 / tp.bpm;
+    const step = beatLen / snapDiv();
+    const base = tp.t;
+
+    const n0 = Math.ceil((start - base) / step);
+    for(let t = base + n0*step; t <= end; t += step){
+      const y = yFromTimeTL(t);
+      const rel = t - base;
+      const beatIndex = Math.round(rel / beatLen);
+      const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+      const isBar = isBeat && (beatIndex % (tp.meter||4) === 0);
+
+      const a = isBar ? .22 : isBeat ? .14 : .08;
+      tlCtx.strokeStyle = `rgba(255,255,255,${a})`;
+      tlCtx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
+      tlCtx.beginPath();
+      tlCtx.moveTo(0,y);
+      tlCtx.lineTo(w,y);
+      tlCtx.stroke();
+    }
+
+    // notes markers
+    const laneWtl = w / state.keys;
+    for(const n of state.notes){
+      if(n.t < start || n.t > end) continue;
+      const y = yFromTimeTL(n.t);
+      const x = (n.lane + 0.5)*laneWtl;
+      tlCtx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.92)" : "rgba(255,255,255,.78)";
+      tlCtx.fillRect(x-3, y-3, 6, 6);
+
+      if(n.type==="hold"){
+        const y2 = yFromTimeTL(n.end);
+        tlCtx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.16)";
+        tlCtx.fillRect(x-2, Math.min(y,y2), 4, Math.abs(y2-y));
+      }
+    }
+
+    // bookmarks
+    if(state.bookmarks.length){
+      tlCtx.globalAlpha = 0.35;
+      tlCtx.fillStyle = "rgba(233,238,247,1)";
+      for(const b of state.bookmarks){
+        if(b.t < start || b.t > end) continue;
+        const y = yFromTimeTL(b.t);
+        tlCtx.fillRect(0, y-1, w, 2);
+      }
+      tlCtx.globalAlpha = 1;
     }
 
     // playhead
-    const yph = crispY(centerYEditor());
-    ectx.strokeStyle = "rgba(239,68,68,.85)";
-    ectx.lineWidth = 2;
-    ectx.beginPath();
-    ectx.moveTo(0, yph);
-    ectx.lineTo(w, yph);
-    ectx.stroke();
+    const yPH = yFromTimeTL(state.timeMs);
+    tlCtx.strokeStyle = "rgba(255,51,85,.92)";
+    tlCtx.lineWidth = 2;
+    tlCtx.beginPath();
+    tlCtx.moveTo(0, yPH);
+    tlCtx.lineTo(w, yPH);
+    tlCtx.stroke();
+  }
 
-    // notes (editor rectangles)
-    for(const n of state.notes){
-      const y = yFromTimeEditor(n.t);
-      if(y < -140 || y > h+140) continue;
+  function drawPvStatic(){
+    const key = `${PW()}x${PH()}|k${state.keys}|hit${state.preview.hitPad}`;
+    if(state.cacheMeta.pvStaticKey === key) return;
+    state.cacheMeta.pvStaticKey = key;
 
-      const x0 = xFromLane(n.lane);
-      const pad = 10;
-      const rw = lw - pad*2;
-      const rh = 12;
+    const {ctx} = state.caches.pvStatic;
+    const w = PW(), h = PH();
+    ctx.clearRect(0,0,w,h);
 
-      const sel = state.selected.has(n.id);
+    // bg
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0,0,w,h);
 
-      if(n.type === "hold"){
-        const y2 = yFromTimeEditor(n.end);
-        const top = Math.min(y, y2);
-        const bot = Math.max(y, y2);
+    // playfield pad
+    const padX = 30;
+    const top = 22;
+    const bottom = h-22;
+    const playW = w - padX*2;
+    const playH = bottom-top;
 
-        ectx.fillStyle = sel ? "rgba(167,139,250,.42)" : "rgba(255,255,255,.14)";
-        ectx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
-
-        ectx.fillStyle = sel ? "rgba(167,139,250,.92)" : "rgba(255,255,255,.70)";
-        ectx.fillRect(x0 + pad, y2 - rh/2, rw, rh);
-      }
-
-      ectx.fillStyle = sel ? "rgba(38,211,255,.95)" : "rgba(255,255,255,.78)";
-      ectx.fillRect(x0 + pad, y - rh/2, rw, rh);
-
-      if(sel){
-        ectx.strokeStyle = "rgba(38,211,255,.95)";
-        ectx.lineWidth = 1.3;
-        ectx.strokeRect(x0 + pad, y - rh/2, rw, rh);
-      }
+    // lanes
+    const lw = playW / state.keys;
+    for(let i=0;i<state.keys;i++){
+      ctx.fillStyle = "rgba(255,255,255,.03)";
+      ctx.fillRect(padX+i*lw, top, lw-1, playH);
+      ctx.fillStyle = "rgba(255,255,255,.07)";
+      ctx.fillRect(padX+i*lw, top, 1, playH);
     }
+    ctx.fillStyle = "rgba(255,255,255,.10)";
+    ctx.fillRect(padX+playW-1, top, 1, playH);
+
+    // hitline
+    const hitY = bottom - state.preview.hitPad;
+    ctx.strokeStyle = "rgba(233,238,247,.15)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padX, hitY);
+    ctx.lineTo(padX+playW, hitY);
+    ctx.stroke();
+
+    // receptors circles
+    const r = Math.min(44, lw*0.36);
+    for(let i=0;i<state.keys;i++){
+      const cx = padX + (i+0.5)*lw;
+      const cy = hitY + 34;
+
+      // outer ring
+      ctx.strokeStyle = "rgba(233,238,247,.92)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.stroke();
+
+      // inner subtle
+      ctx.strokeStyle = "rgba(233,238,247,.16)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r-8, 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    // vignette
+    const grd = ctx.createLinearGradient(0, top, 0, bottom);
+    grd.addColorStop(0, "rgba(0,0,0,.65)");
+    grd.addColorStop(0.18, "rgba(0,0,0,.00)");
+    grd.addColorStop(0.85, "rgba(0,0,0,.12)");
+    grd.addColorStop(1, "rgba(0,0,0,.75)");
+    ctx.fillStyle = grd;
+    ctx.fillRect(padX, top, playW, playH);
   }
 
   function drawPreview(){
     if(!state.preview.enabled) return;
-
-    // keep runtime synced (combo)
-    syncPreviewRuntimeToTime();
-
     const w = PW(), h = PH();
-    prctx.clearRect(0,0,w,h);
 
-    prctx.fillStyle = "#000";
-    prctx.fillRect(0,0,w,h);
+    drawPvStatic();
+    pvCtx.clearRect(0,0,w,h);
+    pvCtx.drawImage(state.caches.pvStatic.c, 0,0, w,h);
 
-    const padX = 34;
-    const keys = state.keys;
+    if(!state.preview.realtime) return;
+
+    const padX = 30;
+    const top = 22;
+    const bottom = h-22;
     const playW = w - padX*2;
-    const lw = playW / keys;
+    const lw = playW / state.keys;
+    const hitY = bottom - state.preview.hitPad;
 
-    const receptorY = h - state.preview.hitLinePad;
-
-    // circle size osu-like
-    const r = Math.min(lw * 0.42, 46);
-    const strokeW = 3;
-
-    function circle(cx, cy, rad, fill, stroke){
-      prctx.beginPath();
-      prctx.arc(cx, cy, rad, 0, Math.PI*2);
-      if(fill){
-        prctx.fillStyle = fill;
-        prctx.fill();
-      }
-      if(stroke){
-        prctx.lineWidth = strokeW;
-        prctx.strokeStyle = stroke;
-        prctx.stroke();
-      }
-    }
-
-    // receptors (empty circles)
-    for(let lane=0; lane<keys; lane++){
-      const cx = padX + (lane+0.5)*lw;
-      circle(cx, receptorY, r, null, "rgba(255,255,255,0.92)");
-    }
-
-    const pxPerMsPrev = state.view.pxPerMs * state.preview.speedFactor;
-    const t0 = state.timeMs - 250;
+    const pxPerMsPrev = (state.scrollPxPerSec * state.preview.speedFactor) / 1000;
+    const t0 = state.timeMs - state.preview.lookBackMs;
     const t1 = state.timeMs + state.preview.lookAheadMs;
 
-    // holds body behind
-    for(const n of state.notes){
-      if(n.type !== "hold") continue;
-      if(n.t > t1 || n.end < t0) continue;
+    // draw notes circles
+    const r = Math.min(42, lw*0.34);
 
-      const cx = padX + (n.lane+0.5)*lw;
-      const headY = receptorY - (n.t - state.timeMs) * pxPerMsPrev;
-      const tailY = receptorY - (n.end - state.timeMs) * pxPerMsPrev;
+    // to keep it cheap, iterate only visible notes (sorted)
+    // simple scan: since notes are sorted, start near lowerBound(t0)
+    sortNotes();
+    const startIdx = clamp(lowerBound(state.notes, t0) - 25, 0, state.notes.length);
+    for(let i=startIdx; i<state.notes.length; i++){
+      const n = state.notes[i];
+      if(n.t > t1 && (n.type!=="hold" || n.end > t1)) break;
+      if(n.type==="tap"){
+        // autoplay: hide after hit
+        if(state.preview.autoplay && n.t <= state.timeMs) continue;
+        if(n.t < t0 || n.t > t1) continue;
 
-      prctx.lineCap = "round";
-      prctx.lineWidth = Math.max(10, r*0.46);
-      prctx.strokeStyle = "rgba(185,205,255,0.30)";
-      prctx.beginPath();
-      prctx.moveTo(cx, headY);
-      prctx.lineTo(cx, tailY);
-      prctx.stroke();
+        const cx = padX + (n.lane+0.5)*lw;
+        let cy = hitY - (n.t - state.timeMs)*pxPerMsPrev;
 
-      // tail circle (soft)
-      circle(cx, tailY, r, "rgba(185,205,255,0.70)", "rgba(255,255,255,0.92)");
-    }
+        // keep above hitline a bit
+        if(cy > hitY + 8) continue;
 
-    // heads / taps
-    for(const n of state.notes){
-      if(n.t > t1 || (n.type === "hold" ? n.end < t0 : n.t < t0)) continue;
+        pvCtx.strokeStyle = "rgba(233,238,247,.92)";
+        pvCtx.lineWidth = 3;
+        pvCtx.beginPath();
+        pvCtx.arc(cx, cy, r, 0, Math.PI*2);
+        pvCtx.stroke();
 
-      const cx = padX + (n.lane+0.5)*lw;
-      const y  = receptorY - (n.t - state.timeMs) * pxPerMsPrev;
-
-      circle(cx, y, r, "rgba(185,205,255,0.85)", "rgba(255,255,255,0.92)");
-    }
-
-    // combo only (no other HUD)
-    prctx.fillStyle = "rgba(255,255,255,0.95)";
-    prctx.font = "800 44px " + getComputedStyle(document.body).fontFamily;
-    prctx.textAlign = "right";
-    prctx.textBaseline = "top";
-    prctx.fillText(String(state.previewRuntime.combo), w - 18, 14);
-
-    // subtle vignette
-    const grd = prctx.createLinearGradient(0, 0, 0, h);
-    grd.addColorStop(0, "rgba(0,0,0,.70)");
-    grd.addColorStop(0.18, "rgba(0,0,0,.00)");
-    grd.addColorStop(0.86, "rgba(0,0,0,.10)");
-    grd.addColorStop(1, "rgba(0,0,0,.75)");
-    prctx.fillStyle = grd;
-    prctx.fillRect(0,0,w,h);
-  }
-
-  /* ===== UI refresh ===== */
-  function fmtTime(ms){
-    ms = Math.max(0, Math.floor(ms));
-    const m = Math.floor(ms / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    const t = ms % 1000;
-    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}:${String(t).padStart(3,"0")}`;
-  }
-
-  function getMeta(){
-    return {
-      title: mTitle.value || "WebManiaEditor",
-      artist: mArtist.value || "Unknown",
-      creator: mCreator.value || "reze",
-      version: mVersion.value || "Easy",
-    };
-  }
-  function setMeta(meta){
-    mTitle.value = meta.title ?? mTitle.value;
-    mArtist.value = meta.artist ?? mArtist.value;
-    mCreator.value = meta.creator ?? mCreator.value;
-    mVersion.value = meta.version ?? mVersion.value;
-  }
-
-  function refreshHUD(){
-    const tp = activeTP(state.timeMs);
-
-    hudTime.textContent = String(Math.round(state.timeMs));
-    hudKeys.textContent = String(state.keys);
-    hudSnap.textContent = `1/${state.snap}`;
-    hudTool.textContent = state.tool[0].toUpperCase() + state.tool.slice(1);
-
-    dCount.textContent = String(state.notes.length);
-    dSpeed.textContent = `${Math.round(state.rate*100)}%`;
-    dBpm.textContent = tp ? tp.bpm.toFixed(5) : "—";
-    dSnap.textContent = `1/${state.snap}th`;
-
-    // simple "difficulty-ish" estimator
-    const dur = state.buffer ? state.buffer.duration : 0;
-    let diff = "—";
-    if(dur > 0){
-      const nps = state.notes.length / dur;
-      const est = (nps * 7.4) + (state.keys - 3) * 0.9; // heuristic
-      diff = est.toFixed(2);
-    }
-    dDiff.textContent = diff;
-
-    chipRate.textContent = `${Math.round(state.rate*100)}%`;
-    chipSnap.textContent = `1/${state.snap}`;
-    timeStr.textContent = fmtTime(state.timeMs);
-
-    snapBadge.textContent = String(state.snap);
-    topStatus.textContent = state.buffer ? `time ${fmtTime(state.timeMs)} • ${state.notes.length} objs` : "carregue um áudio em OPTIONS";
-  }
-
-  function setTool(tool){
-    state.tool = tool;
-    toolBtns.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
-    refreshHUD();
-  }
-
-  function applyPreviewLayout(){
-    if(state.preview.enabled){
-      previewWrap.style.display = "";
-      editorSplit.classList.add("previewOn");
-      fitCanvas(previewCanvas);
-    } else {
-      previewWrap.style.display = "none";
-      editorSplit.classList.remove("previewOn");
-    }
-  }
-
-  /* ===== Interaction helpers ===== */
-  function mousePos(e, wrap){
-    const r = wrap.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
-
-  /* ===== Editor interactions ===== */
-  editWrap.addEventListener("contextmenu", (e)=> e.preventDefault());
-
-  editWrap.addEventListener("wheel", (e)=>{
-    e.preventDefault();
-    if(!state.buffer) return;
-    // scroll time with wheel; scale by zoom
-    const delta = e.deltaY;
-    const ms = delta * (2.2 / state.view.pxPerMs);
-    seekMs(state.timeMs + ms);
-  }, {passive:false});
-
-  // Alt+drag scrub
-  editWrap.addEventListener("mousedown", (e)=>{
-    if(!state.buffer) return;
-    if(!e.altKey) return;
-    e.preventDefault();
-
-    state.scrub.on = true;
-    state.scrub.wasPlaying = state.isPlaying;
-    if(state.isPlaying) pause();
-
-    const m = mousePos(e, editWrap);
-    const ms = timeFromYEditor(m.y);
-    seekMs(state.snapOn ? quantizeAt(ms) : ms);
-  });
-
-  window.addEventListener("mousemove", (e)=>{
-    if(!state.scrub.on) return;
-    const m = mousePos(e, editWrap);
-    const ms = timeFromYEditor(m.y);
-    seekMs(state.snapOn ? quantizeAt(ms) : ms);
-  });
-
-  window.addEventListener("mouseup", ()=>{
-    if(!state.scrub.on) return;
-    state.scrub.on = false;
-    if(state.scrub.wasPlaying) play();
-  });
-
-  editWrap.addEventListener("mousedown", (e)=>{
-    if(!state.buffer) return;
-    if(e.altKey) return; // scrub handles
-
-    const m = mousePos(e, editWrap);
-    state.drag.down = true;
-    state.drag.x0 = m.x;
-    state.drag.y0 = m.y;
-
-    const hit = findNoteAt(m.x, m.y);
-
-    if(state.tool === "select"){
-      const additive = e.ctrlKey || e.metaKey;
-
-      if(hit){
-        if(additive){
-          if(state.selected.has(hit.id)) state.selected.delete(hit.id);
-          else state.selected.add(hit.id);
-        } else {
-          if(!state.selected.has(hit.id)){
-            state.selected.clear();
-            state.selected.add(hit.id);
-          }
-        }
-        syncHitsoundUI();
-
-        state.drag.mode = "move";
-        beginMoveSelection();
+        pvCtx.strokeStyle = "rgba(233,238,247,.18)";
+        pvCtx.lineWidth = 2;
+        pvCtx.beginPath();
+        pvCtx.arc(cx, cy, r-8, 0, Math.PI*2);
+        pvCtx.stroke();
       } else {
-        if(!additive) state.selected.clear();
-        syncHitsoundUI();
-        state.drag.mode = "none";
+        // hold note
+        if(n.end < t0) continue;
+        if(n.t > t1) continue;
+
+        const cx = padX + (n.lane+0.5)*lw;
+
+        // positions
+        let headY = hitY - (n.t - state.timeMs)*pxPerMsPrev;
+        let tailY = hitY - (n.end - state.timeMs)*pxPerMsPrev;
+
+        // autoplay behavior: head disappears after hit; body stays until end, and never passes hitline
+        const now = state.timeMs;
+
+        if(state.preview.autoplay){
+          if(n.end <= now) continue; // done
+          // clamp body to hitline after start time
+          if(n.t <= now){
+            headY = hitY; // effectively pinned, but we won't draw head circle
+          }
+          // tail should not pass hitline either
+          tailY = Math.min(tailY, hitY);
+        } else {
+          // not autoplay: allow it to pass visually, but skip far below
+          if(Math.min(headY, tailY) > hitY + 90) continue;
+        }
+
+        // body
+        const topY = Math.min(headY, tailY);
+        const botY = Math.max(headY, tailY);
+
+        pvCtx.strokeStyle = "rgba(233,238,247,.22)";
+        pvCtx.lineWidth = 10;
+        pvCtx.lineCap = "round";
+        pvCtx.beginPath();
+        pvCtx.moveTo(cx, topY);
+        pvCtx.lineTo(cx, botY);
+        pvCtx.stroke();
+
+        // tail circle: show until end; in autoplay, it approaches hitline but won't go past
+        const showTail = (!state.preview.autoplay) || (n.end > now);
+        if(showTail){
+          pvCtx.strokeStyle = "rgba(233,238,247,.92)";
+          pvCtx.lineWidth = 3;
+          pvCtx.beginPath();
+          pvCtx.arc(cx, tailY, r, 0, Math.PI*2);
+          pvCtx.stroke();
+
+          pvCtx.strokeStyle = "rgba(233,238,247,.18)";
+          pvCtx.lineWidth = 2;
+          pvCtx.beginPath();
+          pvCtx.arc(cx, tailY, r-8, 0, Math.PI*2);
+          pvCtx.stroke();
+        }
+
+        // head circle: only if not autoplay hit yet
+        const showHead = (!state.preview.autoplay) || (n.t > now);
+        if(showHead){
+          pvCtx.strokeStyle = "rgba(233,238,247,.92)";
+          pvCtx.lineWidth = 3;
+          pvCtx.beginPath();
+          pvCtx.arc(cx, headY, r, 0, Math.PI*2);
+          pvCtx.stroke();
+
+          pvCtx.strokeStyle = "rgba(233,238,247,.18)";
+          pvCtx.lineWidth = 2;
+          pvCtx.beginPath();
+          pvCtx.arc(cx, headY, r-8, 0, Math.PI*2);
+          pvCtx.stroke();
+        }
       }
-      return;
     }
-
-    if(state.tool === "erase"){
-      if(hit){
-        pushUndo();
-        state.notes = state.notes.filter(n => n.id !== hit.id);
-        state.selected.delete(hit.id);
-        markPreviewDirty();
-        resetPreviewRuntime();
-      }
-      return;
-    }
-
-    if(state.tool === "note"){
-      const lane = laneFromX(m.x);
-      const tRaw = timeFromYEditor(m.y);
-      const t = state.snapOn ? quantizeAt(tRaw) : tRaw;
-      addNote({ id: uid(), lane, t, type:"tap", end:t, hs:0, vol:0 });
-      syncHitsoundUI();
-      return;
-    }
-
-    if(state.tool === "ln"){
-      const lane = laneFromX(m.x);
-      const t0Raw = timeFromYEditor(m.y);
-      const t0 = state.snapOn ? quantizeAt(t0Raw) : t0Raw;
-      const id = uid();
-      addNote({ id, lane, t:t0, type:"hold", end: t0 + snapStepMsAt(t0), hs:0, vol:0 });
-      state.drag.mode = "lnCreate";
-      state.drag.holdId = id;
-      syncHitsoundUI();
-      return;
-    }
-  });
-
-  editWrap.addEventListener("mousemove", (e)=>{
-    if(!state.drag.down) return;
-    if(state.tool === "select" && state.drag.mode === "move"){
-      const m = mousePos(e, editWrap);
-      const dl = laneFromX(m.x) - laneFromX(state.drag.x0);
-      const ms0 = state.snapOn ? quantizeAt(timeFromYEditor(state.drag.y0)) : timeFromYEditor(state.drag.y0);
-      const ms1 = state.snapOn ? quantizeAt(timeFromYEditor(m.y)) : timeFromYEditor(m.y);
-      const dt = ms1 - ms0;
-      applyMoveSelection(dl, dt);
-      return;
-    }
-
-    if(state.tool === "ln" && state.drag.mode === "lnCreate"){
-      const m = mousePos(e, editWrap);
-      const id = state.drag.holdId;
-      const n = state.notes.find(x => x.id === id);
-      if(!n) return;
-      const endRaw = timeFromYEditor(m.y);
-      const end = state.snapOn ? quantizeAt(endRaw) : endRaw;
-      n.end = Math.max(n.t + 1, end);
-      sortNotes();
-      markPreviewDirty();
-      resetPreviewRuntime();
-      return;
-    }
-  });
-
-  window.addEventListener("mouseup", ()=>{
-    if(!state.drag.down) return;
-    state.drag.down = false;
-    state.drag.mode = "none";
-    state.drag.holdId = null;
-    state.drag.moveSnap = null;
-  });
-
-  /* ===== Wave interactions (seek + bookmarks) ===== */
-  waveWrap.addEventListener("wheel", (e)=>{
-    e.preventDefault();
-    if(!state.buffer) return;
-    const delta = e.deltaY;
-    const ms = delta * (2.2 / state.view.pxPerMs);
-    seekMs(state.timeMs + ms);
-  }, {passive:false});
-
-  waveWrap.addEventListener("mousedown", (e)=>{
-    if(!state.buffer) return;
-    const m = mousePos(e, waveWrap);
-    const ms = timeFromYWave(m.y);
-    seekMs(state.snapOn ? quantizeAt(ms) : ms);
-
-    const onMove = (ev)=>{
-      const mm = mousePos(ev, waveWrap);
-      const t = timeFromYWave(mm.y);
-      seekMs(state.snapOn ? quantizeAt(t) : t);
-    };
-    const onUp = ()=>{
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-  });
-
-  /* ===== Zoom ===== */
-  function zoom(mult){
-    const z = clamp(state.view.pxPerMs * mult, state.view.min, state.view.max);
-    state.view.pxPerMs = z;
-  }
-  zoomIn.addEventListener("click", ()=> zoom(state.view.zoomStep));
-  zoomOut.addEventListener("click", ()=> zoom(1/state.view.zoomStep));
-
-  /* ===== Tools ===== */
-  toolBtns.forEach(btn => {
-    btn.addEventListener("click", ()=> setTool(btn.getAttribute("data-tool")));
-  });
-
-  /* ===== Hitsounds ===== */
-  hsWhistle.addEventListener("click", ()=> toggleHs(2));
-  hsFinish.addEventListener("click", ()=> toggleHs(4));
-  hsClap.addEventListener("click", ()=> toggleHs(8));
-  hsVol.addEventListener("input", ()=> setHsVol(parseInt(hsVol.value,10) || 0));
-
-  /* ===== Bottom controls ===== */
-  function beatLenMsAtNow(){
-    const tp = activeTP(state.timeMs);
-    return 60000 / (tp?.bpm || 180);
   }
 
-  prevBtn.addEventListener("click", ()=>{
-    if(!state.buffer) return;
-    seekMs(state.timeMs - beatLenMsAtNow());
-  });
-  nextBtn.addEventListener("click", ()=>{
-    if(!state.buffer) return;
-    seekMs(state.timeMs + beatLenMsAtNow());
-  });
-
-  playBtn.addEventListener("click", ()=> state.isPlaying ? pause() : play());
-  stopBtn.addEventListener("click", stop);
-
-  testPlayBtn.addEventListener("click", ()=>{
-    if(!state.buffer) return;
-    if(!state.preview.enabled){
-      // liga preview automaticamente pra "test play"
-      pushUndo();
-      state.preview.enabled = true;
-      previewToggle.checked = true;
-      applyPreviewLayout();
-    }
-    if(state.isPlaying) pause(); else play();
-  });
-
-  exitBtn.addEventListener("click", ()=> alert("EXIT (placeholder) — aqui você pode redirecionar para a home do seu site."));
-
-  addBmBtn.addEventListener("click", addBookmark);
-
-  /* ===== Modal open/close ===== */
-  optionsBtn.addEventListener("click", ()=>{
-    modalBackdrop.classList.add("show");
-  });
-  closeModal.addEventListener("click", ()=>{
-    modalBackdrop.classList.remove("show");
-  });
-  modalBackdrop.addEventListener("mousedown", (e)=>{
-    if(e.target === modalBackdrop) modalBackdrop.classList.remove("show");
-  });
-
-  /* ===== Options wiring ===== */
-  audioFile.addEventListener("change", async ()=>{
-    const f = audioFile.files[0];
-    if(!f) return;
-    await loadAudio(f);
-  });
-
-  bgFile.addEventListener("change", async ()=>{
-    const f = bgFile.files[0];
-    if(!f) return;
-    const url = URL.createObjectURL(f);
-    bgImg.onload = ()=> URL.revokeObjectURL(url);
-    bgImg.src = url;
-  });
-
-  bgOpacity.addEventListener("input", ()=>{
-    state.bg.opacity = clamp(parseFloat(bgOpacity.value)||0.35, 0, 1);
-    bgImg.style.opacity = String(state.bg.opacity);
-  });
-  bgBlur.addEventListener("input", ()=>{
-    state.bg.blur = clamp(parseInt(bgBlur.value,10)||0, 0, 20);
-    bgImg.style.filter = `blur(${state.bg.blur}px)`;
-  });
-
-  keysSel.addEventListener("change", ()=>{
-    pushUndo();
-    state.keys = clamp(parseInt(keysSel.value,10), 4, 7);
-    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
-    markPreviewDirty();
-    resetPreviewRuntime();
-    syncHitsoundUI();
-  });
-
-  snapSel.addEventListener("change", ()=>{
-    pushUndo();
-    state.snap = clamp(parseInt(snapSel.value,10), 1, 16);
-  });
-
-  snapOnToggle.addEventListener("change", ()=>{
-    pushUndo();
-    state.snapOn = !!snapOnToggle.checked;
-  });
-
-  bpmIn.addEventListener("change", ()=>{
-    pushUndo();
-    const bpm = clamp(parseFloat(bpmIn.value)||180, 30, 400);
-    state.timing[0].bpm = bpm;
-  });
-  offIn.addEventListener("change", ()=>{
-    pushUndo();
-    const off = Math.max(0, Math.round(parseFloat(offIn.value)||0));
-    state.timing[0].t = off;
+  /* ==========================
+     Timing list UI
+  ========================== */
+  function renderTPList(){
     normalizeTiming();
-  });
+    tpList.innerHTML = state.timing.map(tp => `
+      <div class="item" data-id="${tp.id}">
+        <span><b>${Math.round(tp.t)}</b> ms • <b>${tp.bpm.toFixed(3)}</b> BPM</span>
+        <span style="display:flex; gap:10px; align-items:center">
+          <input data-k="t" class="mono" type="number" step="1" value="${Math.round(tp.t)}" style="width:120px">
+          <input data-k="bpm" class="mono" type="number" step="0.001" value="${tp.bpm}" style="width:120px">
+          <span class="act" data-act="del">x</span>
+        </span>
+      </div>
+    `).join("");
 
-  rateSel.addEventListener("change", ()=>{
-    pushUndo();
-    state.rate = parseFloat(rateSel.value) || 1;
-    if(state.isPlaying){
-      pause();
-      play();
-    }
-  });
+    tpList.querySelectorAll(".item").forEach(row=>{
+      const id = row.getAttribute("data-id");
+      const tp = state.timing.find(x=>x.id===id);
+      if(!tp) return;
 
-  previewToggle.addEventListener("change", ()=>{
-    pushUndo();
-    state.preview.enabled = !!previewToggle.checked;
-    applyPreviewLayout();
-  });
+      const tIn = row.querySelector('input[data-k="t"]');
+      const bpmIn = row.querySelector('input[data-k="bpm"]');
+      const del = row.querySelector('[data-act="del"]');
 
-  clearBtn.addEventListener("click", clearNotes);
-  undoBtn.addEventListener("click", doUndo);
+      tIn.addEventListener("change", ()=>{
+        pushUndo();
+        tp.t = Math.max(0, Math.round(Number(tIn.value)||0));
+        normalizeTiming();
+        renderTPList();
+      });
+      bpmIn.addEventListener("change", ()=>{
+        pushUndo();
+        tp.bpm = clamp(Number(bpmIn.value)||180, 30, 400);
+        normalizeTiming();
+        renderTPList();
+      });
+      del.addEventListener("click", ()=>{
+        if(state.timing.length<=1) return;
+        pushUndo();
+        state.timing = state.timing.filter(x=>x.id!==id);
+        normalizeTiming();
+        renderTPList();
+      });
+    });
+  }
 
-  /* ===== Keyboard ===== */
-  window.addEventListener("keydown", (e)=>{
-    if(e.code === "Space"){
-      e.preventDefault();
-      if(state.isPlaying) pause(); else play();
-      return;
-    }
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){
-      e.preventDefault();
-      doUndo();
-      return;
-    }
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="b"){
-      e.preventDefault();
-      addBookmark();
-      return;
-    }
-    if(e.code === "Delete"){
-      deleteSelection();
-      return;
-    }
-    if(e.key === "1") setTool("select");
-    if(e.key === "2") setTool("note");
-    if(e.key === "3") setTool("ln");
-    if(e.key === "4") setTool("erase");
-  });
-
-  /* ===== Export / Import ===== */
+  /* ==========================
+     Export .osu
+  ========================== */
   function laneToOsuX(lane){
     const x = Math.floor((lane + 0.5) * 512 / state.keys);
     return clamp(x, 0, 511);
   }
 
   function exportOsu(){
-    if(!state.buffer){
-      alert("Carregue um áudio antes de exportar (OPTIONS > Áudio).");
-      return;
-    }
-
+    if(!state.buffer) return;
     normalizeTiming();
     sortNotes();
 
-    const meta = getMeta();
-    const audioName = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\","/");
+    const audioFilename = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\","/");
     const keys = state.keys;
-
-    const bgName = bgFile.files[0]?.name ? bgFile.files[0].name.replaceAll("\\","/") : "";
 
     const header =
 `osu file format v14
 
 [General]
-AudioFilename: ${audioName}
+AudioFilename: ${audioFilename}
 AudioLeadIn: 0
 PreviewTime: -1
 Countdown: 0
@@ -2474,15 +2135,15 @@ SpecialStyle: 0
 WidescreenStoryboard: 0
 
 [Editor]
-BeatDivisor: ${state.snap}
+BeatDivisor: ${snapDiv()}
 GridSize: 4
 TimelineZoom: 1.0
 
 [Metadata]
-Title:${meta.title}
-Artist:${meta.artist}
-Creator:${meta.creator}
-Version:${keys}K ${meta.version}
+Title:WebManiaEditor
+Artist:Unknown
+Creator:reze
+Version:${keys}K
 Source:
 Tags:
 
@@ -2496,13 +2157,10 @@ SliderTickRate:1
 
 [Events]
 //Background and Video events
-`;
 
-    const events = bgName ? `0,0,"${bgName}",0,0\n` : "";
-
-    const timingHeader = `
 [TimingPoints]
 `;
+
     const tps = state.timing
       .slice()
       .sort((a,b)=>a.t-b.t)
@@ -2512,237 +2170,694 @@ SliderTickRate:1
       }).join("\n");
 
     const hitHeader = `
+
 [HitObjects]
 `;
 
-    const hitLines = state.notes.map(n => {
+    const hitLines = state.notes.map(n=>{
       const x = laneToOsuX(n.lane);
       const y = 192;
       const t = Math.round(n.t);
-      const hs = n.hs ?? 0;
-      const vol = clamp(n.vol ?? 0, 0, 100);
-      const sample = `0:0:0:${vol}:`;
-
-      if(n.type === "tap"){
-        return `${x},${y},${t},1,${hs},${sample}`;
+      if(n.type==="tap"){
+        return `${x},${y},${t},1,0,0:0:0:0:`;
       } else {
         const end = Math.max(t+1, Math.round(n.end));
-        return `${x},${y},${t},128,${hs},${end}:${sample}`;
+        return `${x},${y},${t},128,0,${end}:0:0:0:0:`;
       }
     }).join("\n");
 
-    const out = header + events + timingHeader + tps + "\n" + hitHeader + hitLines + "\n";
-
+    const out = header + tps + hitHeader + hitLines + "\n";
     const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${meta.title} - ${meta.artist} (${meta.creator}) [${keys}K ${meta.version}].osu`;
+    a.download = `WebManiaEditor [${keys}K].osu`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
 
-  exportBtn.addEventListener("click", exportOsu);
+  /* ==========================
+     Tool / toggles
+  ========================== */
+  function setTool(tool){
+    state.tool = tool;
+    toolBtns.forEach(b=>b.classList.toggle("active", b.getAttribute("data-tool")===tool));
+    hudTool.textContent = tool==="select"?"Select":tool==="tap"?"Note":tool==="hold"?"Long Note":"Erase";
+  }
 
-  function parseOsu(text){
-    const lines = text.replace(/\r/g,"").split("\n");
-    let section = "";
-    const meta = {};
-    let keys = 4;
-    const timing = [];
-    const notes = [];
+  function setRealtimePreview(on){
+    state.preview.realtime = !!on;
+    rtPreviewBtn.classList.toggle("on", state.preview.realtime);
+    if(!state.preview.realtime){
+      // keep combo visible but stop drawing notes
+      rebuildAutoplayIndexForTime();
+    }
+  }
 
-    function parseKV(line){
-      const i = line.indexOf(":");
-      if(i<0) return null;
-      return [line.slice(0,i).trim(), line.slice(i+1).trim()];
+  function setAutoplay(on){
+    state.preview.autoplay = !!on;
+    autoPlayBtn.classList.toggle("on", state.preview.autoplay);
+    rebuildAutoplayIndexForTime();
+  }
+
+  /* ==========================
+     Input: Editor (fix lanes + LN drag)
+  ========================== */
+  function onPointerDownEditor(e){
+    if(!state.buffer) return;
+    edCanvas.setPointerCapture(e.pointerId);
+    const m = mousePosOnCanvas(e, edCanvas);
+
+    state.drag.down = true;
+    state.drag.pointerId = e.pointerId;
+    state.drag.x0 = m.x;
+    state.drag.y0 = m.y;
+
+    const additive = e.ctrlKey || e.metaKey;
+
+    if(state.tool==="select"){
+      const hit = findNoteAt(m.x, m.y);
+      if(hit){
+        if(additive){
+          if(state.selected.has(hit.id)) state.selected.delete(hit.id);
+          else state.selected.add(hit.id);
+        } else {
+          if(!state.selected.has(hit.id)){
+            state.selected.clear();
+            state.selected.add(hit.id);
+          }
+        }
+        updateSelectionUI();
+        state.drag.mode = "move";
+        beginMoveSelection();
+      } else {
+        state.drag.mode = "box";
+        state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
+        if(!additive) state.selected.clear();
+        updateSelectionUI();
+      }
+      return;
     }
 
-    for(const raw of lines){
-      const line = raw.trim();
-      if(!line || line.startsWith("//")) continue;
-      if(line.startsWith("[") && line.endsWith("]")){
-        section = line.slice(1,-1);
+    if(state.tool==="erase"){
+      const hit = findNoteAt(m.x, m.y);
+      if(hit){
+        pushUndo();
+        state.notes = state.notes.filter(n=>n.id!==hit.id);
+        state.selected.delete(hit.id);
+        updateSelectionUI();
+        rebuildAutoplayIndexForTime();
+      }
+      return;
+    }
+
+    if(state.tool==="tap"){
+      const lane = laneFromX(m.x);
+      const tRaw = timeFromY(m.y);
+      const t = state.snapOn ? quantizeAt(tRaw) : tRaw;
+      addNote({ id: uid(), lane, t, type:"tap", end:t });
+      return;
+    }
+
+    if(state.tool==="hold"){
+      const lane = laneFromX(m.x);
+      const t0Raw = timeFromY(m.y);
+      const t0 = state.snapOn ? quantizeAt(t0Raw) : t0Raw;
+      const id = uid();
+
+      // create with minimal length; user drags to size
+      addNote({ id, lane, t:t0, type:"hold", end: t0 + snapMsAt(t0) });
+
+      state.drag.mode = "holdCreate";
+      state.drag.holdId = id;
+      return;
+    }
+  }
+
+  function onPointerMoveEditor(e){
+    if(!state.drag.down || state.drag.pointerId !== e.pointerId) return;
+    const m = mousePosOnCanvas(e, edCanvas);
+
+    if(state.tool==="select" && state.drag.mode==="box" && state.drag.box){
+      state.drag.box.x1 = m.x;
+      state.drag.box.y1 = m.y;
+      selectByBox(state.drag.box, e.ctrlKey || e.metaKey);
+      return;
+    }
+
+    if(state.tool==="select" && state.drag.mode==="move"){
+      const dxLane = laneFromX(m.x) - laneFromX(state.drag.x0);
+      const dMsRaw = (state.snapOn ? quantizeAt(timeFromY(m.y)) : timeFromY(m.y))
+                   - (state.snapOn ? quantizeAt(timeFromY(state.drag.y0)) : timeFromY(state.drag.y0));
+      applyMoveSelection(dxLane, dMsRaw);
+      return;
+    }
+
+    if(state.tool==="hold" && state.drag.mode==="holdCreate"){
+      const id = state.drag.holdId;
+      const n = state.notes.find(x=>x.id===id);
+      if(!n) return;
+      const endRaw = timeFromY(m.y);
+      const end = state.snapOn ? quantizeAt(endRaw) : endRaw;
+      n.end = Math.max(n.t+1, end);
+      sortNotes();
+      rebuildAutoplayIndexForTime();
+      return;
+    }
+  }
+
+  function onPointerUpEditor(e){
+    if(state.drag.pointerId !== e.pointerId) return;
+    state.drag.down = false;
+
+    // push undo only if we actually moved / created via drag modes
+    if(state.drag.mode==="move" || state.drag.mode==="holdCreate" || state.drag.mode==="box"){
+      pushUndo();
+    }
+    state.drag.mode = "none";
+    state.drag.box = null;
+    state.drag.moveSnap = null;
+    state.drag.holdId = null;
+    state.drag.pointerId = null;
+  }
+
+  /* ==========================
+     Timeline seek drag (fixed & precise)
+  ========================== */
+  function tlSeekAtY(y){
+    seekMs(timeFromYTL(y));
+  }
+
+  function onPointerDownTL(e){
+    if(!state.buffer) return;
+    tlCanvas.setPointerCapture(e.pointerId);
+    state.tlDrag = true;
+    const m = mousePosOnCanvas(e, tlCanvas);
+    tlSeekAtY(m.y);
+  }
+  function onPointerMoveTL(e){
+    if(!state.tlDrag) return;
+    const m = mousePosOnCanvas(e, tlCanvas);
+    tlSeekAtY(m.y);
+  }
+  function onPointerUpTL(){
+    state.tlDrag = false;
+  }
+
+  /* ==========================
+     Wheel behaviors
+     - Wheel: seek
+     - Ctrl+Wheel: beat snap
+  ========================== */
+  function onWheelEditor(e){
+    if(!state.buffer) return;
+    // prevent page zoom/scroll
+    e.preventDefault();
+
+    if(e.ctrlKey){
+      const dir = e.deltaY > 0 ? 1 : -1;
+      setSnapIndex(state.snapIndex + dir);
+      return;
+    }
+    // seek
+    seekMs(state.timeMs + e.deltaY * 2.2);
+  }
+
+  function onWheelTimeline(e){
+    if(!state.buffer) return;
+    e.preventDefault();
+    if(e.ctrlKey){
+      const dir = e.deltaY > 0 ? 1 : -1;
+      setSnapIndex(state.snapIndex + dir);
+      return;
+    }
+    seekMs(state.timeMs + e.deltaY * 2.6);
+  }
+
+  /* ==========================
+     Auto BPM (beta) — practical estimator with optional change detection
+  ========================== */
+  function makeMono(buf){
+    const ch = buf.numberOfChannels;
+    const len = buf.length;
+    const out = new Float32Array(len);
+    for(let c=0;c<ch;c++){
+      const data = buf.getChannelData(c);
+      for(let i=0;i<len;i++) out[i] += data[i]/ch;
+    }
+    return out;
+  }
+
+  function buildEnvelope(mono, sampleRate, targetHz=200){
+    const step = Math.max(1, Math.floor(sampleRate/targetHz));
+    const n = Math.floor(mono.length / step);
+    const env = new Float32Array(n);
+
+    // energy-ish envelope + onset emphasis
+    let prev = 0;
+    for(let i=0;i<n;i++){
+      const s0 = i*step;
+      const s1 = Math.min(mono.length, s0+step);
+      let sum=0;
+      for(let s=s0; s<s1; s++){
+        sum += Math.abs(mono[s]);
+      }
+      const v = sum / (s1-s0 || 1);
+      // onset-ish
+      const o = Math.max(0, v - prev);
+      env[i] = o;
+      prev = v;
+    }
+
+    // normalize
+    let max=0;
+    for(let i=0;i<n;i++) if(env[i]>max) max=env[i];
+    if(max<=0) max=1;
+    for(let i=0;i<n;i++) env[i] /= max;
+
+    // light smoothing
+    const sm = new Float32Array(n);
+    const a = 0.86;
+    let acc=0;
+    for(let i=0;i<n;i++){
+      acc = a*acc + (1-a)*env[i];
+      sm[i] = acc;
+    }
+    return { env: sm, hz: targetHz };
+  }
+
+  function scoreBpm(env, lag){
+    // dot product env[i]*env[i+lag]
+    let sum=0;
+    const n = env.length - lag;
+    for(let i=0;i<n;i++){
+      sum += env[i] * env[i+lag];
+    }
+    return sum / n;
+  }
+
+  function estimateBpmForEnv(env, hz, bpmMin=60, bpmMax=260){
+    let bestBpm = 120;
+    let bestScore = -1;
+
+    // step 0.5 bpm for stability
+    for(let bpm=bpmMin; bpm<=bpmMax; bpm+=0.5){
+      const lag = Math.round(hz*60/bpm);
+      if(lag < 10 || lag >= env.length/2) continue;
+      const s = scoreBpm(env, lag);
+      if(s > bestScore){
+        bestScore = s;
+        bestBpm = bpm;
+      }
+    }
+    return { bpm: bestBpm, score: bestScore };
+  }
+
+  function estimateOffsetForBpm(env, hz, bpm){
+    // choose phase within one beat that best aligns with onsets
+    const lag = Math.round(hz*60/bpm);
+    if(lag < 10) return 0;
+    let bestOff=0, best=-1;
+
+    // sample phase candidates (0..lag-1) but step a bit for speed
+    const step = Math.max(1, Math.floor(lag/60));
+    for(let off=0; off<lag; off+=step){
+      let s=0;
+      for(let i=off; i<env.length; i+=lag){
+        s += env[i];
+      }
+      if(s > best){
+        best = s;
+        bestOff = off;
+      }
+    }
+    return (bestOff / hz) * 1000;
+  }
+
+  async function autoDetectBpm(){
+    if(!state.buffer) return;
+    autoBpmBtn.disabled = true;
+    autoBpmStatus.textContent = "Analisando… (beta)";
+
+    const detectChanges = !!autoChanges.checked;
+    const buf = state.buffer;
+
+    // build envelope
+    const mono = makeMono(buf);
+    const { env, hz } = buildEnvelope(mono, buf.sampleRate, 200);
+
+    // global BPM
+    await new Promise(r=>setTimeout(r, 10));
+    const global = estimateBpmForEnv(env, hz, 60, 260);
+    const offMs = estimateOffsetForBpm(env, hz, global.bpm);
+
+    if(!detectChanges){
+      pushUndo();
+      state.timing = [{ id: uid(), t: Math.max(0, Math.round(offMs)), bpm: clamp(global.bpm, 30, 400), meter: 4 }];
+      normalizeTiming();
+      renderTPList();
+      autoBpmStatus.textContent = `BPM detectado: ${global.bpm.toFixed(2)} • offset: ${Math.round(offMs)}ms (aplicado)`;
+      autoBpmBtn.disabled = false;
+      return;
+    }
+
+    // changes: sliding windows
+    const winSec = 12;
+    const hopSec = 6;
+    const win = Math.floor(winSec*hz);
+    const hop = Math.floor(hopSec*hz);
+
+    const estimates = [];
+    for(let start=0; start+win<env.length; start+=hop){
+      // slice without copying huge arrays (manual view)
+      const seg = env.subarray(start, start+win);
+      const est = estimateBpmForEnv(seg, hz, 60, 260);
+      estimates.push({ tMs: (start/hz)*1000, bpm: est.bpm, score: est.score });
+      if(estimates.length % 4 === 0){
+        autoBpmStatus.textContent = `Analisando mudanças… ${Math.round((start/env.length)*100)}%`;
+        await new Promise(r=>setTimeout(r, 0));
+      }
+    }
+
+    // smooth + segment
+    for(let i=1;i<estimates.length-1;i++){
+      estimates[i].bpm = (estimates[i-1].bpm + estimates[i].bpm + estimates[i+1].bpm)/3;
+    }
+
+    const segs = [];
+    const threshold = 1.8; // bpm difference to split
+    let cur = { t: Math.round(offMs), bpm: estimates[0]?.bpm ?? global.bpm };
+    segs.push(cur);
+
+    for(let i=1;i<estimates.length;i++){
+      const prev = estimates[i-1];
+      const curE = estimates[i];
+      if(Math.abs(curE.bpm - prev.bpm) >= threshold){
+        segs.push({ t: Math.round(curE.tMs), bpm: curE.bpm });
+      }
+    }
+
+    // merge near duplicates
+    const merged = [];
+    for(const s of segs){
+      const last = merged[merged.length-1];
+      if(!last){
+        merged.push(s); continue;
+      }
+      if(Math.abs(s.bpm - last.bpm) < 1.2){
+        // ignore tiny change
         continue;
       }
-
-      if(section === "Metadata"){
-        const kv = parseKV(line);
-        if(kv){
-          const [k,v] = kv;
-          if(k==="Title") meta.title=v;
-          if(k==="Artist") meta.artist=v;
-          if(k==="Creator") meta.creator=v;
-          if(k==="Version"){
-            // might be "4K X"
-            meta.version = v.replace(/^\d+K\s*/,"");
-          }
+      if(s.t - last.t < 6000){
+        // too close -> keep stronger change
+        if(Math.abs(s.bpm - global.bpm) > Math.abs(last.bpm - global.bpm)){
+          last.bpm = s.bpm;
         }
+        continue;
       }
-
-      if(section === "Difficulty"){
-        const kv = parseKV(line);
-        if(kv && kv[0]==="CircleSize"){
-          keys = clamp(parseInt(kv[1],10)||4, 4, 7);
-        }
-      }
-
-      if(section === "TimingPoints"){
-        const parts = line.split(",");
-        if(parts.length >= 2){
-          const t = Math.max(0, Math.round(parseFloat(parts[0])||0));
-          const beatLen = parseFloat(parts[1]);
-          if(beatLen > 0){
-            const bpm = clamp(60000/beatLen, 30, 400);
-            timing.push({ id: uid(), t, bpm, meter:4 });
-          }
-        }
-      }
-
-      if(section === "HitObjects"){
-        const p = line.split(",");
-        if(p.length < 6) continue;
-        const x = parseInt(p[0],10)||0;
-        const t = Math.round(parseFloat(p[2])||0);
-        const type = parseInt(p[3],10)||1;
-        const hs = parseInt(p[4],10)||0;
-
-        const lane = clamp(Math.floor((x/512)*keys), 0, keys-1);
-
-        if((type & 128) !== 0){
-          // hold: p[5] like "end:sample"
-          const extra = p[5] || "";
-          const endStr = extra.split(":")[0];
-          const end = Math.max(t+1, Math.round(parseFloat(endStr)||t+1));
-          notes.push({ id: uid(), lane, t, type:"hold", end, hs, vol:0 });
-        } else {
-          notes.push({ id: uid(), lane, t, type:"tap", end:t, hs, vol:0 });
-        }
-      }
+      merged.push(s);
     }
 
-    if(timing.length === 0) timing.push({ id: uid(), t:0, bpm:180, meter:4 });
-    timing.sort((a,b)=>a.t-b.t);
-
-    return { meta, keys, timing, notes };
+    pushUndo();
+    state.timing = merged.map(s => ({ id: uid(), t: Math.max(0, s.t), bpm: clamp(s.bpm, 30, 400), meter:4 }));
+    normalizeTiming();
+    renderTPList();
+    autoBpmStatus.textContent = `BPM detectado: ${global.bpm.toFixed(2)} • mudanças: ${Math.max(0, merged.length-1)} (aplicado)`;
+    autoBpmBtn.disabled = false;
   }
 
-  osuIn.addEventListener("change", async ()=>{
-    const f = osuIn.files[0];
-    if(!f) return;
-    const text = await f.text();
-    const parsed = parseOsu(text);
+  /* ==========================
+     UI wiring
+  ========================== */
+  function openOptions(){ optBack.classList.add("show"); }
+  function closeOptions(){ optBack.classList.remove("show"); }
 
-    pushUndo();
+  optBtn.addEventListener("click", openOptions);
+  optClose.addEventListener("click", closeOptions);
+  optBack.addEventListener("click", (e)=>{ if(e.target===optBack) closeOptions(); });
 
-    if(parsed.meta) setMeta(parsed.meta);
-    state.keys = parsed.keys;
-    state.timing = parsed.timing;
-    state.notes = parsed.notes;
-    sortNotes();
-    normalizeTiming();
-
-    keysSel.value = String(state.keys);
-    const tp0 = state.timing[0];
-    bpmIn.value = String(tp0.bpm);
-    offIn.value = String(tp0.t);
-
-    markPreviewDirty();
-    resetPreviewRuntime();
-    renderBookmarks();
-    syncHitsoundUI();
-
-    alert("Import OK. Agora carregue o áudio em OPTIONS > Áudio.");
+  exitBtn.addEventListener("click", ()=>{
+    const ok = confirm("Sair? (isso não salva automaticamente)\n\nDica: exporte .osu antes 🙂");
+    if(ok) location.reload();
   });
 
-  /* ===== Bookmarks add (bottom + keybind) ===== */
-  addBmBtn.addEventListener("click", addBookmark);
+  bmBtn.addEventListener("click", ()=> addBookmarkAt(state.timeMs));
+  bmClearBtn.addEventListener("click", clearBookmarks);
 
-  /* ===== Timeline zoom controls ===== */
-  // already wired
+  rtPreviewBtn.addEventListener("click", ()=> setRealtimePreview(!state.preview.realtime));
+  autoPlayBtn.addEventListener("click", ()=> setAutoplay(!state.preview.autoplay));
 
-  /* ===== Global init ===== */
-  function initDefaults(){
-    setTool("select");
-    keysSel.value = "4";
-    snapSel.value = "4";
-    bpmIn.value = "180";
-    offIn.value = "0";
-    rateSel.value = "1";
-    snapOnToggle.checked = true;
+  toolBtns.forEach(btn=>{
+    btn.addEventListener("click", ()=> setTool(btn.getAttribute("data-tool")));
+  });
 
-    bgImg.style.opacity = "0.35";
-    bgImg.style.filter = "blur(0px)";
+  zoomInBtn.addEventListener("click", ()=>{
+    state.tlWinSec = clamp(state.tlWinSec - 1, 3, 30);
+    tlWinIn.value = String(state.tlWinSec);
+    tlWinLbl.textContent = String(state.tlWinSec);
+    state.cacheMeta.tlStaticKey = "";
+    state.cacheMeta.tlWaveKey = "";
+  });
+  zoomOutBtn.addEventListener("click", ()=>{
+    state.tlWinSec = clamp(state.tlWinSec + 1, 3, 30);
+    tlWinIn.value = String(state.tlWinSec);
+    tlWinLbl.textContent = String(state.tlWinSec);
+    state.cacheMeta.tlStaticKey = "";
+    state.cacheMeta.tlWaveKey = "";
+  });
 
-    renderBookmarks();
-    updatePlayIcon();
-    refreshHUD();
+  playBtn.addEventListener("click", ()=> state.isPlaying ? pause() : play());
+  stopBtn.addEventListener("click", stop);
+  vol.addEventListener("input", ()=>{ if(state.gain) state.gain.gain.value = parseFloat(vol.value)||1; });
+
+  rateBtns.forEach(b=>{
+    b.addEventListener("click", ()=>{
+      rateBtns.forEach(x=>x.classList.remove("active"));
+      b.classList.add("active");
+      state.rate = parseFloat(b.getAttribute("data-rate"));
+      if(state.isPlaying){ pause(); play(); }
+    });
+  });
+
+  // options inputs
+  audioFile.addEventListener("change", async ()=>{
+    const f = audioFile.files[0];
+    if(!f) return;
+    await loadAudio(f);
+  });
+
+  keysSel.addEventListener("change", ()=>{
+    pushUndo();
+    setKeys(parseInt(keysSel.value,10));
+  });
+
+  scrollIn.addEventListener("change", ()=>{
+    pushUndo();
+    state.scrollPxPerSec = clamp(parseInt(scrollIn.value,10)||1700, 250, 9000);
+    state.cacheMeta.edWaveKey = "";
+  });
+
+  tlWinIn.addEventListener("change", ()=>{
+    pushUndo();
+    state.tlWinSec = clamp(parseInt(tlWinIn.value,10)||8, 3, 30);
+    tlWinLbl.textContent = String(state.tlWinSec);
+    state.cacheMeta.tlStaticKey = "";
+    state.cacheMeta.tlWaveKey = "";
+  });
+
+  offsetIn.addEventListener("change", ()=>{
+    pushUndo();
+    setAudioOffset(parseInt(offsetIn.value,10)||0);
+  });
+
+  snapOnSel.addEventListener("change", ()=>{
+    pushUndo();
+    setSnapOn(snapOnSel.value === "on");
+  });
+
+  perfSel.addEventListener("change", ()=>{
+    const v = perfSel.value;
+    state.perfCap = (v==="off") ? 0 : parseFloat(v);
+    pushUndo();
+    doResizeAll();
+  });
+
+  autoSel.addEventListener("change", ()=>{
+    pushUndo();
+    setAutoplay(autoSel.value === "on");
+  });
+
+  exportBtn.addEventListener("click", exportOsu);
+  undoBtn.addEventListener("click", doUndo);
+  deleteBtn.addEventListener("click", deleteSelection);
+  clearBtn.addEventListener("click", clearNotes);
+
+  resetViewBtn.addEventListener("click", ()=>{
+    pushUndo();
+    state.scrollPxPerSec = 1700;
+    state.tlWinSec = 8;
+    state.audioOffsetMs = 0;
+    scrollIn.value = "1700";
+    tlWinIn.value = "8";
+    tlWinLbl.textContent = "8";
+    offsetIn.value = "0";
+    hudOffset.textContent = "0";
+    state.cacheMeta.edWaveKey = "";
+    state.cacheMeta.tlWaveKey = "";
+  });
+
+  tpAddBtn.addEventListener("click", ()=>{
+    if(!state.buffer) return;
+    pushUndo();
+    const ms = Math.round(state.timeMs);
+    const cur = activeTP(ms);
+    state.timing.push({ id: uid(), t: ms, bpm: cur.bpm, meter: cur.meter||4 });
+    normalizeTiming();
+    renderTPList();
+  });
+
+  tpResetBtn.addEventListener("click", ()=>{
+    pushUndo();
+    state.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
+    normalizeTiming();
+    renderTPList();
+  });
+
+  autoBpmBtn.addEventListener("click", autoDetectBpm);
+
+  // canvas events
+  edCanvas.addEventListener("pointerdown", onPointerDownEditor);
+  edCanvas.addEventListener("pointermove", onPointerMoveEditor);
+  edCanvas.addEventListener("pointerup", onPointerUpEditor);
+  edCanvas.addEventListener("pointercancel", onPointerUpEditor);
+
+  tlCanvas.addEventListener("pointerdown", onPointerDownTL);
+  tlCanvas.addEventListener("pointermove", onPointerMoveTL);
+  tlCanvas.addEventListener("pointerup", onPointerUpTL);
+  tlCanvas.addEventListener("pointercancel", onPointerUpTL);
+
+  edCanvas.addEventListener("wheel", onWheelEditor, {passive:false});
+  tlCanvas.addEventListener("wheel", onWheelTimeline, {passive:false});
+
+  // keyboard
+  window.addEventListener("keydown", (e)=>{
+    if(e.code==="Space"){
+      e.preventDefault();
+      state.isPlaying ? pause() : play();
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){
+      e.preventDefault();
+      doUndo();
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="b"){
+      e.preventDefault();
+      addBookmarkAt(state.timeMs);
+      return;
+    }
+    if(e.code==="Delete"){
+      deleteSelection();
+      return;
+    }
+    if(e.key==="1") setTool("select");
+    if(e.key==="2") setTool("tap");
+    if(e.key==="3") setTool("hold");
+    if(e.key==="4") setTool("erase");
+  });
+
+  /* ==========================
+     Init / HUD
+  ========================== */
+  function renderHUD(){
+    hudTime.textContent = String(Math.round(state.timeMs));
+    tlWinLbl.textContent = String(state.tlWinSec);
+
+    const tp = activeTP(state.timeMs);
+    bpmLbl.textContent = tp ? tp.bpm.toFixed(2) : "—";
+
+    const label = `1/${snapDiv()}`;
+    snapLbl.textContent = label;
+    hudSnap.textContent = label;
+
+    noteFmt.textContent = `notes: ${state.notes.length}`;
+    timeFmt.textContent = fmtTime(state.timeMs);
+
+    if(state.buffer){
+      const pct = (state.timeMs / (state.buffer.duration*1000))*100;
+      pctFmt.textContent = `${pct.toFixed(1)}%`;
+    } else {
+      pctFmt.textContent = "0.0%";
+    }
+
+    hudKeys.textContent = String(state.keys);
+    hudOffset.textContent = String(state.audioOffsetMs);
+
+    bookmarkFmt.textContent = `bm: ${state.bookmarks.length}`;
+
+    // options buttons state
+    undoBtn.disabled = state.undo.length===0;
+    deleteBtn.disabled = state.selected.size===0;
   }
 
-  /* ===== Main loop ===== */
+  /* ==========================
+     Main loop
+  ========================== */
   function loop(){
     updateTimeFromAudio();
-    refreshHUD();
+    advanceAutoplay();
 
-    drawAmpStrip();
-    drawWaveform();
-    drawEditor();
+    // update combo (always derived for autoplay)
+    if(state.preview.autoplay){
+      // during playing it’s kept in sync; during scrubbing it recalcs
+      // (cheap enough and avoids weirdness)
+      const idx = lowerBound(state.notes, state.timeMs);
+      state.preview.combo = idx;
+      comboLbl.textContent = String(idx);
+    } else {
+      comboLbl.textContent = "0";
+    }
+
+    renderHUD();
+
+    // draw
+    drawEdDynamic();
+    drawTimeline();
     drawPreview();
 
     requestAnimationFrame(loop);
   }
 
-  /* ===== Buttons ===== */
-  addBmBtn.addEventListener("click", addBookmark);
+  // baseline state
+  setTool("select");
+  setKeys(4);
+  setSnapIndex(3);
+  setSnapOn(true);
+  setAudioOffset(0);
+  setRealtimePreview(true);
+  setAutoplay(true);
 
-  /* ===== Set initial timing from inputs ===== */
-  function applyTimingFromUI(){
-    state.timing = [{ id: uid(), t: Math.max(0, Math.round(parseFloat(offIn.value)||0)), bpm: clamp(parseFloat(bpmIn.value)||180, 30, 400), meter:4 }];
-    normalizeTiming();
-  }
-  applyTimingFromUI();
+  // options defaults
+  keysSel.value = "4";
+  scrollIn.value = "1700";
+  tlWinIn.value = "8";
+  offsetIn.value = "0";
+  snapOnSel.value = "on";
+  perfSel.value = "1.25";
+  autoSel.value = "on";
 
-  /* ===== Preview toggle layout ===== */
-  function setPreviewEnabled(on){
-    state.preview.enabled = !!on;
-    previewToggle.checked = !!on;
-    applyPreviewLayout();
-  }
+  renderTPList();
+  renderBMList();
+  updateSelectionUI();
 
-  /* ===== Click bookmark on waveform area: right-click add BM ===== */
-  waveWrap.addEventListener("contextmenu", (e)=>{
-    e.preventDefault();
-    addBookmark();
-  });
+  // disabled until audio load
+  exportBtn.disabled = true;
+  clearBtn.disabled = true;
+  tpAddBtn.disabled = true;
+  tpResetBtn.disabled = true;
+  autoBpmBtn.disabled = true;
 
-  /* ===== Options open loads correct UI ===== */
-  optionsBtn.addEventListener("click", ()=>{
-    // sync UI fields with current state
-    keysSel.value = String(state.keys);
-    snapSel.value = String(state.snap);
-    snapOnToggle.checked = !!state.snapOn;
-
-    const tp0 = state.timing[0] || {t:0,bpm:180};
-    bpmIn.value = String(tp0.bpm);
-    offIn.value = String(tp0.t);
-
-    rateSel.value = String(state.rate);
-
-    previewToggle.checked = !!state.preview.enabled;
-
-    bgOpacity.value = String(state.bg.opacity);
-    bgBlur.value = String(state.bg.blur);
-
-    modalBackdrop.classList.add("show");
-  });
-
-  /* ===== Volume global (use hsVol only for note; master uses browser) ===== */
-  // (se você quiser master volume global depois, eu adiciono no layout igual o osu)
-
-  initDefaults();
-  fitCanvas(ampCanvas);
-  fitCanvas(waveCanvas);
-  fitCanvas(editCanvas);
-  applyPreviewLayout();
+  // initial resize
+  doResizeAll();
   requestAnimationFrame(loop);
 })();
 </script>

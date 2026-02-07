@@ -1,908 +1,752 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Web Mania Editor — osu!mania vibe (waveform + preview circles)</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Web Mania Editor — V7 (layout antigo, editor in-game + waveform)</title>
   <style>
     :root{
-      --bg:#0b0c10;
-      --panel:#0f141b;
-      --panel2:#0b1016;
-      --line:rgba(255,255,255,.09);
-      --line2:rgba(255,255,255,.06);
-      --fg:#e9eef7;
-      --muted:#a8b3c4;
+      --bg:#0b0c0f;
+      --panel:#11141a;
+      --panel2:#0e1117;
+      --fg:#eaeef6;
+      --muted:#9aa4b2;
+      --border:rgba(255,255,255,.10);
+      --border2:rgba(255,255,255,.06);
 
-      --accent:#34d4ff;
+      --accent:#7dd3fc;
       --accent2:#a78bfa;
-      --danger:#ff5c7a;
-      --ok:#3cf2a6;
+      --danger:#fb7185;
+      --ok:#86efac;
 
-      --wave:#22c9ff;
-      --hitline:#ff3355;
+      --r1:10px;
+      --r2:14px;
 
-      --r1:12px;
-      --r2:16px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0; background:var(--bg); color:var(--fg);
-      font-family:var(--font); overflow:hidden;
-      display:flex; flex-direction:column;
+      margin:0; background:var(--bg); color:var(--fg); font-family:var(--font);
+      display:flex; flex-direction:column; overflow:hidden;
     }
 
-    /* ===== TOPBAR (osu-like) ===== */
+    /* ===== Top bar (sem File/Edit/etc) ===== */
     .topbar{
-      height:64px;
-      display:flex; align-items:center; gap:12px;
-      padding:10px 14px;
-      border-bottom:1px solid var(--line2);
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-    }
-    .tbBtn{
-      height:42px;
-      padding:0 18px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.04);
-      color:var(--fg);
-      display:inline-flex; align-items:center; gap:10px;
-      font-weight:650;
-      letter-spacing:.2px;
-      cursor:pointer;
+      height:52px;
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-bottom:1px solid var(--border2);
+      background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,0));
       user-select:none;
     }
-    .tbBtn:hover{ background:rgba(255,255,255,.06) }
-    .tbBtn:active{ transform:translateY(1px) }
-    .tbBtn.primary{
-      border-color:rgba(52,212,255,.35);
-      background:rgba(52,212,255,.10);
-    }
-    .tbBtn.primary:hover{ background:rgba(52,212,255,.14) }
-    .spacer{flex:1}
-    .statusPill{
-      height:42px;
-      padding:0 14px;
+    .topbar .leftBtns, .topbar .rightBtns{ display:flex; gap:10px; align-items:center; }
+    .topbar .spacer{ flex:1; }
+
+    .pillBtn{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 14px;
       border-radius:999px;
-      border:1px solid var(--line2);
-      background:rgba(0,0,0,.25);
-      display:flex; align-items:center; gap:10px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:var(--fg);
+      cursor:pointer;
+      font-size:13px;
+      line-height:1;
+    }
+    .pillBtn.secondary{ color:var(--muted); }
+    .pillBtn.primary{ border-color:rgba(125,211,252,.45); background:rgba(125,211,252,.10); }
+    .pillBtn:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:9px 12px;
+      border-radius:999px;
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
       color:var(--muted);
       font-size:12px;
-      user-select:none;
       white-space:nowrap;
     }
-    .statusPill b{ color:var(--fg) }
+    .chip b{ color:var(--fg); font-weight:650; }
+    .chip .mono{ font-family:var(--mono); }
 
-    /* ===== MAIN WORKSPACE ===== */
-    .main{
+    .iconBtn{
+      width:40px; height:40px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+    }
+    .iconBtn svg{ width:18px; height:18px; opacity:.95; }
+
+    input[type="range"]{ width:140px; }
+
+    /* ===== App layout (antigo) ===== */
+    .app{
       flex:1;
-      padding:14px;
+      display:grid;
+      grid-template-columns: 90px 1fr 360px;
+      gap:12px;
+      padding:12px;
       min-height:0;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:var(--r2);
+      overflow:hidden;
+      min-height:0;
+    }
+    .panel .hd{
+      padding:10px 12px;
+      border-bottom:1px solid var(--border2);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size:12px; color:var(--muted);
+    }
+    .panel .bd{ padding:12px; min-height:0; }
+    .divider{ height:1px; background:var(--border2); margin:10px 0; }
+
+    /* Left */
+    .left{
       display:flex;
       flex-direction:column;
       gap:12px;
-    }
-    .workspace{
-      flex:1;
       min-height:0;
-      display:grid;
-      grid-template-columns: 120px 1fr 420px;
-      gap:0;
-      border-radius:18px;
-      border:1px solid var(--line);
-      overflow:hidden;
-      background:#070a0f;
     }
+    .toolbox{
+      padding:8px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .tool{
+      width:100%;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px;
+      padding:10px 6px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--panel2);
+      color:var(--muted);
+      cursor:pointer;
+      font-size:11px;
+      line-height:1;
+    }
+    .tool.active{
+      color:var(--fg);
+      border-color:rgba(125,211,252,.35);
+      background:rgba(125,211,252,.10);
+    }
+    .tool svg{width:18px; height:18px; opacity:.9}
+    .tool .kbd{
+      font-family:var(--mono);
+      font-size:10px;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+    }
+
+    .minimapWrap{
+      flex:1;
+      display:flex; flex-direction:column;
+      min-height:0;
+    }
+    .minimapCanvas{
+      flex:1;
+      border-top:1px solid var(--border2);
+      background:#07090d;
+      cursor:pointer;
+    }
+
+    /* Center stage */
+    .center{
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .stageWrap{
+      flex:1;
+      border-radius:var(--r2);
+      border:1px solid var(--border);
+      background:#07090d;
+      overflow:hidden;
+      min-height:0;
+      position:relative;
+    }
+    .stageInner{
+      position:absolute; inset:0;
+      padding:12px;
+      display:grid;
+      grid-template-columns: 140px 1fr;
+      gap:12px;
+      min-height:0;
+    }
+
     .pane{
       position:relative;
+      border-radius:var(--r2);
+      border:1px solid var(--border);
+      overflow:hidden;
+      background:#07090d;
       min-height:0;
-      background:#070a0f;
     }
-    .pane + .pane{ border-left:1px solid var(--line2); }
-
     canvas{display:block; width:100%; height:100%}
 
-    /* ===== Timeline ===== */
-    .zoomBtns{
+    /* Timeline controls (+/-) */
+    .tlBtns{
       position:absolute;
-      top:86px; right:10px;
-      display:flex; flex-direction:column; gap:10px;
-      z-index:5;
-    }
-    .zoomBtn{
-      width:44px; height:44px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.28);
-      color:var(--fg);
-      font-size:20px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .zoomBtn:hover{ background:rgba(255,255,255,.06) }
-    .zoomBtn:active{ transform:translateY(1px) }
-
-    .tlBadge{
-      position:absolute; left:10px; top:10px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--line2);
-      background:rgba(0,0,0,.35);
-      color:var(--muted);
-      font-size:12px;
-      user-select:none;
-      z-index:5;
-    }
-    .tlBadge b{color:var(--fg)}
-    .tlBadge .mono{font-family:var(--mono)}
-
-    /* ===== Editor HUD stack (pills) ===== */
-    .hudStack{
-      position:absolute;
-      top:12px; right:12px;
-      display:flex; flex-direction:column; gap:10px;
+      right:10px; top:54px;
+      display:flex; flex-direction:column; gap:8px;
       z-index:6;
-      pointer-events:none;
-      user-select:none;
-    }
-    .pill{
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid var(--line2);
-      background:rgba(0,0,0,.38);
-      color:var(--muted);
-      font-size:13px;
-      white-space:nowrap;
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      min-width:190px;
-    }
-    .pill b{color:var(--fg); font-family:var(--mono); font-weight:750}
-    .pill .tag{
-      font-size:12px;
-      opacity:.9;
-    }
-    .pillBtn{
       pointer-events:auto;
-      cursor:pointer;
-      padding:9px 12px;
+    }
+    .tlBtn{
+      width:34px; height:34px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.05);
+      background:rgba(0,0,0,.35);
       color:var(--fg);
-      font-size:13px;
-      font-weight:650;
-      user-select:none;
-    }
-    .pillBtn:hover{ background:rgba(255,255,255,.07) }
-    .pillBtn.on{
-      border-color:rgba(52,212,255,.35);
-      background:rgba(52,212,255,.12);
-    }
-
-    /* ===== Tool tray ===== */
-    .toolTray{
-      position:absolute;
-      left:12px; bottom:12px;
-      display:flex; gap:10px;
-      z-index:6;
-      user-select:none;
-    }
-    .toolBtn{
-      width:56px; height:56px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.28);
-      color:var(--muted);
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:4px;
+      display:flex; align-items:center; justify-content:center;
       cursor:pointer;
+      backdrop-filter: blur(6px);
+      font-size:18px;
+      line-height:1;
+      user-select:none;
     }
-    .toolBtn:hover{ background:rgba(255,255,255,.06) }
-    .toolBtn.active{
-      color:var(--fg);
-      border-color:rgba(52,212,255,.35);
-      background:rgba(52,212,255,.10);
-    }
-    .toolBtn .kbd{font-family:var(--mono); font-size:11px; opacity:.95}
-    .toolBtn .lbl{font-size:11px; letter-spacing:.1px}
 
-    /* ===== Preview ===== */
-    .previewTop{
+    /* HUD chips inside editor */
+    .hudRow{
       position:absolute;
-      top:12px; left:12px;
+      top:10px; left:10px; right:10px;
+      display:flex; gap:8px; flex-wrap:wrap;
       z-index:6;
-      display:flex; gap:10px;
-      align-items:center;
+      pointer-events:none;
     }
-    .combo{
+    .hudRow .chip{ pointer-events:none; }
+    .hudRight{
+      margin-left:auto;
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+
+    /* Combo overlay (center) */
+    .comboOverlay{
       position:absolute;
       inset:0;
-      display:flex; align-items:center; justify-content:center;
-      font-size:92px;
-      font-weight:800;
-      color:rgba(233,238,247,.75);
-      text-shadow:0 6px 24px rgba(0,0,0,.55);
-      letter-spacing:1px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:5;
       pointer-events:none;
-      user-select:none;
-      z-index:6;
       font-family:var(--mono);
-    }
-
-    /* ===== Transport ===== */
-    .transport{
-      height:72px;
-      border:1px solid var(--line);
-      border-radius:18px;
-      background:rgba(255,255,255,.03);
-      display:flex; align-items:center; justify-content:space-between;
-      padding:12px 14px;
-      gap:14px;
-    }
-    .tLeft{
-      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .mono{font-family:var(--mono)}
-    .tRight{
-      display:flex; align-items:center; gap:12px; flex-wrap:wrap;
-    }
-    .iconBtn{
-      width:48px; height:48px;
-      border-radius:16px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.24);
-      display:flex; align-items:center; justify-content:center;
-      cursor:pointer;
-      user-select:none;
-    }
-    .iconBtn:hover{ background:rgba(255,255,255,.06) }
-    .iconBtn:active{ transform:translateY(1px) }
-    .iconBtn svg{width:20px; height:20px; fill:var(--fg); opacity:.95}
-    .rateGroup{
-      display:flex; gap:8px; align-items:center;
-    }
-    .rateBtn{
-      height:48px;
-      padding:0 12px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.24);
-      color:var(--muted);
-      cursor:pointer;
-      user-select:none;
-      font-weight:650;
-      font-size:12px;
-    }
-    .rateBtn.active{
-      color:var(--fg);
-      border-color:rgba(52,212,255,.35);
-      background:rgba(52,212,255,.10);
-    }
-    .slider{
-      display:flex; flex-direction:column; gap:6px;
-      color:var(--muted);
-      font-size:12px;
-      min-width:180px;
-    }
-    input[type="range"]{ width:100% }
-
-    /* ===== Modal ===== */
-    .modalBack{
-      position:fixed; inset:0;
-      background:rgba(0,0,0,.55);
-      display:none;
-      align-items:center; justify-content:center;
-      padding:18px;
-      z-index:100;
-    }
-    .modalBack.show{ display:flex }
-    .modal{
-      width:min(980px, 100%);
-      max-height:min(86vh, 900px);
-      overflow:hidden;
-      border-radius:20px;
-      border:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      box-shadow:0 30px 120px rgba(0,0,0,.55);
-      display:flex; flex-direction:column;
-    }
-    .modalHd{
-      padding:14px 16px;
-      border-bottom:1px solid var(--line2);
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-    }
-    .modalHd .title{
       font-weight:800;
-      letter-spacing:.2px;
+      font-size:72px;
+      color:rgba(255,255,255,.22);
+      text-shadow: 0 10px 40px rgba(0,0,0,.65);
     }
-    .modalBd{
-      padding:16px;
-      overflow:auto;
-      background:rgba(0,0,0,.22);
+
+    /* Right */
+    .right{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height:0;
     }
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
-    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px }
-    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end }
+
     label{
       display:flex; flex-direction:column; gap:6px;
-      color:var(--muted);
-      font-size:12px;
+      font-size:12px; color:var(--muted);
     }
-    input[type="file"], input[type="number"], input[type="text"], select{
-      height:42px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.25);
+    input[type="text"], input[type="number"], select, button{
+      border:1px solid var(--border);
+      background:var(--panel2);
       color:var(--fg);
-      padding:0 12px;
-      outline:none;
+      border-radius:var(--r1);
+      padding:9px 10px;
       font-size:14px;
+      outline:none;
     }
-    .smallNote{
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.45;
-    }
-    .line{ height:1px; background:var(--line2); margin:14px 0 }
-    .btn{
-      height:42px;
-      padding:0 14px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.04);
-      color:var(--fg);
-      cursor:pointer;
-      user-select:none;
-      font-weight:700;
-    }
-    .btn:hover{ background:rgba(255,255,255,.06) }
-    .btn.ok{ border-color:rgba(60,242,166,.35); background:rgba(60,242,166,.10) }
-    .btn.danger{ border-color:rgba(255,92,122,.35); background:rgba(255,92,122,.10) }
-    .btn.primary{ border-color:rgba(52,212,255,.35); background:rgba(52,212,255,.10) }
-    .btn:disabled{ opacity:.55; cursor:not-allowed }
+    input[type="file"]{ color:var(--muted); font-size:13px }
+    button{ cursor:pointer; user-select:none }
+    button.primary{ border-color:rgba(125,211,252,.45) }
+    button.ok{ border-color:rgba(134,239,172,.50); color:#d1fae5 }
+    button.danger{ border-color:rgba(251,113,133,.55); color:#ffd7df }
+    button:disabled{ opacity:.55; cursor:not-allowed }
+
+    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
 
     .list{
-      border:1px solid var(--line2);
-      background:rgba(0,0,0,.25);
-      border-radius:16px;
-      overflow:hidden;
+      border:1px solid var(--border2);
+      border-radius:12px;
+      background:rgba(255,255,255,.03);
+      overflow:auto;
+      max-height:18vh;
     }
     .item{
-      padding:10px 12px;
-      border-bottom:1px solid var(--line2);
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .item:last-child{ border-bottom:none }
-    .item b{ color:var(--fg); font-family:var(--mono) }
-    .item .act{
+      padding:9px 10px;
+      border-bottom:1px solid var(--border2);
+      display:flex; justify-content:space-between; gap:10px;
+      font-size:12px; color:var(--muted);
       cursor:pointer;
-      color:rgba(233,238,247,.8);
-      padding:6px 10px;
-      border-radius:12px;
-      border:1px solid var(--line2);
-      background:rgba(255,255,255,.03);
+      align-items:center;
     }
-    .item .act:hover{ background:rgba(255,255,255,.06) }
+    .item:last-child{border-bottom:none}
+    .item.sel{background:rgba(125,211,252,.10)}
+    .item b{color:var(--fg); font-weight:650}
+    .small{font-size:12px; color:var(--muted); line-height:1.45}
+    .mono{font-family:var(--mono)}
+    .toggleRow{
+      display:flex; gap:8px; align-items:center; justify-content:space-between;
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:8px 10px;
+    }
+    .toggleRow input{transform:scale(1.05)}
+    .hint{
+      border:1px solid var(--border2);
+      background:rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:10px;
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.45;
+    }
+
+    .collapsed{ display:none !important; }
 
     @media (max-width: 1100px){
-      .workspace{ grid-template-columns: 120px 1fr; }
-      .pane.preview{ display:none; }
-    }
-    @media (max-width: 800px){
-      .workspace{ grid-template-columns: 1fr; }
-      .pane.timeline{ display:none; }
-      .hudStack{ right:10px }
+      .app{ grid-template-columns: 90px 1fr; }
+      .right{ display:none; }
     }
   </style>
 </head>
 
 <body>
   <div class="topbar">
-    <button class="tbBtn" id="exitBtn">← <span>EXIT</span></button>
-    <button class="tbBtn" id="optBtn">⚙ <span>OPTIONS</span></button>
-    <button class="tbBtn primary" id="bmBtn">＋ <span>ADD BOOKMARK</span></button>
+    <div class="leftBtns">
+      <button class="pillBtn secondary" id="exitBtn">← EXIT</button>
+      <button class="pillBtn" id="optionsBtn">⚙ OPTIONS</button>
+      <button class="pillBtn primary" id="bookmarkBtn">＋ ADD BOOKMARK</button>
+    </div>
 
     <div class="spacer"></div>
 
-    <!-- quick status -->
-    <div class="statusPill" id="audioStatus">Áudio: <b id="audioName">—</b></div>
-    <div class="statusPill">BPM: <b id="bpmLbl">—</b></div>
-    <div class="statusPill">Snap: <b id="snapLbl">1/4</b></div>
-  </div>
+    <div class="rightBtns">
+      <div class="chip"><span class="mono">Time:</span> <b class="mono" id="chipTime">0</b> <span class="mono">ms</span></div>
+      <div class="chip">Keys: <b class="mono" id="chipKeys">4</b></div>
+      <div class="chip">Snap: <b class="mono" id="chipSnap">1/4</b></div>
+      <div class="chip">Tool: <b class="mono" id="chipTool">Select</b></div>
 
-  <div class="main">
-    <div class="workspace" id="workspace">
-      <!-- TIMELINE -->
-      <div class="pane timeline" id="tlPane">
-        <div class="tlBadge">
-          <span class="mono" id="tlWinLbl">8</span>s • wf: <b id="wfStatus" class="mono">—</b>
-        </div>
-        <div class="zoomBtns">
-          <button class="zoomBtn" id="zoomInBtn" title="Zoom in (timeline window)">+</button>
-          <button class="zoomBtn" id="zoomOutBtn" title="Zoom out (timeline window)">−</button>
-        </div>
-        <canvas id="tlCanvas"></canvas>
+      <div class="iconBtn" id="playBtn" title="Play/Pause (Space)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div class="iconBtn" id="stopBtn" title="Stop">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v10H7z"/></svg>
       </div>
 
-      <!-- EDITOR -->
-      <div class="pane editor" id="edPane">
-        <canvas id="edCanvas"></canvas>
+      <label class="small" style="gap:6px; min-width:160px">
+        Volume
+        <input id="volRange" type="range" min="0" max="1" step="0.01" value="1">
+      </label>
+    </div>
+  </div>
 
-        <div class="hudStack">
-          <div class="pill">Time <span class="tag"><b id="hudTime">0</b> ms</span></div>
-          <div class="pill">Keys <span class="tag"><b id="hudKeys">4</b></span></div>
-          <div class="pill">Beat Snap <span class="tag"><b id="hudSnap">1/4</b></span></div>
-          <div class="pill">Tool <span class="tag"><b id="hudTool">Select</b></span></div>
-          <button class="pillBtn on" id="rtPreviewBtn">Realtime preview</button>
-          <div class="pill">Audio offset <span class="tag"><b id="hudOffset">0</b> ms</span></div>
-          <div class="smallNote" style="padding:0 8px; opacity:.9">
-            Wheel = scroll • Ctrl+Wheel = snap • Space = play/pause • Ctrl+Z = undo • Delete = delete • Ctrl+B = bookmark
-          </div>
-        </div>
-
-        <div class="toolTray">
-          <div class="toolBtn active" data-tool="select" title="Select (1)">
+  <div class="app">
+    <!-- LEFT -->
+    <section class="left">
+      <div class="panel">
+        <div class="hd">Tools</div>
+        <div class="toolbox">
+          <button class="tool active" data-tool="select" title="Select (1)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 17 2-7 7-2L4 4z"/></svg>
+            <div>Select</div>
             <div class="kbd">1</div>
-            <div class="lbl">Select</div>
-          </div>
-          <div class="toolBtn" data-tool="tap" title="Note (2)">
+          </button>
+          <button class="tool" data-tool="tap" title="Tap (2)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-8"/><path d="M8 12h8"/><circle cx="12" cy="6" r="3"/></svg>
+            <div>Note</div>
             <div class="kbd">2</div>
-            <div class="lbl">Note</div>
-          </div>
-          <div class="toolBtn" data-tool="hold" title="Long Note (3)">
+          </button>
+          <button class="tool" data-tool="hold" title="Hold (3)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M12 8v8"/></svg>
+            <div>Long</div>
             <div class="kbd">3</div>
-            <div class="lbl">LN</div>
-          </div>
-          <div class="toolBtn" data-tool="erase" title="Erase (4)">
+          </button>
+          <button class="tool" data-tool="erase" title="Erase (4)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H8l-4-4L14 6l6 6-8 8"/><path d="M13 7l6 6"/></svg>
+            <div>Erase</div>
             <div class="kbd">4</div>
-            <div class="lbl">Erase</div>
+          </button>
+
+          <div class="divider"></div>
+
+          <div class="toggleRow" title="Realtime preview (auto-play, notas não passam da linha)">
+            <div class="small"><b class="mono">AT</b> Realtime preview</div>
+            <input id="rtToggle" type="checkbox" checked/>
+          </div>
+
+          <div class="toggleRow" title="Snap On/Off (quantize)">
+            <div class="small">Snap</div>
+            <input id="snapOnToggle" type="checkbox" checked/>
+          </div>
+
+          <div class="toggleRow" title="Key recording (tocar e gravar)">
+            <div class="small"><b class="mono">REC</b> Key recording</div>
+            <input id="recToggle" type="checkbox" />
+          </div>
+
+          <div class="toggleRow" title="Quantize durante gravação">
+            <div class="small">Quantize REC</div>
+            <input id="recQuantToggle" type="checkbox" checked/>
           </div>
         </div>
       </div>
 
-      <!-- PREVIEW -->
-      <div class="pane preview" id="pvPane">
-        <div class="previewTop">
-          <button class="pillBtn on" id="autoPlayBtn">AutoPlay</button>
+      <div class="panel minimapWrap">
+        <div class="hd">
+          Minimap
+          <span class="small mono" id="miniLbl">—</span>
         </div>
-        <div class="combo" id="comboLbl">0</div>
-        <canvas id="pvCanvas"></canvas>
+        <canvas id="miniCanvas" class="minimapCanvas"></canvas>
       </div>
-    </div>
+    </section>
 
-    <div class="transport">
-      <div class="tLeft">
-        <span class="mono" id="timeFmt">00:00:000</span>
-        <span class="mono" id="pctFmt">0.0%</span>
-        <span class="mono" id="noteFmt">notes: 0</span>
-        <span class="mono" id="selFmt">sel: 0</span>
-        <span class="mono" id="bookmarkFmt">bm: 0</span>
+    <!-- CENTER -->
+    <section class="center">
+      <div class="stageWrap" id="stageWrap">
+        <div class="stageInner">
+          <!-- TIMELINE -->
+          <div class="pane timeline" id="timelineWrap">
+            <div class="hudRow" style="pointer-events:none;">
+              <div class="chip"><span class="mono">Win:</span> <b class="mono" id="tlWinLbl">8</b><span class="mono">s</span></div>
+              <div class="chip"><span class="mono">Wf:</span> <b class="mono" id="tlWfLbl">—</b></div>
+            </div>
+            <div class="tlBtns">
+              <div class="tlBtn" id="tlZoomIn" title="Zoom in (+)">+</div>
+              <div class="tlBtn" id="tlZoomOut" title="Zoom out (-)">−</div>
+            </div>
+            <canvas id="timelineCanvas"></canvas>
+          </div>
+
+          <!-- MAP EDITOR (mania in-game + waveform) -->
+          <div class="pane edit" id="editWrap">
+            <div class="hudRow">
+              <div class="chip"><span class="mono">Ctrl+Wheel</span> <span class="mono">Snap</span></div>
+              <div class="chip"><span class="mono">Wheel</span> <span class="mono">Seek</span></div>
+              <div class="chip"><span class="mono">Space</span> <span class="mono">Play</span></div>
+              <div class="hudRight">
+                <div class="chip"><span class="mono">Offset:</span> <b class="mono" id="hudOffset">0</b><span class="mono">ms</span></div>
+                <div class="chip"><span class="mono">Notes:</span> <b class="mono" id="hudNotes">0</b></div>
+              </div>
+            </div>
+
+            <div class="comboOverlay" id="comboOverlay">0</div>
+            <canvas id="stageCanvas"></canvas>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <div class="tRight">
-        <div class="iconBtn" id="playBtn" title="Play/Pause (Space)">
-          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </div>
-        <div class="iconBtn" id="stopBtn" title="Stop">
-          <svg viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></svg>
-        </div>
-
-        <div class="rateGroup" title="Playback rate">
-          <button class="rateBtn" data-rate="0.50">50%</button>
-          <button class="rateBtn" data-rate="0.75">75%</button>
-          <button class="rateBtn active" data-rate="1.00">100%</button>
-        </div>
-
-        <div class="slider">
-          <div>Volume</div>
-          <input id="vol" type="range" min="0" max="1" step="0.01" value="1" />
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- OPTIONS MODAL -->
-  <div class="modalBack" id="optBack">
-    <div class="modal">
-      <div class="modalHd">
-        <div class="title">OPTIONS</div>
-        <button class="btn" id="optClose">Close</button>
-      </div>
-      <div class="modalBd">
-        <div class="grid2">
+    <!-- RIGHT -->
+    <section class="right" id="rightPanel">
+      <div class="panel">
+        <div class="hd">Projeto</div>
+        <div class="bd">
           <label>Áudio
-            <input id="audioFile" type="file" accept="audio/*" />
-          </label>
-          <label>Keys (4–7)
-            <select id="keysSel">
-              <option>4</option><option>5</option><option>6</option><option>7</option>
-            </select>
+            <input id="audioFile" type="file" accept="audio/*">
           </label>
 
-          <label>Scroll speed (px/s)
-            <input id="scrollIn" type="number" min="250" max="9000" step="50" value="1700" />
-          </label>
-          <label>Timeline window (s)
-            <input id="tlWinIn" type="number" min="3" max="30" step="1" value="8" />
-          </label>
+          <div class="grid2" style="margin-top:10px">
+            <label>Keys
+              <select id="keysSel">
+                <option>4</option><option>5</option><option>6</option><option>7</option>
+              </select>
+            </label>
 
-          <label>Audio offset (ms) (só som — não altera o mapa)
-            <input id="offsetIn" type="number" step="1" value="0" />
-          </label>
-          <label>Snap On/Off
-            <select id="snapOnSel">
-              <option value="on" selected>On</option>
-              <option value="off">Off</option>
-            </select>
-          </label>
+            <label>Scroll (px/s)
+              <input id="scrollIn" type="number" min="250" max="9000" step="50" value="1700">
+            </label>
 
-          <label>Performance mode (cap DPR)
-            <select id="perfSel">
-              <option value="off">Off (full quality)</option>
-              <option value="1.25" selected>On (cap 1.25)</option>
-              <option value="1.5">On (cap 1.5)</option>
-              <option value="1">On (cap 1.0)</option>
-            </select>
-          </label>
+            <label>Timeline window (s)
+              <input id="tlWinIn" type="number" min="3" max="30" step="1" value="8">
+            </label>
 
-          <label>Autoplay (preview)
-            <select id="autoSel">
-              <option value="on" selected>On</option>
-              <option value="off">Off</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="line"></div>
-
-        <div class="row">
-          <button class="btn primary" id="exportBtn" disabled>Exportar .osu</button>
-          <button class="btn" id="undoBtn" disabled>Undo</button>
-          <button class="btn danger" id="deleteBtn" disabled>Delete sel.</button>
-          <button class="btn danger" id="clearBtn" disabled>Clear notes</button>
-          <button class="btn" id="resetViewBtn">Reset view</button>
-        </div>
-
-        <div class="smallNote" style="margin-top:10px">
-          <b>Beat Snap:</b> use <span class="mono">Ctrl + Wheel</span> a qualquer momento. <b>LN:</b> com tool LN, clique e segure, arraste para definir o tamanho, solte pra confirmar (igual osu).<br/>
-          <b>Offset:</b> típico pra fone com delay (ex: -220). Só mexe no áudio.
-        </div>
-
-        <div class="line"></div>
-
-        <div class="grid2">
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-              <div style="font-weight:800">Timing points</div>
-              <div style="display:flex; gap:10px">
-                <button class="btn ok" id="tpAddBtn" disabled>Add TP @ time</button>
-                <button class="btn danger" id="tpResetBtn" disabled>Reset</button>
-              </div>
-            </div>
-            <div class="list" id="tpList"></div>
+            <label>Offset áudio (ms)
+              <input id="audioOffsetIn" type="number" step="1" value="0" placeholder="-220">
+            </label>
           </div>
 
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-              <div style="font-weight:800">Bookmarks</div>
-              <button class="btn" id="bmClearBtn">Clear</button>
-            </div>
-            <div class="list" id="bmList"></div>
+          <div class="grid2" style="margin-top:10px">
+            <button id="exportBtn" class="primary" disabled>Exportar .osu</button>
+            <button id="undoBtn" disabled>Undo</button>
+            <button id="deleteBtn" class="danger" disabled>Delete sel.</button>
+            <button id="clearNotesBtn" class="danger" disabled>Clear notes</button>
+          </div>
 
-            <div class="line"></div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-              <div style="font-weight:800">Auto BPM (beta)</div>
-              <div style="display:flex; gap:10px; align-items:center">
-                <label style="flex-direction:row; align-items:center; gap:8px; color:var(--muted); font-size:12px">
-                  <input id="autoChanges" type="checkbox" />
-                  detectar mudanças
-                </label>
-                <button class="btn primary" id="autoBpmBtn" disabled>Detect</button>
-              </div>
-            </div>
-            <div class="smallNote" id="autoBpmStatus">Carregue um áudio para habilitar.</div>
+          <div class="hint" style="margin-top:10px">
+            <div><b>LN</b>: tool Long (3) → clique e arraste o tamanho.</div>
+            <div><b>Resize LN</b>: Select (1) → pegue a “ponta” de baixo da LN e arraste.</div>
+            <div><b>Snap</b>: Ctrl+Wheel em qualquer hora.</div>
+            <div><b>Offset</b> afeta só o som (não mexe no mapa).</div>
           </div>
         </div>
       </div>
-    </div>
+
+      <div class="panel">
+        <div class="hd">Beat Snap</div>
+        <div class="bd">
+          <div class="small" style="margin-bottom:8px">Divisor</div>
+          <input id="snapRange" type="range" min="0" max="7" step="1" value="3">
+          <div class="small" style="margin-top:8px; display:flex; justify-content:space-between">
+            <span class="mono" id="snapLabel">1/4</span>
+            <span class="mono" style="opacity:.85">1/1 1/2 1/3 1/4 1/6 1/8 1/12 1/16</span>
+          </div>
+          <div class="divider"></div>
+          <div class="toggleRow" title="Autoplay / não deixar passar">
+            <div class="small">Autoplay (preview)</div>
+            <input id="autoplayToggle" type="checkbox" checked/>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="hd">Timing</div>
+        <div class="bd">
+          <div class="grid2">
+            <button id="tpAdd" class="ok" disabled>Add TP @ tempo</button>
+            <button id="tpSort" disabled>Sort</button>
+            <button id="tpReset" class="danger" disabled>Reset</button>
+            <button id="autoBpmBtn" class="primary" disabled>Auto BPM (beta)</button>
+          </div>
+          <div class="divider"></div>
+          <div class="list" id="tpList"></div>
+          <div class="divider"></div>
+          <div class="small" id="autoBpmOut">—</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="hd">Bookmarks</div>
+        <div class="bd">
+          <div class="list" id="bmList" style="max-height:16vh"></div>
+          <div class="hint" style="margin-top:10px">
+            “ADD BOOKMARK” adiciona um marcador no tempo atual (aparece na timeline + minimap + editor).
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="hd">Meta (.osu)</div>
+        <div class="bd">
+          <div class="grid2">
+            <label>Title <input id="mTitle" type="text" value="WebManiaEditor"></label>
+            <label>Artist <input id="mArtist" type="text" value="Unknown"></label>
+            <label>Creator <input id="mCreator" type="text" value="reze"></label>
+            <label>Version <input id="mVersion" type="text" value="Easy"></label>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 
 <script>
 (() => {
-  /* ==========================
-     Utilities
-  ========================== */
   const $ = (id) => document.getElementById(id);
   const qsa = (sel) => Array.from(document.querySelectorAll(sel));
-  const clamp = (v,a,b)=>Math.max(a, Math.min(b, v));
-  const uid = ()=>Math.random().toString(36).slice(2,10);
-  const lerp=(a,b,t)=>a+(b-a)*t;
 
-  const SNAP_OPTS = [1,2,3,4,6,8,12,16];
-
-  function fmtTime(ms){
-    ms = Math.max(0, Math.floor(ms));
-    const m = Math.floor(ms/60000);
-    const s = Math.floor((ms%60000)/1000);
-    const t = ms%1000;
-    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}:${String(t).padStart(3,"0")}`;
-  }
-
-  function lowerBound(arr, x){
-    // arr sorted by .t
-    let lo=0, hi=arr.length;
-    while(lo<hi){
-      const mid=(lo+hi)>>1;
-      if(arr[mid].t <= x) lo=mid+1;
-      else hi=mid;
-    }
-    return lo; // first index with t > x
-  }
-
-  /* ==========================
-     Elements
-  ========================== */
+  // Top controls
   const exitBtn = $("exitBtn");
-  const optBtn = $("optBtn");
-  const bmBtn = $("bmBtn");
-
-  const audioName = $("audioName");
-  const bpmLbl = $("bpmLbl");
-  const snapLbl = $("snapLbl");
-
-  const tlPane = $("tlPane");
-  const tlCanvas = $("tlCanvas");
-  const edPane = $("edPane");
-  const edCanvas = $("edCanvas");
-  const pvPane = $("pvPane");
-  const pvCanvas = $("pvCanvas");
-
-  const zoomInBtn = $("zoomInBtn");
-  const zoomOutBtn = $("zoomOutBtn");
-  const tlWinLbl = $("tlWinLbl");
-  const wfStatus = $("wfStatus");
-
-  const hudTime = $("hudTime");
-  const hudKeys = $("hudKeys");
-  const hudSnap = $("hudSnap");
-  const hudTool = $("hudTool");
-  const hudOffset = $("hudOffset");
-
-  const rtPreviewBtn = $("rtPreviewBtn");
-  const autoPlayBtn = $("autoPlayBtn");
-  const comboLbl = $("comboLbl");
-
-  const toolBtns = qsa(".toolBtn");
+  const optionsBtn = $("optionsBtn");
+  const bookmarkBtn = $("bookmarkBtn");
 
   const playBtn = $("playBtn");
   const stopBtn = $("stopBtn");
-  const vol = $("vol");
-  const rateBtns = qsa(".rateBtn");
+  const volRange = $("volRange");
 
-  const timeFmt = $("timeFmt");
-  const pctFmt = $("pctFmt");
-  const noteFmt = $("noteFmt");
-  const selFmt = $("selFmt");
-  const bookmarkFmt = $("bookmarkFmt");
+  // Chips
+  const chipTime = $("chipTime");
+  const chipKeys = $("chipKeys");
+  const chipSnap = $("chipSnap");
+  const chipTool = $("chipTool");
 
-  // Options modal
-  const optBack = $("optBack");
-  const optClose = $("optClose");
+  // Left tools
+  const tools = qsa(".tool");
+  const rtToggle = $("rtToggle");
+  const snapOnToggle = $("snapOnToggle");
+  const recToggle = $("recToggle");
+  const recQuantToggle = $("recQuantToggle");
 
+  // Canvases
+  const editWrap = $("editWrap");
+  const stageCanvas = $("stageCanvas");
+  const sctx = stageCanvas.getContext("2d", { alpha:false });
+
+  const timelineWrap = $("timelineWrap");
+  const timelineCanvas = $("timelineCanvas");
+  const tctx = timelineCanvas.getContext("2d", { alpha:false });
+
+  const miniCanvas = $("miniCanvas");
+  const mctx = miniCanvas.getContext("2d", { alpha:false });
+  const miniLbl = $("miniLbl");
+
+  // Timeline labels + zoom
+  const tlWinLbl = $("tlWinLbl");
+  const tlWfLbl = $("tlWfLbl");
+  const tlZoomIn = $("tlZoomIn");
+  const tlZoomOut = $("tlZoomOut");
+
+  // Right panel
+  const rightPanel = $("rightPanel");
   const audioFile = $("audioFile");
   const keysSel = $("keysSel");
   const scrollIn = $("scrollIn");
   const tlWinIn = $("tlWinIn");
-  const offsetIn = $("offsetIn");
-  const snapOnSel = $("snapOnSel");
-  const perfSel = $("perfSel");
-  const autoSel = $("autoSel");
+  const audioOffsetIn = $("audioOffsetIn");
 
   const exportBtn = $("exportBtn");
   const undoBtn = $("undoBtn");
   const deleteBtn = $("deleteBtn");
-  const clearBtn = $("clearBtn");
-  const resetViewBtn = $("resetViewBtn");
+  const clearNotesBtn = $("clearNotesBtn");
 
-  const tpAddBtn = $("tpAddBtn");
-  const tpResetBtn = $("tpResetBtn");
+  const snapRange = $("snapRange");
+  const snapLabel = $("snapLabel");
+  const autoplayToggle = $("autoplayToggle");
+
+  const tpAdd = $("tpAdd");
+  const tpSort = $("tpSort");
+  const tpReset = $("tpReset");
   const tpList = $("tpList");
+  const autoBpmBtn = $("autoBpmBtn");
+  const autoBpmOut = $("autoBpmOut");
 
   const bmList = $("bmList");
-  const bmClearBtn = $("bmClearBtn");
 
-  const autoBpmBtn = $("autoBpmBtn");
-  const autoChanges = $("autoChanges");
-  const autoBpmStatus = $("autoBpmStatus");
+  const mTitle = $("mTitle");
+  const mArtist = $("mArtist");
+  const mCreator = $("mCreator");
+  const mVersion = $("mVersion");
 
-  /* ==========================
-     State
-  ========================== */
+  const comboOverlay = $("comboOverlay");
+  const hudOffset = $("hudOffset");
+  const hudNotes = $("hudNotes");
+
+  const SNAP_OPTS = [1,2,3,4,6,8,12,16];
+
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+
   const state = {
     tool: "select",
     keys: 4,
-    snapIndex: 3, // 1/4
+    snap: 4,
     snapOn: true,
-
     scrollPxPerSec: 1700,
     tlWinSec: 8,
 
-    perfCap: 1.25,
-
+    // audio
+    ac: null,
+    buffer: null,
+    source: null,
+    gain: null,
+    startedAt: 0,
+    startMapMs: 0,
+    isPlaying: false,
+    rate: 1,
+    timeMs: 0,
     audioOffsetMs: 0,
 
-    buffer: null,
-    ac: null,
-    gain: null,
-    source: null,
-    isPlaying: false,
-    startedAt: 0,
-    startAudioOffsetSec: 0,
-    rate: 1,
+    // waveform
+    wf: { ready:false, peaks:null, blockSec:0, max:1, progress:0, gamma:0.62 },
 
-    timeMs: 0,
-
+    // mapping
     timing: [{ id: uid(), t:0, bpm:180, meter:4 }],
+
     notes: [],
     selected: new Set(),
+    undo: [],
 
+    // preview / autoplay
+    realtimePreview: true,
+    autoplay: true,
+    combo: 0,
+
+    // bookmarks
     bookmarks: [],
 
-    // waveform data
-    wf: {
-      ready:false,
-      peaks:null,
-      blockSize:2048,
-      blockSec:0,
-      robustMax:1,
-      progress:0
-    },
-
-    // caches
-    dpr: 1,
-    caches: {
-      edStatic: makeOffscreen(),
-      edWave: makeOffscreen(),
-      tlStatic: makeOffscreen(),
-      tlWave: makeOffscreen(),
-      pvStatic: makeOffscreen(), // receptors etc.
-    },
-    cacheMeta: {
-      edStaticKey:"",
-      edWaveKey:"",
-      tlStaticKey:"",
-      tlWaveKey:"",
-      pvStaticKey:"",
-      edWaveLastMsBucket:-1,
-      tlWaveLastMsBucket:-1,
-      edWaveLastPaint:0,
-      tlWaveLastPaint:0,
-    },
-
-    // interactions
     drag: {
       down:false,
-      pointerId:null,
-      mode:"none", // box, move, holdCreate, seekTL
-      x0:0, y0:0,
+      mode:"none",
+      x0:0,y0:0,
+      box:null,
       moveSnap:null,
       holdId:null,
-      box:null
+      resizeId:null,
+      resizeWhich:null, // "end"
+      scrubWasPlaying:false,
     },
+
     tlDrag:false,
-    lastPointerLane:0,
+    miniDrag:false,
 
-    // preview
-    preview: {
-      enabled:true,
-      realtime:true,
-      autoplay:true,
-      combo:0,
-      autoIndex:0,
-      lastSeekTime:0,
-      lookAheadMs:2200,
-      lookBackMs:250,
-      hitPad:86,
-      speedFactor:0.75
-    },
-
-    undo: []
+    rec: {
+      on:false,
+      quantize:true,
+      bindsByKeys: {
+        4:["d","f","j","k"],
+        5:["d","f","space","j","k"],
+        6:["s","d","f","j","k","l"],
+        7:["s","d","f","space","j","k","l"],
+      },
+      downMap: new Map(),
+    }
   };
 
-  function makeOffscreen(){
-    const c = document.createElement("canvas");
-    const ctx = c.getContext("2d");
-    return { c, ctx };
-  }
-
-  /* ==========================
-     DPR / Resize
-  ========================== */
-  const edCtx = edCanvas.getContext("2d");
-  const tlCtx = tlCanvas.getContext("2d");
-  const pvCtx = pvCanvas.getContext("2d");
-
-  function effectiveDPR(){
-    const d = window.devicePixelRatio || 1;
-    if(state.perfCap === 0) return d;
-    return Math.min(d, state.perfCap);
-  }
-
+  /* ===== Canvas resize (retina safe) ===== */
   function resizeCanvas(canvas, wrap){
     const r = wrap.getBoundingClientRect();
-    const dpr = state.dpr;
+    const dpr = devicePixelRatio || 1;
     canvas.width = Math.max(1, Math.floor(r.width * dpr));
     canvas.height = Math.max(1, Math.floor(r.height * dpr));
     const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.imageSmoothingEnabled = true;
   }
+  const roStage = new ResizeObserver(()=> resizeCanvas(stageCanvas, editWrap));
+  const roTl    = new ResizeObserver(()=> resizeCanvas(timelineCanvas, timelineWrap));
+  const roMini  = new ResizeObserver(()=> resizeCanvas(miniCanvas, miniCanvas.parentElement));
+  roStage.observe(editWrap);
+  roTl.observe(timelineWrap);
+  roMini.observe(miniCanvas.parentElement);
 
-  function resizeOffscreen(off, w, h){
-    const dpr = state.dpr;
-    off.c.width = Math.max(1, Math.floor(w * dpr));
-    off.c.height = Math.max(1, Math.floor(h * dpr));
-    off.ctx.setTransform(dpr,0,0,dpr,0,0);
-    off.ctx.imageSmoothingEnabled = true;
-  }
+  resizeCanvas(stageCanvas, editWrap);
+  resizeCanvas(timelineCanvas, timelineWrap);
+  resizeCanvas(miniCanvas, miniCanvas.parentElement);
 
-  function doResizeAll(){
-    state.dpr = effectiveDPR();
+  const SW = ()=> stageCanvas.width / (devicePixelRatio||1);
+  const SH = ()=> stageCanvas.height / (devicePixelRatio||1);
+  const TW = ()=> timelineCanvas.width / (devicePixelRatio||1);
+  const TH = ()=> timelineCanvas.height / (devicePixelRatio||1);
+  const MW = ()=> miniCanvas.width / (devicePixelRatio||1);
+  const MH = ()=> miniCanvas.height / (devicePixelRatio||1);
 
-    resizeCanvas(edCanvas, edPane);
-    resizeCanvas(tlCanvas, tlPane);
-    resizeCanvas(pvCanvas, pvPane);
-
-    // reset caches to fit
-    const EW = edCanvas.width / state.dpr;
-    const EH = edCanvas.height / state.dpr;
-    const TW = tlCanvas.width / state.dpr;
-    const TH = tlCanvas.height / state.dpr;
-    const PW = pvCanvas.width / state.dpr;
-    const PH = pvCanvas.height / state.dpr;
-
-    resizeOffscreen(state.caches.edStatic, EW, EH);
-    resizeOffscreen(state.caches.edWave, EW, EH);
-    resizeOffscreen(state.caches.tlStatic, TW, TH);
-    resizeOffscreen(state.caches.tlWave, TW, TH);
-    resizeOffscreen(state.caches.pvStatic, PW, PH);
-
-    state.cacheMeta.edStaticKey = "";
-    state.cacheMeta.edWaveKey = "";
-    state.cacheMeta.tlStaticKey = "";
-    state.cacheMeta.tlWaveKey = "";
-    state.cacheMeta.pvStaticKey = "";
-  }
-
-  const ro = new ResizeObserver(doResizeAll);
-  ro.observe(edPane);
-  ro.observe(tlPane);
-  ro.observe(pvPane);
-  window.addEventListener("resize", doResizeAll);
-
-  /* ==========================
-     Timing / Snap
-  ========================== */
+  /* ===== Timing helpers ===== */
   function normalizeTiming(){
     state.timing.sort((a,b)=>a.t-b.t);
     const out=[];
     for(const tp of state.timing){
-      if(out.length && out[out.length-1].t === tp.t) out[out.length-1] = tp;
+      if(out.length && out[out.length-1].t === tp.t) out[out.length-1]=tp;
       else out.push(tp);
     }
     state.timing = out;
   }
-
   function activeTP(ms){
     normalizeTiming();
     let best = state.timing[0];
@@ -912,426 +756,62 @@
     }
     return best;
   }
-
-  function snapDiv(){ return SNAP_OPTS[state.snapIndex] || 4; }
-
   function snapMsAt(ms){
     const tp = activeTP(ms);
     const beatLen = 60000 / tp.bpm;
-    return beatLen / snapDiv();
+    return beatLen / state.snap;
   }
-
   function quantizeAt(ms){
     if(!state.snapOn) return ms;
     const tp = activeTP(ms);
     const beatLen = 60000 / tp.bpm;
-    const step = beatLen / snapDiv();
+    const step = beatLen / state.snap;
     const base = tp.t;
     const n = Math.round((ms - base) / step);
     return base + n*step;
   }
 
-  function setSnapIndex(i){
-    state.snapIndex = clamp(i, 0, SNAP_OPTS.length-1);
-    const label = `1/${snapDiv()}`;
-    snapLbl.textContent = label;
-    hudSnap.textContent = label;
-    state.cacheMeta.tlStaticKey = ""; // grid changes
-    state.cacheMeta.edStaticKey = "";
-  }
+  /* ===== Geometry (mania in-game style) ===== */
+  function laneW(){ return SW() / state.keys; }
+  function laneFromX(x){ return clamp(Math.floor(x / laneW()), 0, state.keys-1); }
+  function xLaneCenter(lane){ return (lane + 0.5) * laneW(); }
 
-  function setKeys(k){
-    state.keys = clamp(k,4,7);
-    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
-    // selection might contain out-of-range lane notes fixed above
-    hudKeys.textContent = String(state.keys);
-    state.cacheMeta.edStaticKey = "";
-    state.cacheMeta.tlStaticKey = "";
-    state.cacheMeta.pvStaticKey = "";
-  }
+  // hitline near bottom
+  function hitY(){ return SH() - 120; }
+  function pxPerMs(){ return state.scrollPxPerSec / 1000; }
+  function yFromTimeInGame(tMs){ return hitY() - (tMs - state.timeMs) * pxPerMs(); }
+  function timeFromYInGame(y){ return state.timeMs + (hitY() - y) / pxPerMs(); }
 
-  /* ==========================
-     Geometry
-  ========================== */
-  const EW = ()=> edCanvas.width / state.dpr;
-  const EH = ()=> edCanvas.height / state.dpr;
-  const TW = ()=> tlCanvas.width / state.dpr;
-  const TH = ()=> tlCanvas.height / state.dpr;
-  const PW = ()=> pvCanvas.width / state.dpr;
-  const PH = ()=> pvCanvas.height / state.dpr;
-
-  const pxPerMs = ()=> state.scrollPxPerSec / 1000;
-  const centerY = ()=> Math.floor(EH()*0.58);
-  const laneW = ()=> EW() / state.keys;
-
-  function xFromLane(lane){ return lane * laneW(); }
-
-  function laneFromX(x){
-    // important: x is in CSS coords already
-    return clamp(Math.floor(x / laneW()), 0, state.keys-1);
-  }
-
-  function yFromTime(ms){
-    return centerY() - (ms - state.timeMs) * pxPerMs();
-  }
-
-  function timeFromY(y){
-    return state.timeMs + (centerY() - y) / pxPerMs();
-  }
-
-  function tlRange(){
-    const half = (state.tlWinSec*1000)/2;
-    return { start: state.timeMs - half, end: state.timeMs + half };
-  }
-  function yFromTimeTL(ms){
-    const {start,end} = tlRange();
-    const h = TH();
-    return ((ms - start) / (end - start)) * h;
-  }
-  function timeFromYTL(y){
-    const {start,end} = tlRange();
-    const h = TH();
-    return start + (y / h) * (end - start);
-  }
-
-  function mousePosOnCanvas(e, canvas){
-    const r = canvas.getBoundingClientRect();
-    const x = (e.clientX - r.left);
-    const y = (e.clientY - r.top);
-    return { x, y };
-  }
-
-  /* ==========================
-     Undo
-  ========================== */
-  function pushUndo(){
-    state.undo.push(JSON.stringify({
-      keys: state.keys,
-      snapIndex: state.snapIndex,
-      snapOn: state.snapOn,
-      scrollPxPerSec: state.scrollPxPerSec,
-      tlWinSec: state.tlWinSec,
-      audioOffsetMs: state.audioOffsetMs,
-      timing: state.timing,
-      notes: state.notes,
-      bookmarks: state.bookmarks,
-      preview: {
-        realtime: state.preview.realtime,
-        autoplay: state.preview.autoplay
-      }
-    }));
-    if(state.undo.length > 200) state.undo.shift();
-    undoBtn.disabled = state.undo.length === 0;
-  }
-
-  function doUndo(){
-    const raw = state.undo.pop();
-    if(!raw) return;
-    const s = JSON.parse(raw);
-
-    state.keys = s.keys ?? state.keys;
-    state.snapIndex = s.snapIndex ?? state.snapIndex;
-    state.snapOn = s.snapOn ?? state.snapOn;
-    state.scrollPxPerSec = s.scrollPxPerSec ?? state.scrollPxPerSec;
-    state.tlWinSec = s.tlWinSec ?? state.tlWinSec;
-    state.audioOffsetMs = s.audioOffsetMs ?? state.audioOffsetMs;
-
-    state.timing = s.timing ?? state.timing;
-    state.notes = s.notes ?? state.notes;
-    state.bookmarks = s.bookmarks ?? state.bookmarks;
-
-    state.preview.realtime = s.preview?.realtime ?? state.preview.realtime;
-    state.preview.autoplay = s.preview?.autoplay ?? state.preview.autoplay;
-
-    // sync UI
-    keysSel.value = String(state.keys);
-    scrollIn.value = String(state.scrollPxPerSec);
-    tlWinIn.value = String(state.tlWinSec);
-    offsetIn.value = String(state.audioOffsetMs);
-    snapOnSel.value = state.snapOn ? "on":"off";
-    autoSel.value = state.preview.autoplay ? "on":"off";
-
-    setKeys(state.keys);
-    setSnapIndex(state.snapIndex);
-    setSnapOn(state.snapOn);
-    setAudioOffset(state.audioOffsetMs);
-    setRealtimePreview(state.preview.realtime);
-    setAutoplay(state.preview.autoplay);
-
-    normalizeTiming();
-    sortNotes();
-    rebuildAutoplayIndexForTime();
-    renderTPList();
-    renderBMList();
-    updateSelectionUI();
-
-    undoBtn.disabled = state.undo.length === 0;
-  }
-
-  /* ==========================
-     Notes
-  ========================== */
-  function sortNotes(){
-    state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
-  }
-
-  function addNote(n){
-    pushUndo();
-    state.notes.push(n);
-    sortNotes();
-    state.selected.clear();
-    state.selected.add(n.id);
-    updateSelectionUI();
-    rebuildAutoplayIndexForTime();
-    exportBtn.disabled = false;
-  }
-
-  function deleteSelection(){
-    if(state.selected.size===0) return;
-    pushUndo();
-    state.notes = state.notes.filter(n => !state.selected.has(n.id));
-    state.selected.clear();
-    updateSelectionUI();
-    rebuildAutoplayIndexForTime();
-  }
-
-  function clearNotes(){
-    pushUndo();
-    state.notes = [];
-    state.selected.clear();
-    updateSelectionUI();
-    rebuildAutoplayIndexForTime();
-  }
-
-  function getSelectedOne(){
-    if(state.selected.size!==1) return null;
-    const id = [...state.selected][0];
-    return state.notes.find(n => n.id===id) || null;
-  }
-
-  function updateSelectionUI(){
-    selFmt.textContent = `sel: ${state.selected.size}`;
-    deleteBtn.disabled = state.selected.size===0;
-
-    // also show selection count in transport
-    // (no big props panel — keeping osu-like minimal)
-  }
-
-  function rectNorm(b){
-    return {
-      x0: Math.min(b.x0,b.x1),
-      y0: Math.min(b.y0,b.y1),
-      x1: Math.max(b.x0,b.x1),
-      y1: Math.max(b.y0,b.y1),
-    };
-  }
-
-  function findNoteAt(mx, my){
-    const lw = laneW();
-    const lane = laneFromX(mx);
-    const x0 = xFromLane(lane);
-
-    for(let i=state.notes.length-1; i>=0; i--){
-      const n = state.notes[i];
-      if(n.lane !== lane) continue;
-      const y = yFromTime(n.t);
-
-      const pad = 7;
-      const rectW = lw - pad*2;
-      const rectH = 12;
-
-      const rx = x0+pad, ry = y-rectH/2;
-      if(mx>=rx && mx<=rx+rectW && my>=ry && my<=ry+rectH) return n;
-
-      if(n.type==="hold"){
-        const y2 = yFromTime(n.end);
-        const top = Math.min(y,y2);
-        const bot = Math.max(y,y2);
-        const barX = x0 + lw/2 - 3;
-        if(mx >= barX-10 && mx <= barX+16 && my >= top-10 && my <= bot+10) return n;
-      }
-    }
-    return null;
-  }
-
-  function selectByBox(box, additive=false){
-    const b = rectNorm(box);
-    const tA = state.snapOn ? quantizeAt(timeFromY(b.y1)) : timeFromY(b.y1);
-    const tB = state.snapOn ? quantizeAt(timeFromY(b.y0)) : timeFromY(b.y0);
-    const tMin = Math.min(tA,tB), tMax = Math.max(tA,tB);
-
-    const laneMin = laneFromX(b.x0);
-    const laneMax = laneFromX(b.x1);
-
-    if(!additive) state.selected.clear();
-
-    for(const n of state.notes){
-      if(n.lane < laneMin || n.lane > laneMax) continue;
-      if(n.type==="tap"){
-        if(n.t >= tMin && n.t <= tMax) state.selected.add(n.id);
-      } else {
-        if(!(n.end < tMin || n.t > tMax)) state.selected.add(n.id);
-      }
-    }
-    updateSelectionUI();
-  }
-
-  function beginMoveSelection(){
-    const snap = new Map();
-    for(const n of state.notes){
-      if(state.selected.has(n.id)){
-        snap.set(n.id, { t:n.t, end:n.end, lane:n.lane });
-      }
-    }
-    state.drag.moveSnap = snap;
-  }
-
-  function applyMoveSelection(deltaLane, deltaMs){
-    const snap = state.drag.moveSnap;
-    if(!snap) return;
-    for(const n of state.notes){
-      if(!state.selected.has(n.id)) continue;
-      const base = snap.get(n.id);
-      if(!base) continue;
-
-      const lane = clamp(base.lane + deltaLane, 0, state.keys-1);
-      let t = base.t + deltaMs;
-      t = state.snapOn ? quantizeAt(t) : t;
-
-      n.lane = lane;
-      n.t = t;
-
-      if(n.type==="hold"){
-        let end = base.end + deltaMs;
-        end = state.snapOn ? quantizeAt(end) : end;
-        n.end = Math.max(n.t+1, end);
-      } else {
-        n.end = n.t;
-      }
-    }
-    sortNotes();
-    rebuildAutoplayIndexForTime();
-  }
-
-  /* ==========================
-     Bookmarks
-  ========================== */
-  function addBookmarkAt(ms){
-    pushUndo();
-    const t = Math.round(ms);
-    state.bookmarks.push({ id: uid(), t });
-    state.bookmarks.sort((a,b)=>a.t-b.t);
-    renderBMList();
-  }
-
-  function clearBookmarks(){
-    pushUndo();
-    state.bookmarks = [];
-    renderBMList();
-  }
-
-  function renderBMList(){
-    bookmarkFmt.textContent = `bm: ${state.bookmarks.length}`;
-    if(state.bookmarks.length===0){
-      bmList.innerHTML = `<div class="item"><span>—</span><span class="mono">sem bookmarks</span></div>`;
-      return;
-    }
-    bmList.innerHTML = state.bookmarks.map(b => `
-      <div class="item" data-id="${b.id}">
-        <span><b>${b.t}</b> ms</span>
-        <span style="display:flex; gap:10px; align-items:center">
-          <span class="act" data-act="go">go</span>
-          <span class="act" data-act="del">del</span>
-        </span>
-      </div>
-    `).join("");
-
-    bmList.querySelectorAll(".item").forEach(row=>{
-      const id = row.getAttribute("data-id");
-      row.querySelector('[data-act="go"]').addEventListener("click", (e)=>{
-        e.stopPropagation();
-        const b = state.bookmarks.find(x=>x.id===id);
-        if(b) seekMs(b.t);
-      });
-      row.querySelector('[data-act="del"]').addEventListener("click", (e)=>{
-        e.stopPropagation();
-        pushUndo();
-        state.bookmarks = state.bookmarks.filter(x=>x.id!==id);
-        renderBMList();
-      });
-    });
-  }
-
-  /* ==========================
-     Audio engine (fixed pause/seek/offset)
-  ========================== */
+  /* ===== Audio engine (pause/seek consertado + offset só do áudio) ===== */
   async function ensureAC(){
     if(state.ac) return state.ac;
     state.ac = new (window.AudioContext || window.webkitAudioContext)();
     state.gain = state.ac.createGain();
-    state.gain.gain.value = parseFloat(vol.value) || 1;
+    state.gain.gain.value = parseFloat(volRange.value) || 1;
     state.gain.connect(state.ac.destination);
     return state.ac;
   }
-
   function cleanupSource(){
-    try{ if(state.source) state.source.stop(); }catch(e){}
+    try{
+      if(state.source){
+        state.source.onended = null;
+        state.source.stop(0);
+      }
+    }catch(e){}
     state.source = null;
   }
-
-  function setAudioOffset(ms){
-    state.audioOffsetMs = Math.round(ms||0);
-    hudOffset.textContent = String(state.audioOffsetMs);
-    offsetIn.value = String(state.audioOffsetMs);
-    if(state.isPlaying){
-      pause();
-      play();
-    } else {
-      rebuildAutoplayIndexForTime();
-    }
+  function getDurMs(){
+    return state.buffer ? state.buffer.duration * 1000 : 0;
+  }
+  function clampTimeMs(ms){
+    const max = getDurMs();
+    return clamp(ms, 0, max);
   }
 
-  function setSnapOn(on){
-    state.snapOn = !!on;
-    snapOnSel.value = state.snapOn ? "on":"off";
-  }
-
-  async function loadAudio(file){
-    const ac = await ensureAC();
-    const arr = await file.arrayBuffer();
-    state.buffer = await ac.decodeAudioData(arr);
-
-    // reset playback
-    cleanupSource();
-    state.isPlaying = false;
-    state.timeMs = 0;
-    state.startedAt = 0;
-    state.startAudioOffsetSec = 0;
-
-    // UI enable
-    exportBtn.disabled = false;
-    clearBtn.disabled = false;
-    tpAddBtn.disabled = false;
-    tpResetBtn.disabled = false;
-    autoBpmBtn.disabled = false;
-    autoBpmStatus.textContent = "Pronto. Clique Detect para estimar BPM.";
-    audioName.textContent = file.name;
-
-    // waveform build
-    state.wf.ready = false;
-    state.wf.peaks = null;
-    wfStatus.textContent = "…";
-    buildPeaks();
-
-    // reset timing if empty
-    if(!state.timing || !state.timing.length){
-      state.timing = [{id:uid(), t:0, bpm:180, meter:4}];
-    }
-    normalizeTiming();
-    renderTPList();
-    renderBMList();
-
-    rebuildAutoplayIndexForTime();
+  function audioPosSecForMapMs(mapMs){
+    // áudio toca em mapMs + offset
+    const aMs = mapMs + state.audioOffsetMs;
+    return clamp(aMs/1000, 0, state.buffer ? state.buffer.duration : 0);
   }
 
   async function play(){
@@ -1341,147 +821,166 @@
 
     cleanupSource();
 
-    // audio should play at (editorTime + offset)
-    const durSec = state.buffer.duration;
-    const audioStartSec = clamp((state.timeMs + state.audioOffsetMs) / 1000, 0, durSec);
-
     const src = ac.createBufferSource();
     src.buffer = state.buffer;
     src.playbackRate.value = state.rate;
     src.connect(state.gain);
 
     state.startedAt = ac.currentTime;
-    state.startAudioOffsetSec = audioStartSec;
+    state.startMapMs = state.timeMs;
 
-    src.start(0, audioStartSec);
+    const off = audioPosSecForMapMs(state.timeMs);
+    // se offset empurra além do fim, não toca
+    if(off >= state.buffer.duration){
+      state.isPlaying = false;
+      return;
+    }
+    src.start(0, off);
+
     state.source = src;
     state.isPlaying = true;
 
     src.onended = () => {
-      // stop state when finished
+      // acabou natural
       if(state.isPlaying){
         state.isPlaying = false;
-        cleanupSource();
       }
     };
   }
 
   function pause(){
     if(!state.ac || !state.isPlaying) return;
-    const ac = state.ac;
-
-    // where audio is now:
-    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
-    const audioPosSec = state.startAudioOffsetSec + playedSec;
-
-    // update editor time from audio pos - offset
-    const ms = audioPosSec * 1000 - state.audioOffsetMs;
-    state.timeMs = clamp(ms, 0, state.buffer ? state.buffer.duration*1000 : ms);
-
+    // atualiza timeMs antes de parar
+    updateTimeFromAudio(true);
     cleanupSource();
     state.isPlaying = false;
-    rebuildAutoplayIndexForTime();
   }
 
   function stop(){
-    if(!state.buffer) return;
-    if(state.isPlaying) pause();
+    pause();
     state.timeMs = 0;
-    rebuildAutoplayIndexForTime();
+    state.combo = 0;
+    updateComboOverlay();
   }
 
-  function updateTimeFromAudio(){
-    if(!state.isPlaying || !state.ac || !state.buffer) return;
-    const ac = state.ac;
-    const durMs = state.buffer.duration * 1000;
-
-    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
-    const audioPosSec = state.startAudioOffsetSec + playedSec;
-    const ms = audioPosSec * 1000 - state.audioOffsetMs;
-
-    state.timeMs = clamp(ms, 0, durMs);
-    if(state.timeMs >= durMs-1){
-      state.isPlaying = false;
-      cleanupSource();
+  function seekMs(ms, {restartIfPlaying=true} = {}){
+    if(!state.buffer){
+      state.timeMs = Math.max(0, ms);
+      return;
     }
-  }
+    state.timeMs = clampTimeMs(ms);
 
-  function seekMs(ms){
-    if(!state.buffer) return;
-    const durMs = state.buffer.duration * 1000;
-    state.timeMs = clamp(ms, 0, durMs);
-
-    if(state.isPlaying){
+    if(state.isPlaying && restartIfPlaying){
       pause();
       play();
-    } else {
-      rebuildAutoplayIndexForTime();
     }
   }
 
-  /* ==========================
-     Waveform (robust normalization + throttled cache)
-  ========================== */
+  function updateTimeFromAudio(force=false){
+    if(!state.isPlaying || !state.ac) return;
+    const ac = state.ac;
+    const dt = (ac.currentTime - state.startedAt) * state.rate;
+    const newMap = state.startMapMs + dt*1000;
+    const clamped = clampTimeMs(newMap);
+    state.timeMs = clamped;
+
+    // se bateu no fim, pausa limpinho
+    if(force || clamped >= getDurMs()-0.5){
+      if(clamped >= getDurMs()-0.5){
+        state.isPlaying = false;
+        cleanupSource();
+      }
+    }
+  }
+
+  async function loadAudio(file){
+    const ac = await ensureAC();
+    const arr = await file.arrayBuffer();
+    state.buffer = await ac.decodeAudioData(arr);
+
+    state.timeMs = 0;
+    state.combo = 0;
+    updateComboOverlay();
+
+    cleanupSource();
+    state.isPlaying = false;
+
+    exportBtn.disabled = false;
+    clearNotesBtn.disabled = false;
+    tpAdd.disabled = false;
+    tpSort.disabled = false;
+    tpReset.disabled = false;
+    autoBpmBtn.disabled = false;
+    bookmarkBtn.disabled = false;
+
+    // waveform
+    state.wf.ready = false;
+    state.wf.peaks = null;
+    state.wf.progress = 0;
+    tlWfLbl.textContent = "gerando…";
+    miniLbl.textContent = "gerando…";
+    buildPeaks();
+  }
+
+  /* ===== Waveform peaks (mais leve + menos estourado) ===== */
   function buildPeaks(){
     const buf = state.buffer;
     if(!buf) return;
+
     const wf = state.wf;
-
     const dur = buf.duration;
-    wf.blockSize = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
 
-    const channels = buf.numberOfChannels;
+    // blocos maiores = mais leve
+    const sr = buf.sampleRate;
+    const baseBlock = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
+    const block = baseBlock;
     const len = buf.length;
-    const block = wf.blockSize;
     const blocks = Math.ceil(len / block);
 
     wf.peaks = new Float32Array(blocks);
-    wf.blockSec = block / buf.sampleRate;
+    wf.blockSec = block / sr;
 
+    const channels = buf.numberOfChannels;
     const ch = [];
     for(let c=0;c<channels;c++) ch.push(buf.getChannelData(c));
 
-    let i=0;
+    let i=0, max=1e-9;
+
     function step(){
       const t0 = performance.now();
-      const budget = 12;
+      const budget = 10; // ms por frame
 
       while(i < blocks && performance.now() - t0 < budget){
         const start = i * block;
         const end = Math.min(len, start + block);
-        let peak=0;
+
+        // RMS simples (fica mais “justo” que peak puro)
+        let sum = 0;
+        const n = end - start;
 
         for(let s=start; s<end; s++){
           let v=0;
           for(let c=0;c<channels;c++) v += ch[c][s];
           v /= channels;
-          const a = Math.abs(v);
-          if(a > peak) peak = a;
+          sum += v*v;
         }
-        wf.peaks[i] = peak;
+        const rms = Math.sqrt(sum / Math.max(1,n));
+        wf.peaks[i] = rms;
+        if(rms > max) max = rms;
         i++;
       }
 
       wf.progress = i/blocks;
-      wfStatus.textContent = wf.progress >= 1 ? "ok" : Math.round(wf.progress*100) + "%";
+      const pct = Math.round(wf.progress*100);
+      tlWfLbl.textContent = wf.progress >= 1 ? "ok" : (pct + "%");
+      miniLbl.textContent = tlWfLbl.textContent;
 
-      if(i < blocks){
-        requestAnimationFrame(step);
-      } else {
-        // robust max by sampling (p99)
-        const peaks = wf.peaks;
-        const sample = [];
-        const stride = Math.max(1, Math.floor(peaks.length / 5000));
-        for(let k=0; k<peaks.length; k+=stride) sample.push(peaks[k]);
-        sample.sort((a,b)=>a-b);
-        const idx = Math.floor(sample.length * 0.99);
-        wf.robustMax = sample[idx] || 1;
+      if(i < blocks) requestAnimationFrame(step);
+      else {
+        wf.max = max || 1;
         wf.ready = true;
-        wfStatus.textContent = "ok";
-
-        // invalidate wave caches
-        state.cacheMeta.edWaveKey = "";
-        state.cacheMeta.tlWaveKey = "";
+        tlWfLbl.textContent = "ok";
+        miniLbl.textContent = "ok";
       }
     }
     requestAnimationFrame(step);
@@ -1493,637 +992,172 @@
     const sec = ms / 1000;
     const idx = Math.floor(sec / wf.blockSec);
     if(idx < 0 || idx >= wf.peaks.length) return 0;
-    let a = wf.peaks[idx] / (wf.robustMax || 1);
+    let a = wf.peaks[idx] / wf.max;            // 0..1
     a = clamp(a, 0, 1);
-    // gamma for nicer detail (osu-like)
-    a = Math.pow(a, 0.65);
+    // compressão (menos estourado)
+    a = Math.pow(a, wf.gamma);
     return a;
   }
 
-  /* ==========================
-     Preview autoplay index / combo
-  ========================== */
-  function rebuildAutoplayIndexForTime(){
-    if(!state.preview.autoplay){
-      state.preview.combo = 0;
-      comboLbl.textContent = "0";
+  /* ===== Undo ===== */
+  function pushUndo(){
+    state.undo.push(JSON.stringify({
+      keys: state.keys,
+      snap: state.snap,
+      snapOn: state.snapOn,
+      scrollPxPerSec: state.scrollPxPerSec,
+      tlWinSec: state.tlWinSec,
+      timing: state.timing,
+      notes: state.notes,
+      bookmarks: state.bookmarks,
+      meta: getMeta(),
+      audioOffsetMs: state.audioOffsetMs,
+    }));
+    if(state.undo.length > 250) state.undo.shift();
+    undoBtn.disabled = state.undo.length === 0;
+  }
+
+  function doUndo(){
+    const raw = state.undo.pop();
+    if(!raw) return;
+    const s = JSON.parse(raw);
+
+    state.keys = s.keys ?? state.keys;
+    state.snap = s.snap ?? state.snap;
+    state.snapOn = s.snapOn ?? state.snapOn;
+    state.scrollPxPerSec = s.scrollPxPerSec ?? state.scrollPxPerSec;
+    state.tlWinSec = s.tlWinSec ?? state.tlWinSec;
+    state.timing = s.timing ?? state.timing;
+    state.notes = s.notes ?? state.notes;
+    state.bookmarks = s.bookmarks ?? state.bookmarks;
+    if(s.meta) setMeta(s.meta);
+    state.audioOffsetMs = s.audioOffsetMs ?? state.audioOffsetMs;
+
+    keysSel.value = String(state.keys);
+    scrollIn.value = String(state.scrollPxPerSec);
+    tlWinIn.value = String(state.tlWinSec);
+    audioOffsetIn.value = String(state.audioOffsetMs);
+
+    const idx = SNAP_OPTS.indexOf(state.snap);
+    snapRange.value = String(Math.max(0, idx));
+
+    state.selected.clear();
+    updateSelectionUI();
+    renderTPList();
+    renderBookmarks();
+    undoBtn.disabled = state.undo.length === 0;
+  }
+
+  /* ===== Notes ===== */
+  function sortNotes(){ state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane); }
+
+  function addNote(note){
+    state.notes.push(note);
+    sortNotes();
+    state.selected.clear();
+    state.selected.add(note.id);
+    updateSelectionUI();
+  }
+
+  function deleteSelection(){
+    if(state.selected.size === 0) return;
+    pushUndo();
+    state.notes = state.notes.filter(n => !state.selected.has(n.id));
+    state.selected.clear();
+    updateSelectionUI();
+  }
+
+  function clearNotes(){
+    pushUndo();
+    state.notes = [];
+    state.selected.clear();
+    state.combo = 0;
+    updateComboOverlay();
+    updateSelectionUI();
+  }
+
+  function getSelectedOne(){
+    if(state.selected.size !== 1) return null;
+    const id = [...state.selected][0];
+    return state.notes.find(n => n.id === id) || null;
+  }
+
+  function updateSelectionUI(){
+    deleteBtn.disabled = state.selected.size === 0;
+  }
+
+  /* ===== Bookmarks ===== */
+  function addBookmark(){
+    if(!state.buffer) return;
+    pushUndo();
+    state.bookmarks.push({ id: uid(), t: Math.round(state.timeMs) });
+    state.bookmarks.sort((a,b)=>a.t-b.t);
+    renderBookmarks();
+  }
+
+  function renderBookmarks(){
+    const arr = state.bookmarks;
+    if(arr.length === 0){
+      bmList.innerHTML = `<div class="item"><span>—</span><span class="mono">sem bookmarks</span></div>`;
       return;
     }
-    sortNotes();
-    const idx = lowerBound(state.notes, state.timeMs); // first note with t > time
-    state.preview.autoIndex = idx;
-    state.preview.combo = idx;
-    comboLbl.textContent = String(state.preview.combo);
-  }
-
-  function advanceAutoplay(){
-    if(!state.preview.realtime || !state.preview.autoplay) return;
-    // only advance while playing forward
-    if(!state.isPlaying) {
-      // still show combo based on current time (for seeking / scrubbing)
-      rebuildAutoplayIndexForTime();
-      return;
-    }
-    // catch up (in case frames drop)
-    sortNotes();
-    const idxNow = lowerBound(state.notes, state.timeMs);
-    if(idxNow !== state.preview.autoIndex){
-      state.preview.autoIndex = idxNow;
-      state.preview.combo = idxNow;
-      comboLbl.textContent = String(state.preview.combo);
-    }
-  }
-
-  /* ==========================
-     Rendering (cached layers)
-  ========================== */
-  function drawEdStatic(){
-    const key = `${EW()}x${EH()}|k${state.keys}|snap${snapDiv()}|bpm${activeTP(state.timeMs).bpm.toFixed(3)}|so${state.snapOn?1:0}`;
-    if(state.cacheMeta.edStaticKey === key) return;
-    state.cacheMeta.edStaticKey = key;
-
-    const {ctx} = state.caches.edStatic;
-    const w = EW(), h = EH();
-    ctx.clearRect(0,0,w,h);
-
-    // base
-    ctx.fillStyle = "#070a0f";
-    ctx.fillRect(0,0,w,h);
-
-    // lanes
-    const lw = laneW();
-    for(let i=0;i<state.keys;i++){
-      ctx.fillStyle = "rgba(255,255,255,.04)";
-      ctx.fillRect(i*lw, 0, lw-1, h);
-      ctx.fillStyle = "rgba(255,255,255,.09)";
-      ctx.fillRect(i*lw, 0, 1, h);
-    }
-    ctx.fillStyle = "rgba(255,255,255,.12)";
-    ctx.fillRect(w-1,0,1,h);
-
-    // subtle center waveform lane backdrop area
-    ctx.globalAlpha = 0.20;
-    ctx.fillStyle = "rgba(0,0,0,1)";
-    ctx.fillRect(w*0.33, 0, w*0.34, h);
-    ctx.globalAlpha = 1;
-
-    // hitline (red like osu editor)
-    ctx.strokeStyle = "rgba(255,51,85,.88)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, centerY());
-    ctx.lineTo(w, centerY());
-    ctx.stroke();
-  }
-
-  function drawEdWaveCache(){
-    // waveform depends on time; throttle to reduce lag
-    if(!state.wf.ready) return;
-    const now = performance.now();
-    if(now - state.cacheMeta.edWaveLastPaint < 70) return; // ~14 fps
-
-    const bucket = Math.floor(state.timeMs / 40);
-    const key = `${EW()}x${EH()}|bucket${bucket}|spd${state.scrollPxPerSec}|off${state.audioOffsetMs}`;
-    if(state.cacheMeta.edWaveKey === key) return;
-    state.cacheMeta.edWaveKey = key;
-    state.cacheMeta.edWaveLastPaint = now;
-
-    const {ctx} = state.caches.edWave;
-    const w = EW(), h = EH();
-    ctx.clearRect(0,0,w,h);
-
-    // waveform “osu-like” centered
-    const midX = Math.floor(w*0.5);
-    ctx.globalAlpha = 0.85;
-    ctx.strokeStyle = "rgba(34,201,255,.95)";
-    ctx.lineWidth = 1;
-
-    for(let y=0; y<=h; y+=2){
-      const ms = timeFromY(y);
-      const a = ampAtMs(ms);
-      // gentle smoothing with neighbor sampling
-      const a2 = ampAtMs(ms + 10);
-      const a3 = ampAtMs(ms - 10);
-      const amp = Math.max(a, a2*0.92, a3*0.92);
-      const ww = amp * (w*0.22);
-      ctx.beginPath();
-      ctx.moveTo(midX - ww, y);
-      ctx.lineTo(midX + ww, y);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawEdDynamic(){
-    const w = EW(), h = EH();
-    edCtx.clearRect(0,0,w,h);
-
-    // static + wave cache
-    drawEdStatic();
-    if(state.wf.ready) drawEdWaveCache();
-
-    edCtx.drawImage(state.caches.edStatic.c, 0,0, w,h);
-    if(state.wf.ready) edCtx.drawImage(state.caches.edWave.c, 0,0, w,h);
-
-    // grid lines (beat/snap) dynamic
-    normalizeTiming();
-    const viewMs = h / pxPerMs();
-    const tMin = state.timeMs - viewMs*0.70;
-    const tMax = state.timeMs + viewMs*0.50;
-
-    const tps = state.timing.slice();
-    for(let i=0;i<tps.length;i++){
-      const tp = tps[i];
-      const next = tps[i+1];
-      const segStart = Math.max(tMin, tp.t);
-      const segEnd = Math.min(tMax, next ? next.t : Infinity);
-      if(segEnd <= segStart) continue;
-
-      const beatLen = 60000 / tp.bpm;
-      const meter = tp.meter || 4;
-      const step = beatLen / snapDiv();
-      const base = tp.t;
-
-      const n0 = Math.ceil((segStart - base) / step);
-      for(let t = base + n0*step; t <= segEnd; t += step){
-        const y = yFromTime(t);
-        if(y < -60 || y > h+60) continue;
-
-        const rel = t - base;
-        const beatIndex = Math.round(rel / beatLen);
-        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
-        const isBar = isBeat && (beatIndex % meter === 0);
-
-        const a = isBar ? 0.20 : isBeat ? 0.13 : 0.07;
-        edCtx.strokeStyle = `rgba(255,255,255,${a})`;
-        edCtx.lineWidth = isBar ? 1.8 : isBeat ? 1.2 : 1;
-        edCtx.beginPath();
-        edCtx.moveTo(0,y);
-        edCtx.lineTo(w,y);
-        edCtx.stroke();
-      }
-    }
-
-    // bookmarks (white small line)
-    if(state.bookmarks.length){
-      edCtx.globalAlpha = 0.35;
-      edCtx.fillStyle = "rgba(233,238,247,1)";
-      for(const b of state.bookmarks){
-        const y = yFromTime(b.t);
-        if(y < -40 || y > h+40) continue;
-        edCtx.fillRect(0, y-1, w, 2);
-      }
-      edCtx.globalAlpha = 1;
-    }
-
-    // notes
-    const lw = laneW();
-    for(const n of state.notes){
-      const y = yFromTime(n.t);
-      if(y < -160 || y > h+160) continue;
-
-      const x0 = xFromLane(n.lane);
-      const pad = 7;
-      const rectW = lw - pad*2;
-      const rectH = 12;
-      const sel = state.selected.has(n.id);
-
-      if(n.type==="hold"){
-        const y2 = yFromTime(n.end);
-        const top = Math.min(y,y2);
-        const bot = Math.max(y,y2);
-
-        edCtx.fillStyle = sel ? "rgba(167,139,250,.36)" : "rgba(255,255,255,.14)";
-        edCtx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
-
-        edCtx.fillStyle = sel ? "rgba(167,139,250,.86)" : "rgba(255,255,255,.70)";
-        edCtx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
-      }
-
-      edCtx.fillStyle = sel ? "rgba(52,212,255,.95)" : "rgba(255,255,255,.78)";
-      edCtx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
-
-      if(sel){
-        edCtx.strokeStyle = "rgba(52,212,255,.95)";
-        edCtx.lineWidth = 1.2;
-        edCtx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
-      }
-    }
-
-    // selection box
-    if(state.drag.mode==="box" && state.drag.box){
-      const b = rectNorm(state.drag.box);
-      edCtx.fillStyle = "rgba(52,212,255,.10)";
-      edCtx.strokeStyle = "rgba(52,212,255,.70)";
-      edCtx.lineWidth = 1.4;
-      edCtx.fillRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
-      edCtx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
-    }
-  }
-
-  function drawTlStatic(){
-    const key = `${TW()}x${TH()}|k${state.keys}|snap${snapDiv()}|win${state.tlWinSec}`;
-    if(state.cacheMeta.tlStaticKey === key) return;
-    state.cacheMeta.tlStaticKey = key;
-
-    const {ctx} = state.caches.tlStatic;
-    const w = TW(), h = TH();
-    ctx.clearRect(0,0,w,h);
-
-    ctx.fillStyle = "#070a0f";
-    ctx.fillRect(0,0,w,h);
-
-    // subtle grid
-    ctx.globalAlpha = 0.10;
-    ctx.fillStyle = "rgba(255,255,255,1)";
-    for(let y=0; y<h; y+=44){
-      ctx.fillRect(0, y, w, 1);
-    }
-    ctx.globalAlpha = 1;
-
-    // right border
-    ctx.strokeStyle = "rgba(255,255,255,.08)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(w-0.5,0);
-    ctx.lineTo(w-0.5,h);
-    ctx.stroke();
-  }
-
-  function drawTlWaveCache(){
-    if(!state.wf.ready) return;
-    const now = performance.now();
-    if(now - state.cacheMeta.tlWaveLastPaint < 70) return;
-
-    const bucket = Math.floor(state.timeMs / 40);
-    const key = `${TW()}x${TH()}|bucket${bucket}|win${state.tlWinSec}`;
-    if(state.cacheMeta.tlWaveKey === key) return;
-    state.cacheMeta.tlWaveKey = key;
-    state.cacheMeta.tlWaveLastPaint = now;
-
-    const {ctx} = state.caches.tlWave;
-    const w = TW(), h = TH();
-    ctx.clearRect(0,0,w,h);
-
-    // waveform
-    ctx.globalAlpha = 0.85;
-    ctx.strokeStyle = "rgba(34,201,255,.95)";
-    ctx.lineWidth = 1;
-
-    const mid = w*0.55;
-    for(let y=0; y<=h; y+=2){
-      const ms = timeFromYTL(y);
-      const a = ampAtMs(ms);
-      const a2 = ampAtMs(ms+10), a3 = ampAtMs(ms-10);
-      const amp = Math.max(a, a2*0.92, a3*0.92);
-      const ww = amp*(w*0.40);
-      ctx.beginPath();
-      ctx.moveTo(mid-ww, y);
-      ctx.lineTo(mid+ww, y);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawTimeline(){
-    const w = TW(), h = TH();
-    tlCtx.clearRect(0,0,w,h);
-
-    drawTlStatic();
-    if(state.wf.ready) drawTlWaveCache();
-
-    tlCtx.drawImage(state.caches.tlStatic.c, 0,0, w,h);
-    if(state.wf.ready) tlCtx.drawImage(state.caches.tlWave.c, 0,0, w,h);
-
-    const {start,end} = tlRange();
-
-    // grid lines (snap)
-    const tp = activeTP(state.timeMs);
-    const beatLen = 60000 / tp.bpm;
-    const step = beatLen / snapDiv();
-    const base = tp.t;
-
-    const n0 = Math.ceil((start - base) / step);
-    for(let t = base + n0*step; t <= end; t += step){
-      const y = yFromTimeTL(t);
-      const rel = t - base;
-      const beatIndex = Math.round(rel / beatLen);
-      const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
-      const isBar = isBeat && (beatIndex % (tp.meter||4) === 0);
-
-      const a = isBar ? .22 : isBeat ? .14 : .08;
-      tlCtx.strokeStyle = `rgba(255,255,255,${a})`;
-      tlCtx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
-      tlCtx.beginPath();
-      tlCtx.moveTo(0,y);
-      tlCtx.lineTo(w,y);
-      tlCtx.stroke();
-    }
-
-    // notes markers
-    const laneWtl = w / state.keys;
-    for(const n of state.notes){
-      if(n.t < start || n.t > end) continue;
-      const y = yFromTimeTL(n.t);
-      const x = (n.lane + 0.5)*laneWtl;
-      tlCtx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.92)" : "rgba(255,255,255,.78)";
-      tlCtx.fillRect(x-3, y-3, 6, 6);
-
-      if(n.type==="hold"){
-        const y2 = yFromTimeTL(n.end);
-        tlCtx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.16)";
-        tlCtx.fillRect(x-2, Math.min(y,y2), 4, Math.abs(y2-y));
-      }
-    }
-
-    // bookmarks
-    if(state.bookmarks.length){
-      tlCtx.globalAlpha = 0.35;
-      tlCtx.fillStyle = "rgba(233,238,247,1)";
-      for(const b of state.bookmarks){
-        if(b.t < start || b.t > end) continue;
-        const y = yFromTimeTL(b.t);
-        tlCtx.fillRect(0, y-1, w, 2);
-      }
-      tlCtx.globalAlpha = 1;
-    }
-
-    // playhead
-    const yPH = yFromTimeTL(state.timeMs);
-    tlCtx.strokeStyle = "rgba(255,51,85,.92)";
-    tlCtx.lineWidth = 2;
-    tlCtx.beginPath();
-    tlCtx.moveTo(0, yPH);
-    tlCtx.lineTo(w, yPH);
-    tlCtx.stroke();
-  }
-
-  function drawPvStatic(){
-    const key = `${PW()}x${PH()}|k${state.keys}|hit${state.preview.hitPad}`;
-    if(state.cacheMeta.pvStaticKey === key) return;
-    state.cacheMeta.pvStaticKey = key;
-
-    const {ctx} = state.caches.pvStatic;
-    const w = PW(), h = PH();
-    ctx.clearRect(0,0,w,h);
-
-    // bg
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0,0,w,h);
-
-    // playfield pad
-    const padX = 30;
-    const top = 22;
-    const bottom = h-22;
-    const playW = w - padX*2;
-    const playH = bottom-top;
-
-    // lanes
-    const lw = playW / state.keys;
-    for(let i=0;i<state.keys;i++){
-      ctx.fillStyle = "rgba(255,255,255,.03)";
-      ctx.fillRect(padX+i*lw, top, lw-1, playH);
-      ctx.fillStyle = "rgba(255,255,255,.07)";
-      ctx.fillRect(padX+i*lw, top, 1, playH);
-    }
-    ctx.fillStyle = "rgba(255,255,255,.10)";
-    ctx.fillRect(padX+playW-1, top, 1, playH);
-
-    // hitline
-    const hitY = bottom - state.preview.hitPad;
-    ctx.strokeStyle = "rgba(233,238,247,.15)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(padX, hitY);
-    ctx.lineTo(padX+playW, hitY);
-    ctx.stroke();
-
-    // receptors circles
-    const r = Math.min(44, lw*0.36);
-    for(let i=0;i<state.keys;i++){
-      const cx = padX + (i+0.5)*lw;
-      const cy = hitY + 34;
-
-      // outer ring
-      ctx.strokeStyle = "rgba(233,238,247,.92)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI*2);
-      ctx.stroke();
-
-      // inner subtle
-      ctx.strokeStyle = "rgba(233,238,247,.16)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r-8, 0, Math.PI*2);
-      ctx.stroke();
-    }
-
-    // vignette
-    const grd = ctx.createLinearGradient(0, top, 0, bottom);
-    grd.addColorStop(0, "rgba(0,0,0,.65)");
-    grd.addColorStop(0.18, "rgba(0,0,0,.00)");
-    grd.addColorStop(0.85, "rgba(0,0,0,.12)");
-    grd.addColorStop(1, "rgba(0,0,0,.75)");
-    ctx.fillStyle = grd;
-    ctx.fillRect(padX, top, playW, playH);
-  }
-
-  function drawPreview(){
-    if(!state.preview.enabled) return;
-    const w = PW(), h = PH();
-
-    drawPvStatic();
-    pvCtx.clearRect(0,0,w,h);
-    pvCtx.drawImage(state.caches.pvStatic.c, 0,0, w,h);
-
-    if(!state.preview.realtime) return;
-
-    const padX = 30;
-    const top = 22;
-    const bottom = h-22;
-    const playW = w - padX*2;
-    const lw = playW / state.keys;
-    const hitY = bottom - state.preview.hitPad;
-
-    const pxPerMsPrev = (state.scrollPxPerSec * state.preview.speedFactor) / 1000;
-    const t0 = state.timeMs - state.preview.lookBackMs;
-    const t1 = state.timeMs + state.preview.lookAheadMs;
-
-    // draw notes circles
-    const r = Math.min(42, lw*0.34);
-
-    // to keep it cheap, iterate only visible notes (sorted)
-    // simple scan: since notes are sorted, start near lowerBound(t0)
-    sortNotes();
-    const startIdx = clamp(lowerBound(state.notes, t0) - 25, 0, state.notes.length);
-    for(let i=startIdx; i<state.notes.length; i++){
-      const n = state.notes[i];
-      if(n.t > t1 && (n.type!=="hold" || n.end > t1)) break;
-      if(n.type==="tap"){
-        // autoplay: hide after hit
-        if(state.preview.autoplay && n.t <= state.timeMs) continue;
-        if(n.t < t0 || n.t > t1) continue;
-
-        const cx = padX + (n.lane+0.5)*lw;
-        let cy = hitY - (n.t - state.timeMs)*pxPerMsPrev;
-
-        // keep above hitline a bit
-        if(cy > hitY + 8) continue;
-
-        pvCtx.strokeStyle = "rgba(233,238,247,.92)";
-        pvCtx.lineWidth = 3;
-        pvCtx.beginPath();
-        pvCtx.arc(cx, cy, r, 0, Math.PI*2);
-        pvCtx.stroke();
-
-        pvCtx.strokeStyle = "rgba(233,238,247,.18)";
-        pvCtx.lineWidth = 2;
-        pvCtx.beginPath();
-        pvCtx.arc(cx, cy, r-8, 0, Math.PI*2);
-        pvCtx.stroke();
-      } else {
-        // hold note
-        if(n.end < t0) continue;
-        if(n.t > t1) continue;
-
-        const cx = padX + (n.lane+0.5)*lw;
-
-        // positions
-        let headY = hitY - (n.t - state.timeMs)*pxPerMsPrev;
-        let tailY = hitY - (n.end - state.timeMs)*pxPerMsPrev;
-
-        // autoplay behavior: head disappears after hit; body stays until end, and never passes hitline
-        const now = state.timeMs;
-
-        if(state.preview.autoplay){
-          if(n.end <= now) continue; // done
-          // clamp body to hitline after start time
-          if(n.t <= now){
-            headY = hitY; // effectively pinned, but we won't draw head circle
-          }
-          // tail should not pass hitline either
-          tailY = Math.min(tailY, hitY);
-        } else {
-          // not autoplay: allow it to pass visually, but skip far below
-          if(Math.min(headY, tailY) > hitY + 90) continue;
-        }
-
-        // body
-        const topY = Math.min(headY, tailY);
-        const botY = Math.max(headY, tailY);
-
-        pvCtx.strokeStyle = "rgba(233,238,247,.22)";
-        pvCtx.lineWidth = 10;
-        pvCtx.lineCap = "round";
-        pvCtx.beginPath();
-        pvCtx.moveTo(cx, topY);
-        pvCtx.lineTo(cx, botY);
-        pvCtx.stroke();
-
-        // tail circle: show until end; in autoplay, it approaches hitline but won't go past
-        const showTail = (!state.preview.autoplay) || (n.end > now);
-        if(showTail){
-          pvCtx.strokeStyle = "rgba(233,238,247,.92)";
-          pvCtx.lineWidth = 3;
-          pvCtx.beginPath();
-          pvCtx.arc(cx, tailY, r, 0, Math.PI*2);
-          pvCtx.stroke();
-
-          pvCtx.strokeStyle = "rgba(233,238,247,.18)";
-          pvCtx.lineWidth = 2;
-          pvCtx.beginPath();
-          pvCtx.arc(cx, tailY, r-8, 0, Math.PI*2);
-          pvCtx.stroke();
-        }
-
-        // head circle: only if not autoplay hit yet
-        const showHead = (!state.preview.autoplay) || (n.t > now);
-        if(showHead){
-          pvCtx.strokeStyle = "rgba(233,238,247,.92)";
-          pvCtx.lineWidth = 3;
-          pvCtx.beginPath();
-          pvCtx.arc(cx, headY, r, 0, Math.PI*2);
-          pvCtx.stroke();
-
-          pvCtx.strokeStyle = "rgba(233,238,247,.18)";
-          pvCtx.lineWidth = 2;
-          pvCtx.beginPath();
-          pvCtx.arc(cx, headY, r-8, 0, Math.PI*2);
-          pvCtx.stroke();
-        }
-      }
-    }
-  }
-
-  /* ==========================
-     Timing list UI
-  ========================== */
-  function renderTPList(){
-    normalizeTiming();
-    tpList.innerHTML = state.timing.map(tp => `
-      <div class="item" data-id="${tp.id}">
-        <span><b>${Math.round(tp.t)}</b> ms • <b>${tp.bpm.toFixed(3)}</b> BPM</span>
-        <span style="display:flex; gap:10px; align-items:center">
-          <input data-k="t" class="mono" type="number" step="1" value="${Math.round(tp.t)}" style="width:120px">
-          <input data-k="bpm" class="mono" type="number" step="0.001" value="${tp.bpm}" style="width:120px">
-          <span class="act" data-act="del">x</span>
-        </span>
+    bmList.innerHTML = arr.map(b => `
+      <div class="item" data-id="${b.id}">
+        <span><b class="mono">${b.t}</b><span class="mono"> ms</span></span>
+        <span class="mono" style="opacity:.85">del</span>
       </div>
     `).join("");
 
-    tpList.querySelectorAll(".item").forEach(row=>{
-      const id = row.getAttribute("data-id");
-      const tp = state.timing.find(x=>x.id===id);
-      if(!tp) return;
-
-      const tIn = row.querySelector('input[data-k="t"]');
-      const bpmIn = row.querySelector('input[data-k="bpm"]');
-      const del = row.querySelector('[data-act="del"]');
-
-      tIn.addEventListener("change", ()=>{
-        pushUndo();
-        tp.t = Math.max(0, Math.round(Number(tIn.value)||0));
-        normalizeTiming();
-        renderTPList();
-      });
-      bpmIn.addEventListener("change", ()=>{
-        pushUndo();
-        tp.bpm = clamp(Number(bpmIn.value)||180, 30, 400);
-        normalizeTiming();
-        renderTPList();
-      });
-      del.addEventListener("click", ()=>{
-        if(state.timing.length<=1) return;
-        pushUndo();
-        state.timing = state.timing.filter(x=>x.id!==id);
-        normalizeTiming();
-        renderTPList();
+    bmList.querySelectorAll(".item").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const id = el.getAttribute("data-id");
+        const b = state.bookmarks.find(x=>x.id===id);
+        if(!b) return;
+        // clique -> seek; shift+clique -> delete
+        if(event.shiftKey){
+          pushUndo();
+          state.bookmarks = state.bookmarks.filter(x=>x.id!==id);
+          renderBookmarks();
+        }else{
+          seekMs(b.t);
+        }
       });
     });
   }
 
-  /* ==========================
-     Export .osu
-  ========================== */
+  /* ===== Meta / Export ===== */
+  function getMeta(){
+    return {
+      title: mTitle.value || "WebManiaEditor",
+      artist: mArtist.value || "Unknown",
+      creator: mCreator.value || "reze",
+      version: mVersion.value || "Easy"
+    };
+  }
+  function setMeta(m){
+    mTitle.value = m.title ?? mTitle.value;
+    mArtist.value = m.artist ?? mArtist.value;
+    mCreator.value = m.creator ?? mCreator.value;
+    mVersion.value = m.version ?? mVersion.value;
+  }
   function laneToOsuX(lane){
     const x = Math.floor((lane + 0.5) * 512 / state.keys);
     return clamp(x, 0, 511);
   }
-
   function exportOsu(){
     if(!state.buffer) return;
     normalizeTiming();
     sortNotes();
 
-    const audioFilename = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\","/");
+    const meta = getMeta();
+    const audioName = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\","/");
     const keys = state.keys;
 
     const header =
 `osu file format v14
 
 [General]
-AudioFilename: ${audioFilename}
+AudioFilename: ${audioName}
 AudioLeadIn: 0
 PreviewTime: -1
 Countdown: 0
@@ -2135,15 +1169,15 @@ SpecialStyle: 0
 WidescreenStoryboard: 0
 
 [Editor]
-BeatDivisor: ${snapDiv()}
+BeatDivisor: ${state.snap}
 GridSize: 4
 TimelineZoom: 1.0
 
 [Metadata]
-Title:WebManiaEditor
-Artist:Unknown
-Creator:reze
-Version:${keys}K
+Title:${meta.title}
+Artist:${meta.artist}
+Creator:${meta.creator}
+Version:${keys}K ${meta.version}
 Source:
 Tags:
 
@@ -2174,15 +1208,19 @@ SliderTickRate:1
 [HitObjects]
 `;
 
-    const hitLines = state.notes.map(n=>{
+    const hitLines = state.notes.map(n => {
       const x = laneToOsuX(n.lane);
       const y = 192;
       const t = Math.round(n.t);
-      if(n.type==="tap"){
-        return `${x},${y},${t},1,0,0:0:0:0:`;
+      const hs = n.hs ?? 0;
+      const vol = clamp(n.vol ?? 0, 0, 100);
+      const sample = `0:0:0:${vol}:`;
+
+      if(n.type === "tap"){
+        return `${x},${y},${t},1,${hs},${sample}`;
       } else {
         const end = Math.max(t+1, Math.round(n.end));
-        return `${x},${y},${t},128,0,${end}:0:0:0:0:`;
+        return `${x},${y},${t},128,${hs},${end}:${sample}`;
       }
     }).join("\n");
 
@@ -2190,559 +1228,809 @@ SliderTickRate:1
     const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `WebManiaEditor [${keys}K].osu`;
+    a.download = `${meta.title} - ${meta.artist} (${meta.creator}) [${keys}K ${meta.version}].osu`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
 
-  /* ==========================
-     Tool / toggles
-  ========================== */
-  function setTool(tool){
-    state.tool = tool;
-    toolBtns.forEach(b=>b.classList.toggle("active", b.getAttribute("data-tool")===tool));
-    hudTool.textContent = tool==="select"?"Select":tool==="tap"?"Note":tool==="hold"?"Long Note":"Erase";
+  /* ===== Hit test (circles + LN) ===== */
+  function findNoteAt(mx, my){
+    const lw = laneW();
+    const lane = laneFromX(mx);
+    const cx = xLaneCenter(lane);
+
+    const radius = Math.min(26, lw*0.32);
+    const r2 = radius*radius;
+
+    for(let i=state.notes.length-1;i>=0;i--){
+      const n = state.notes[i];
+      if(n.lane !== lane) continue;
+
+      const y = yFromTimeInGame(n.t);
+
+      // head circle
+      const dx = mx - cx;
+      const dy = my - y;
+      if(dx*dx + dy*dy <= r2) return { note:n, part:"head" };
+
+      if(n.type === "hold"){
+        const yEnd = yFromTimeInGame(n.end);
+        const dy2 = my - yEnd;
+        if(dx*dx + dy2*dy2 <= r2) return { note:n, part:"end" };
+
+        // body (hit area) - capsule
+        const top = Math.min(y, yEnd);
+        const bot = Math.max(y, yEnd);
+        const bodyW = Math.max(10, radius*0.44);
+        if(mx >= cx - bodyW && mx <= cx + bodyW && my >= top && my <= bot){
+          return { note:n, part:"body" };
+        }
+      }
+    }
+    return null;
   }
 
-  function setRealtimePreview(on){
-    state.preview.realtime = !!on;
-    rtPreviewBtn.classList.toggle("on", state.preview.realtime);
-    if(!state.preview.realtime){
-      // keep combo visible but stop drawing notes
-      rebuildAutoplayIndexForTime();
+  /* ===== Tools & snap setters ===== */
+  function setTool(tool){
+    state.tool = tool;
+    tools.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
+    chipTool.textContent = tool[0].toUpperCase()+tool.slice(1);
+  }
+
+  function setKeys(k){
+    pushUndo();
+    state.keys = clamp(k,4,7);
+    chipKeys.textContent = String(state.keys);
+    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
+    state.selected.clear();
+    updateSelectionUI();
+  }
+
+  function setSnapByIndex(idx){
+    idx = clamp(idx,0,SNAP_OPTS.length-1);
+    state.snap = SNAP_OPTS[idx];
+    const label = `1/${state.snap}`;
+    snapLabel.textContent = label;
+    chipSnap.textContent = label;
+  }
+
+  /* ===== Timeline mapping (mais firme) ===== */
+  function tlRange(){
+    const half = (state.tlWinSec*1000)/2;
+    return { start: state.timeMs - half, end: state.timeMs + half };
+  }
+  function yFromTimeTL(ms){
+    const {start,end} = tlRange();
+    const h = TH();
+    return ((ms - start) / (end - start)) * h;
+  }
+  function timeFromYTL(y){
+    const {start,end} = tlRange();
+    const h = TH();
+    return start + (y / h) * (end - start);
+  }
+
+  /* ===== Drawing (otimizado) ===== */
+  function drawLaneBG(ctx, w, h){
+    const lw = laneW();
+
+    // lanes
+    for(let i=0;i<state.keys;i++){
+      const x0 = i*lw;
+      ctx.fillStyle = "rgba(255,255,255,.03)";
+      ctx.fillRect(x0, 0, lw-1, h);
+      ctx.fillStyle = "rgba(255,255,255,.06)";
+      ctx.fillRect(x0, 0, 1, h);
+    }
+    ctx.fillStyle = "rgba(255,255,255,.08)";
+    ctx.fillRect(w-1,0,1,h);
+  }
+
+  function drawWaveformInEditor(ctx, w, h){
+    if(!state.wf.ready || !state.buffer) return;
+
+    // desenha “pilar” no centro tipo osu-editor (mas dentro do playfield)
+    const centerX = w * 0.5;
+    const maxHalf = w * 0.18;
+
+    // desenha só a cada 4px (bem mais leve)
+    ctx.globalAlpha = 0.65;
+    ctx.strokeStyle = "rgba(125,211,252,.85)";
+    ctx.lineWidth = 1;
+
+    const stepY = 4;
+    for(let y=0; y<=h; y+=stepY){
+      const ms = timeFromYInGame(y);
+      const a = ampAtMs(ms);
+      const amp = a * maxHalf;
+
+      ctx.beginPath();
+      ctx.moveTo(centerX - amp, y);
+      ctx.lineTo(centerX + amp, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawGridLines(ctx, w, h){
+    // linhas de snap horizontais (discretas, “firmes”)
+    const tp = activeTP(state.timeMs);
+    const beatLen = 60000 / tp.bpm;
+    const step = beatLen / state.snap;
+    const meter = tp.meter || 4;
+    const base = tp.t;
+
+    const tMin = timeFromYInGame(h+40);
+    const tMax = timeFromYInGame(-40);
+
+    const n0 = Math.ceil((tMin - base) / step);
+    for(let t = base + n0*step; t <= tMax; t += step){
+      const y = yFromTimeInGame(t);
+      if(y < -60 || y > h+60) continue;
+
+      const rel = t - base;
+      const beatIndex = Math.round(rel / beatLen);
+      const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+      const isBar = isBeat && (beatIndex % meter === 0);
+
+      const a = isBar ? 0.16 : isBeat ? 0.11 : 0.06;
+      ctx.strokeStyle = `rgba(255,255,255,${a})`;
+      ctx.lineWidth = isBar ? 1.6 : isBeat ? 1.2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(w,y);
+      ctx.stroke();
     }
   }
 
-  function setAutoplay(on){
-    state.preview.autoplay = !!on;
-    autoPlayBtn.classList.toggle("on", state.preview.autoplay);
-    rebuildAutoplayIndexForTime();
+  function drawBookmarksInEditor(ctx, w, h){
+    if(!state.bookmarks.length) return;
+    ctx.globalAlpha = 0.7;
+    for(const b of state.bookmarks){
+      const y = yFromTimeInGame(b.t);
+      if(y < -50 || y > h+50) continue;
+      ctx.strokeStyle = "rgba(167,139,250,.65)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(w,y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
   }
 
-  /* ==========================
-     Input: Editor (fix lanes + LN drag)
-  ========================== */
-  function onPointerDownEditor(e){
-    if(!state.buffer) return;
-    edCanvas.setPointerCapture(e.pointerId);
-    const m = mousePosOnCanvas(e, edCanvas);
+  function drawNotesInGame(ctx, w, h){
+    const lw = laneW();
+    const radius = Math.min(28, lw*0.32);
 
+    // receptor circles
+    const ry = hitY() + 52;
+    for(let i=0;i<state.keys;i++){
+      const cx = xLaneCenter(i);
+      ctx.strokeStyle = "rgba(255,255,255,.90)";
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.arc(cx, ry, radius, 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    // hit line (igual vibe osu)
+    ctx.strokeStyle = "rgba(255,80,80,.85)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, hitY());
+    ctx.lineTo(w, hitY());
+    ctx.stroke();
+
+    // draw notes
+    const now = state.timeMs;
+    const lookAhead = 2400;
+    const lookBack  = 350;
+
+    for(const n of state.notes){
+      // realtime preview: não desenhar “passando”
+      if(state.realtimePreview){
+        if(n.type === "tap"){
+          if(n.t < now - lookBack || n.t > now + lookAhead) continue;
+          if(state.autoplay && n._hit) continue;
+        }else{
+          if(n.end < now - lookBack || n.t > now + lookAhead) continue;
+          if(state.autoplay && n._hit && now > n.end + 60) continue;
+        }
+      }else{
+        // modo edição: desenhar um pouco mais
+        if(n.t < now - 5000 && n.end < now - 5000) continue;
+        if(n.t > now + 8000) continue;
+      }
+
+      const cx = xLaneCenter(n.lane);
+      const y = yFromTimeInGame(n.t);
+
+      // LN body
+      if(n.type === "hold"){
+        const y2 = yFromTimeInGame(n.end);
+        const top = Math.min(y,y2);
+        const bot = Math.max(y,y2);
+
+        // body (capsule-ish)
+        const bodyW = Math.max(10, radius*0.44);
+        ctx.fillStyle = state.selected.has(n.id) ? "rgba(167,139,250,.28)" : "rgba(180,210,255,.18)";
+        ctx.fillRect(cx-bodyW, top, bodyW*2, bot-top);
+
+        // tail circle
+        ctx.fillStyle = "rgba(180,210,255,.92)";
+        ctx.strokeStyle = "rgba(255,255,255,.92)";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(cx, y2, radius, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // head circle
+      ctx.fillStyle = "rgba(180,210,255,.92)";
+      ctx.strokeStyle = "rgba(255,255,255,.92)";
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.arc(cx, y, radius, 0, Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      // selection ring
+      if(state.selected.has(n.id)){
+        ctx.strokeStyle = "rgba(125,211,252,.95)";
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.arc(cx, y, radius+4, 0, Math.PI*2);
+        ctx.stroke();
+
+        if(n.type === "hold"){
+          const y2 = yFromTimeInGame(n.end);
+          ctx.beginPath();
+          ctx.arc(cx, y2, radius+4, 0, Math.PI*2);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function updateComboOverlay(){
+    comboOverlay.textContent = String(state.combo|0);
+  }
+
+  function runAutoplay(){
+    if(!state.realtimePreview || !state.autoplay) return;
+    // marca hits quando cruzam hitline (janela simples)
+    const now = state.timeMs;
+    const win = 38;
+
+    for(const n of state.notes){
+      if(n._hit) continue;
+      if(n.type === "tap"){
+        if(n.t <= now + win){
+          n._hit = true;
+          state.combo++;
+        }
+      }else{
+        if(n.t <= now + win){
+          n._hit = true;
+          state.combo++;
+        }
+      }
+    }
+    updateComboOverlay();
+  }
+
+  // timeline waveform + markers (throttle)
+  function drawTimeline(){
+    const w = TW(), h = TH();
+    tctx.fillStyle = "#07090d";
+    tctx.fillRect(0,0,w,h);
+
+    const {start,end} = tlRange();
+
+    // waveform (mais leve)
+    if(state.wf.ready){
+      tctx.globalAlpha = 0.45;
+      tctx.strokeStyle = "rgba(125,211,252,.85)";
+      tctx.lineWidth = 1;
+      const mid = w*0.52;
+      const stepY = 3;
+      const maxHalf = w*0.40;
+
+      for(let y=0; y<=h; y+=stepY){
+        const ms = timeFromYTL(y);
+        const a = ampAtMs(ms);
+        const amp = a*maxHalf;
+        tctx.beginPath();
+        tctx.moveTo(mid-amp, y);
+        tctx.lineTo(mid+amp, y);
+        tctx.stroke();
+      }
+      tctx.globalAlpha = 1;
+    }
+
+    // bookmarks
+    if(state.bookmarks.length){
+      tctx.globalAlpha = 0.9;
+      for(const b of state.bookmarks){
+        if(b.t < start || b.t > end) continue;
+        const y = yFromTimeTL(b.t);
+        tctx.strokeStyle = "rgba(167,139,250,.75)";
+        tctx.lineWidth = 1.2;
+        tctx.beginPath();
+        tctx.moveTo(0,y);
+        tctx.lineTo(w,y);
+        tctx.stroke();
+      }
+      tctx.globalAlpha = 1;
+    }
+
+    // playhead
+    const yPH = yFromTimeTL(state.timeMs);
+    tctx.strokeStyle = "rgba(255,80,80,.90)";
+    tctx.lineWidth = 2;
+    tctx.beginPath();
+    tctx.moveTo(0,yPH);
+    tctx.lineTo(w,yPH);
+    tctx.stroke();
+
+    // border
+    tctx.strokeStyle = "rgba(255,255,255,.08)";
+    tctx.lineWidth = 1;
+    tctx.beginPath();
+    tctx.moveTo(w-0.5,0);
+    tctx.lineTo(w-0.5,h);
+    tctx.stroke();
+  }
+
+  function drawMinimap(){
+    const w = MW(), h = MH();
+    mctx.fillStyle = "#07090d";
+    mctx.fillRect(0,0,w,h);
+
+    if(!state.buffer || !state.wf.ready){
+      mctx.fillStyle = "rgba(255,255,255,.06)";
+      mctx.fillRect(0,0,w,h);
+      return;
+    }
+
+    const durMs = getDurMs();
+
+    // waveform vertical
+    mctx.globalAlpha = 0.45;
+    mctx.strokeStyle = "rgba(125,211,252,.85)";
+    mctx.lineWidth = 1;
+
+    const mid = w*0.55;
+    const maxHalf = w*0.40;
+    const stepY = 3;
+
+    for(let y=0; y<=h; y+=stepY){
+      const ms = (y/h)*durMs;
+      const a = ampAtMs(ms);
+      const amp = a*maxHalf;
+      mctx.beginPath();
+      mctx.moveTo(mid-amp, y);
+      mctx.lineTo(mid+amp, y);
+      mctx.stroke();
+    }
+    mctx.globalAlpha = 1;
+
+    // bookmarks tiny ticks
+    if(state.bookmarks.length){
+      mctx.globalAlpha = 0.9;
+      for(const b of state.bookmarks){
+        const y = (b.t/durMs)*h;
+        mctx.strokeStyle = "rgba(167,139,250,.75)";
+        mctx.lineWidth = 1.2;
+        mctx.beginPath();
+        mctx.moveTo(0,y);
+        mctx.lineTo(w,y);
+        mctx.stroke();
+      }
+      mctx.globalAlpha = 1;
+    }
+
+    // playhead
+    const py = (state.timeMs/durMs)*h;
+    mctx.strokeStyle = "rgba(255,80,80,.90)";
+    mctx.lineWidth = 2;
+    mctx.beginPath();
+    mctx.moveTo(0, py);
+    mctx.lineTo(w, py);
+    mctx.stroke();
+  }
+
+  function drawEditor(){
+    const w = SW(), h = SH();
+    sctx.fillStyle = "#07090d";
+    sctx.fillRect(0,0,w,h);
+
+    // background vignette
+    const g = sctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0, "rgba(0,0,0,.55)");
+    g.addColorStop(0.2, "rgba(0,0,0,.10)");
+    g.addColorStop(0.8, "rgba(0,0,0,.10)");
+    g.addColorStop(1, "rgba(0,0,0,.55)");
+    sctx.fillStyle = g;
+    sctx.fillRect(0,0,w,h);
+
+    drawLaneBG(sctx, w, h);
+
+    // grid + waveform
+    drawGridLines(sctx, w, h);
+    drawWaveformInEditor(sctx, w, h);
+
+    // bookmarks (linhas roxas discretas)
+    drawBookmarksInEditor(sctx, w, h);
+
+    // notes + receptors
+    drawNotesInGame(sctx, w, h);
+
+    // selection box (se usar)
+    if(state.drag.mode === "box" && state.drag.box){
+      const b = rectNorm(state.drag.box);
+      sctx.fillStyle = "rgba(125,211,252,.10)";
+      sctx.strokeStyle = "rgba(125,211,252,.55)";
+      sctx.lineWidth = 1.5;
+      sctx.fillRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+      sctx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
+    }
+  }
+
+  function rectNorm(box){
+    return {
+      x0: Math.min(box.x0, box.x1),
+      y0: Math.min(box.y0, box.y1),
+      x1: Math.max(box.x0, box.x1),
+      y1: Math.max(box.y0, box.y1),
+    };
+  }
+
+  /* ===== Mouse utils ===== */
+  function mousePos(e, wrap){
+    const r = wrap.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  /* ===== Interactions ===== */
+  function beginMoveSelection(){
+    const snap = new Map();
+    for(const n of state.notes){
+      if(state.selected.has(n.id)){
+        snap.set(n.id, { t:n.t, end:n.end, lane:n.lane });
+      }
+    }
+    state.drag.moveSnap = snap;
+  }
+  function applyMoveSelection(deltaLane, deltaMs){
+    const snap = state.drag.moveSnap;
+    if(!snap) return;
+
+    for(const n of state.notes){
+      if(!state.selected.has(n.id)) continue;
+      const base = snap.get(n.id);
+      if(!base) continue;
+
+      const lane = clamp(base.lane + deltaLane, 0, state.keys-1);
+      let t = base.t + deltaMs;
+      t = state.snapOn ? quantizeAt(t) : t;
+
+      n.lane = lane;
+      n.t = t;
+
+      if(n.type === "hold"){
+        let end = base.end + deltaMs;
+        end = state.snapOn ? quantizeAt(end) : end;
+        n.end = Math.max(n.t + 1, end);
+      } else {
+        n.end = n.t;
+      }
+    }
+    sortNotes();
+  }
+
+  function applyResizeHold(ms){
+    const id = state.drag.resizeId;
+    if(!id) return;
+    const n = state.notes.find(x=>x.id===id);
+    if(!n || n.type!=="hold") return;
+
+    let end = ms;
+    end = state.snapOn ? quantizeAt(end) : end;
+    n.end = Math.max(n.t + 1, end);
+    sortNotes();
+  }
+
+  // Wheel: seek OR ctrl+wheel snap
+  editWrap.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    if(!state.buffer) return;
+
+    if(e.ctrlKey){
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const idx = SNAP_OPTS.indexOf(state.snap);
+      setSnapByIndex(idx + dir);
+      snapRange.value = String(clamp(idx+dir, 0, SNAP_OPTS.length-1));
+      return;
+    }
+
+    // seek (mais “osu-feel”: passos menores)
+    const step = e.shiftKey ? 6.0 : 2.2;
+    seekMs(state.timeMs + e.deltaY * step, { restartIfPlaying:true });
+  }, { passive:false });
+
+  // Stage mouse down
+  editWrap.addEventListener("mousedown", (e)=>{
+    if(!state.buffer) return;
+    const m = mousePos(e, editWrap);
     state.drag.down = true;
-    state.drag.pointerId = e.pointerId;
     state.drag.x0 = m.x;
     state.drag.y0 = m.y;
 
     const additive = e.ctrlKey || e.metaKey;
 
-    if(state.tool==="select"){
-      const hit = findNoteAt(m.x, m.y);
+    const hit = findNoteAt(m.x, m.y);
+
+    if(state.tool === "select"){
       if(hit){
+        const n = hit.note;
+
+        // selection
         if(additive){
-          if(state.selected.has(hit.id)) state.selected.delete(hit.id);
-          else state.selected.add(hit.id);
-        } else {
-          if(!state.selected.has(hit.id)){
+          if(state.selected.has(n.id)) state.selected.delete(n.id);
+          else state.selected.add(n.id);
+        }else{
+          if(!state.selected.has(n.id)){
             state.selected.clear();
-            state.selected.add(hit.id);
+            state.selected.add(n.id);
           }
         }
-        updateSelectionUI();
+
+        // se clicou no "end" de LN => resize
+        if(n.type==="hold" && hit.part==="end"){
+          pushUndo();
+          state.drag.mode = "resizeHold";
+          state.drag.resizeId = n.id;
+          return;
+        }
+
+        // move selection
+        pushUndo();
         state.drag.mode = "move";
         beginMoveSelection();
-      } else {
-        state.drag.mode = "box";
-        state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
-        if(!additive) state.selected.clear();
-        updateSelectionUI();
+        return;
       }
+
+      // box select
+      state.drag.mode = "box";
+      state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
+      if(!additive) state.selected.clear();
       return;
     }
 
-    if(state.tool==="erase"){
-      const hit = findNoteAt(m.x, m.y);
+    if(state.tool === "erase"){
       if(hit){
         pushUndo();
-        state.notes = state.notes.filter(n=>n.id!==hit.id);
-        state.selected.delete(hit.id);
-        updateSelectionUI();
-        rebuildAutoplayIndexForTime();
+        state.notes = state.notes.filter(x => x.id !== hit.note.id);
+        state.selected.delete(hit.note.id);
       }
       return;
     }
 
-    if(state.tool==="tap"){
+    if(state.tool === "tap"){
+      pushUndo();
       const lane = laneFromX(m.x);
-      const tRaw = timeFromY(m.y);
+      const tRaw = timeFromYInGame(m.y);
       const t = state.snapOn ? quantizeAt(tRaw) : tRaw;
-      addNote({ id: uid(), lane, t, type:"tap", end:t });
+      addNote({ id: uid(), lane, t, type:"tap", end:t, hs:0, vol:0, _hit:false });
       return;
     }
 
-    if(state.tool==="hold"){
+    if(state.tool === "hold"){
+      pushUndo();
       const lane = laneFromX(m.x);
-      const t0Raw = timeFromY(m.y);
+      const t0Raw = timeFromYInGame(m.y);
       const t0 = state.snapOn ? quantizeAt(t0Raw) : t0Raw;
       const id = uid();
-
-      // create with minimal length; user drags to size
-      addNote({ id, lane, t:t0, type:"hold", end: t0 + snapMsAt(t0) });
-
+      addNote({ id, lane, t:t0, type:"hold", end:t0 + snapMsAt(t0), hs:0, vol:0, _hit:false });
       state.drag.mode = "holdCreate";
       state.drag.holdId = id;
       return;
     }
-  }
+  });
 
-  function onPointerMoveEditor(e){
-    if(!state.drag.down || state.drag.pointerId !== e.pointerId) return;
-    const m = mousePosOnCanvas(e, edCanvas);
+  editWrap.addEventListener("mousemove", (e)=>{
+    if(!state.drag.down) return;
+    const m = mousePos(e, editWrap);
 
-    if(state.tool==="select" && state.drag.mode==="box" && state.drag.box){
+    if(state.tool === "select" && state.drag.mode === "box" && state.drag.box){
       state.drag.box.x1 = m.x;
       state.drag.box.y1 = m.y;
-      selectByBox(state.drag.box, e.ctrlKey || e.metaKey);
+
+      // select by box
+      const b = rectNorm(state.drag.box);
+      const laneMin = laneFromX(b.x0);
+      const laneMax = laneFromX(b.x1);
+
+      const tA = state.snapOn ? quantizeAt(timeFromYInGame(b.y1)) : timeFromYInGame(b.y1);
+      const tB = state.snapOn ? quantizeAt(timeFromYInGame(b.y0)) : timeFromYInGame(b.y0);
+      const tMin = Math.min(tA,tB), tMax = Math.max(tA,tB);
+
+      for(const n of state.notes){
+        if(n.lane < laneMin || n.lane > laneMax) continue;
+        if(n.type === "tap"){
+          if(n.t >= tMin && n.t <= tMax) state.selected.add(n.id);
+        } else {
+          if(!(n.end < tMin || n.t > tMax)) state.selected.add(n.id);
+        }
+      }
       return;
     }
 
-    if(state.tool==="select" && state.drag.mode==="move"){
+    if(state.tool === "select" && state.drag.mode === "move"){
       const dxLane = laneFromX(m.x) - laneFromX(state.drag.x0);
-      const dMsRaw = (state.snapOn ? quantizeAt(timeFromY(m.y)) : timeFromY(m.y))
-                   - (state.snapOn ? quantizeAt(timeFromY(state.drag.y0)) : timeFromY(state.drag.y0));
+      const dMsRaw = (state.snapOn ? quantizeAt(timeFromYInGame(m.y)) : timeFromYInGame(m.y))
+                   - (state.snapOn ? quantizeAt(timeFromYInGame(state.drag.y0)) : timeFromYInGame(state.drag.y0));
       applyMoveSelection(dxLane, dMsRaw);
       return;
     }
 
-    if(state.tool==="hold" && state.drag.mode==="holdCreate"){
-      const id = state.drag.holdId;
-      const n = state.notes.find(x=>x.id===id);
-      if(!n) return;
-      const endRaw = timeFromY(m.y);
-      const end = state.snapOn ? quantizeAt(endRaw) : endRaw;
-      n.end = Math.max(n.t+1, end);
-      sortNotes();
-      rebuildAutoplayIndexForTime();
+    if(state.tool === "select" && state.drag.mode === "resizeHold"){
+      const ms = timeFromYInGame(m.y);
+      applyResizeHold(ms);
       return;
     }
-  }
 
-  function onPointerUpEditor(e){
-    if(state.drag.pointerId !== e.pointerId) return;
-    state.drag.down = false;
-
-    // push undo only if we actually moved / created via drag modes
-    if(state.drag.mode==="move" || state.drag.mode==="holdCreate" || state.drag.mode==="box"){
-      pushUndo();
+    if(state.tool === "hold" && state.drag.mode === "holdCreate"){
+      const id = state.drag.holdId;
+      const n = state.notes.find(x => x.id === id);
+      if(!n) return;
+      const endRaw = timeFromYInGame(m.y);
+      const end = state.snapOn ? quantizeAt(endRaw) : endRaw;
+      n.end = Math.max(n.t + 1, end);
+      sortNotes();
+      return;
     }
+  });
+
+  window.addEventListener("mouseup", ()=>{
+    state.drag.down = false;
     state.drag.mode = "none";
     state.drag.box = null;
     state.drag.moveSnap = null;
     state.drag.holdId = null;
-    state.drag.pointerId = null;
+    state.drag.resizeId = null;
+    state.drag.resizeWhich = null;
+  });
+
+  /* ===== Timeline drag seek (firme) ===== */
+  function beginScrub(){
+    if(state.isPlaying){
+      state.drag.scrubWasPlaying = true;
+      pause();
+    } else {
+      state.drag.scrubWasPlaying = false;
+    }
+  }
+  function endScrub(){
+    if(state.drag.scrubWasPlaying){
+      state.drag.scrubWasPlaying = false;
+      play();
+    }
+  }
+  function timelineSeekAtY(y){
+    const ms = timeFromYTL(y);
+    seekMs(ms, { restartIfPlaying:false });
   }
 
-  /* ==========================
-     Timeline seek drag (fixed & precise)
-  ========================== */
-  function tlSeekAtY(y){
-    seekMs(timeFromYTL(y));
-  }
-
-  function onPointerDownTL(e){
+  timelineWrap.addEventListener("mousedown", (e)=>{
     if(!state.buffer) return;
-    tlCanvas.setPointerCapture(e.pointerId);
     state.tlDrag = true;
-    const m = mousePosOnCanvas(e, tlCanvas);
-    tlSeekAtY(m.y);
-  }
-  function onPointerMoveTL(e){
+    beginScrub();
+    const m = mousePos(e, timelineWrap);
+    timelineSeekAtY(m.y);
+  });
+  window.addEventListener("mousemove", (e)=>{
     if(!state.tlDrag) return;
-    const m = mousePosOnCanvas(e, tlCanvas);
-    tlSeekAtY(m.y);
-  }
-  function onPointerUpTL(){
-    state.tlDrag = false;
+    const m = mousePos(e, timelineWrap);
+    timelineSeekAtY(m.y);
+  });
+  window.addEventListener("mouseup", ()=>{
+    if(state.tlDrag){
+      state.tlDrag = false;
+      endScrub();
+    }
+  });
+
+  /* ===== Minimap drag seek ===== */
+  function minimapSeek(clientY){
+    const r = miniCanvas.getBoundingClientRect();
+    const y = clientY - r.top;
+    const durMs = getDurMs();
+    seekMs((y / r.height) * durMs, { restartIfPlaying:false });
   }
 
-  /* ==========================
-     Wheel behaviors
-     - Wheel: seek
-     - Ctrl+Wheel: beat snap
-  ========================== */
-  function onWheelEditor(e){
+  miniCanvas.addEventListener("mousedown", (e)=>{
     if(!state.buffer) return;
-    // prevent page zoom/scroll
+    state.miniDrag = true;
+    beginScrub();
+    minimapSeek(e.clientY);
+  });
+  window.addEventListener("mousemove", (e)=>{
+    if(!state.miniDrag) return;
+    minimapSeek(e.clientY);
+  });
+  window.addEventListener("mouseup", ()=>{
+    if(state.miniDrag){
+      state.miniDrag = false;
+      endScrub();
+    }
+  });
+
+  /* ===== Recording ===== */
+  function normalizeKey(e){
+    if(e.code === "Space") return "space";
+    return (e.key || "").toLowerCase();
+  }
+  function recKeyDown(e){
+    if(!state.rec.on) return;
+    if(!state.isPlaying) return;
+    if(e.repeat) return;
+    if(e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const key = normalizeKey(e);
+    const binds = state.rec.bindsByKeys[state.keys];
+    const lane = binds.indexOf(key);
+    if(lane < 0) return;
+    if(state.rec.downMap.has(key)) return;
+
+    pushUndo();
+
+    const ms = state.timeMs;
+    const t = state.rec.quantize ? quantizeAt(ms) : ms;
+
+    const id = uid();
+    const note = { id, lane, t, type:"hold", end: t + snapMsAt(t), hs:0, vol:0, _hit:false };
+    state.notes.push(note);
+    sortNotes();
+
+    state.rec.downMap.set(key, { noteId:id });
+    state.selected.clear();
+    state.selected.add(id);
+
     e.preventDefault();
-
-    if(e.ctrlKey){
-      const dir = e.deltaY > 0 ? 1 : -1;
-      setSnapIndex(state.snapIndex + dir);
-      return;
-    }
-    // seek
-    seekMs(state.timeMs + e.deltaY * 2.2);
   }
+  function recKeyUp(e){
+    if(!state.rec.on) return;
+    const key = normalizeKey(e);
+    const info = state.rec.downMap.get(key);
+    if(!info) return;
 
-  function onWheelTimeline(e){
-    if(!state.buffer) return;
+    const n = state.notes.find(x => x.id === info.noteId);
+    state.rec.downMap.delete(key);
+    if(!n) return;
+
+    const ms = state.timeMs;
+    const end = state.rec.quantize ? quantizeAt(ms) : ms;
+    const minHold = snapMsAt(n.t) * 0.6;
+
+    if(end - n.t < minHold){
+      n.type = "tap";
+      n.end = n.t;
+    } else {
+      n.type = "hold";
+      n.end = Math.max(n.t + 1, end);
+    }
+    sortNotes();
     e.preventDefault();
-    if(e.ctrlKey){
-      const dir = e.deltaY > 0 ? 1 : -1;
-      setSnapIndex(state.snapIndex + dir);
-      return;
-    }
-    seekMs(state.timeMs + e.deltaY * 2.6);
   }
 
-  /* ==========================
-     Auto BPM (beta) — practical estimator with optional change detection
-  ========================== */
-  function makeMono(buf){
-    const ch = buf.numberOfChannels;
-    const len = buf.length;
-    const out = new Float32Array(len);
-    for(let c=0;c<ch;c++){
-      const data = buf.getChannelData(c);
-      for(let i=0;i<len;i++) out[i] += data[i]/ch;
-    }
-    return out;
-  }
-
-  function buildEnvelope(mono, sampleRate, targetHz=200){
-    const step = Math.max(1, Math.floor(sampleRate/targetHz));
-    const n = Math.floor(mono.length / step);
-    const env = new Float32Array(n);
-
-    // energy-ish envelope + onset emphasis
-    let prev = 0;
-    for(let i=0;i<n;i++){
-      const s0 = i*step;
-      const s1 = Math.min(mono.length, s0+step);
-      let sum=0;
-      for(let s=s0; s<s1; s++){
-        sum += Math.abs(mono[s]);
-      }
-      const v = sum / (s1-s0 || 1);
-      // onset-ish
-      const o = Math.max(0, v - prev);
-      env[i] = o;
-      prev = v;
-    }
-
-    // normalize
-    let max=0;
-    for(let i=0;i<n;i++) if(env[i]>max) max=env[i];
-    if(max<=0) max=1;
-    for(let i=0;i<n;i++) env[i] /= max;
-
-    // light smoothing
-    const sm = new Float32Array(n);
-    const a = 0.86;
-    let acc=0;
-    for(let i=0;i<n;i++){
-      acc = a*acc + (1-a)*env[i];
-      sm[i] = acc;
-    }
-    return { env: sm, hz: targetHz };
-  }
-
-  function scoreBpm(env, lag){
-    // dot product env[i]*env[i+lag]
-    let sum=0;
-    const n = env.length - lag;
-    for(let i=0;i<n;i++){
-      sum += env[i] * env[i+lag];
-    }
-    return sum / n;
-  }
-
-  function estimateBpmForEnv(env, hz, bpmMin=60, bpmMax=260){
-    let bestBpm = 120;
-    let bestScore = -1;
-
-    // step 0.5 bpm for stability
-    for(let bpm=bpmMin; bpm<=bpmMax; bpm+=0.5){
-      const lag = Math.round(hz*60/bpm);
-      if(lag < 10 || lag >= env.length/2) continue;
-      const s = scoreBpm(env, lag);
-      if(s > bestScore){
-        bestScore = s;
-        bestBpm = bpm;
-      }
-    }
-    return { bpm: bestBpm, score: bestScore };
-  }
-
-  function estimateOffsetForBpm(env, hz, bpm){
-    // choose phase within one beat that best aligns with onsets
-    const lag = Math.round(hz*60/bpm);
-    if(lag < 10) return 0;
-    let bestOff=0, best=-1;
-
-    // sample phase candidates (0..lag-1) but step a bit for speed
-    const step = Math.max(1, Math.floor(lag/60));
-    for(let off=0; off<lag; off+=step){
-      let s=0;
-      for(let i=off; i<env.length; i+=lag){
-        s += env[i];
-      }
-      if(s > best){
-        best = s;
-        bestOff = off;
-      }
-    }
-    return (bestOff / hz) * 1000;
-  }
-
-  async function autoDetectBpm(){
-    if(!state.buffer) return;
-    autoBpmBtn.disabled = true;
-    autoBpmStatus.textContent = "Analisando… (beta)";
-
-    const detectChanges = !!autoChanges.checked;
-    const buf = state.buffer;
-
-    // build envelope
-    const mono = makeMono(buf);
-    const { env, hz } = buildEnvelope(mono, buf.sampleRate, 200);
-
-    // global BPM
-    await new Promise(r=>setTimeout(r, 10));
-    const global = estimateBpmForEnv(env, hz, 60, 260);
-    const offMs = estimateOffsetForBpm(env, hz, global.bpm);
-
-    if(!detectChanges){
-      pushUndo();
-      state.timing = [{ id: uid(), t: Math.max(0, Math.round(offMs)), bpm: clamp(global.bpm, 30, 400), meter: 4 }];
-      normalizeTiming();
-      renderTPList();
-      autoBpmStatus.textContent = `BPM detectado: ${global.bpm.toFixed(2)} • offset: ${Math.round(offMs)}ms (aplicado)`;
-      autoBpmBtn.disabled = false;
-      return;
-    }
-
-    // changes: sliding windows
-    const winSec = 12;
-    const hopSec = 6;
-    const win = Math.floor(winSec*hz);
-    const hop = Math.floor(hopSec*hz);
-
-    const estimates = [];
-    for(let start=0; start+win<env.length; start+=hop){
-      // slice without copying huge arrays (manual view)
-      const seg = env.subarray(start, start+win);
-      const est = estimateBpmForEnv(seg, hz, 60, 260);
-      estimates.push({ tMs: (start/hz)*1000, bpm: est.bpm, score: est.score });
-      if(estimates.length % 4 === 0){
-        autoBpmStatus.textContent = `Analisando mudanças… ${Math.round((start/env.length)*100)}%`;
-        await new Promise(r=>setTimeout(r, 0));
-      }
-    }
-
-    // smooth + segment
-    for(let i=1;i<estimates.length-1;i++){
-      estimates[i].bpm = (estimates[i-1].bpm + estimates[i].bpm + estimates[i+1].bpm)/3;
-    }
-
-    const segs = [];
-    const threshold = 1.8; // bpm difference to split
-    let cur = { t: Math.round(offMs), bpm: estimates[0]?.bpm ?? global.bpm };
-    segs.push(cur);
-
-    for(let i=1;i<estimates.length;i++){
-      const prev = estimates[i-1];
-      const curE = estimates[i];
-      if(Math.abs(curE.bpm - prev.bpm) >= threshold){
-        segs.push({ t: Math.round(curE.tMs), bpm: curE.bpm });
-      }
-    }
-
-    // merge near duplicates
-    const merged = [];
-    for(const s of segs){
-      const last = merged[merged.length-1];
-      if(!last){
-        merged.push(s); continue;
-      }
-      if(Math.abs(s.bpm - last.bpm) < 1.2){
-        // ignore tiny change
-        continue;
-      }
-      if(s.t - last.t < 6000){
-        // too close -> keep stronger change
-        if(Math.abs(s.bpm - global.bpm) > Math.abs(last.bpm - global.bpm)){
-          last.bpm = s.bpm;
-        }
-        continue;
-      }
-      merged.push(s);
-    }
-
-    pushUndo();
-    state.timing = merged.map(s => ({ id: uid(), t: Math.max(0, s.t), bpm: clamp(s.bpm, 30, 400), meter:4 }));
-    normalizeTiming();
-    renderTPList();
-    autoBpmStatus.textContent = `BPM detectado: ${global.bpm.toFixed(2)} • mudanças: ${Math.max(0, merged.length-1)} (aplicado)`;
-    autoBpmBtn.disabled = false;
-  }
-
-  /* ==========================
-     UI wiring
-  ========================== */
-  function openOptions(){ optBack.classList.add("show"); }
-  function closeOptions(){ optBack.classList.remove("show"); }
-
-  optBtn.addEventListener("click", openOptions);
-  optClose.addEventListener("click", closeOptions);
-  optBack.addEventListener("click", (e)=>{ if(e.target===optBack) closeOptions(); });
-
-  exitBtn.addEventListener("click", ()=>{
-    const ok = confirm("Sair? (isso não salva automaticamente)\n\nDica: exporte .osu antes 🙂");
-    if(ok) location.reload();
-  });
-
-  bmBtn.addEventListener("click", ()=> addBookmarkAt(state.timeMs));
-  bmClearBtn.addEventListener("click", clearBookmarks);
-
-  rtPreviewBtn.addEventListener("click", ()=> setRealtimePreview(!state.preview.realtime));
-  autoPlayBtn.addEventListener("click", ()=> setAutoplay(!state.preview.autoplay));
-
-  toolBtns.forEach(btn=>{
-    btn.addEventListener("click", ()=> setTool(btn.getAttribute("data-tool")));
-  });
-
-  zoomInBtn.addEventListener("click", ()=>{
-    state.tlWinSec = clamp(state.tlWinSec - 1, 3, 30);
-    tlWinIn.value = String(state.tlWinSec);
-    tlWinLbl.textContent = String(state.tlWinSec);
-    state.cacheMeta.tlStaticKey = "";
-    state.cacheMeta.tlWaveKey = "";
-  });
-  zoomOutBtn.addEventListener("click", ()=>{
-    state.tlWinSec = clamp(state.tlWinSec + 1, 3, 30);
-    tlWinIn.value = String(state.tlWinSec);
-    tlWinLbl.textContent = String(state.tlWinSec);
-    state.cacheMeta.tlStaticKey = "";
-    state.cacheMeta.tlWaveKey = "";
-  });
-
-  playBtn.addEventListener("click", ()=> state.isPlaying ? pause() : play());
-  stopBtn.addEventListener("click", stop);
-  vol.addEventListener("input", ()=>{ if(state.gain) state.gain.gain.value = parseFloat(vol.value)||1; });
-
-  rateBtns.forEach(b=>{
-    b.addEventListener("click", ()=>{
-      rateBtns.forEach(x=>x.classList.remove("active"));
-      b.classList.add("active");
-      state.rate = parseFloat(b.getAttribute("data-rate"));
-      if(state.isPlaying){ pause(); play(); }
-    });
-  });
-
-  // options inputs
-  audioFile.addEventListener("change", async ()=>{
-    const f = audioFile.files[0];
-    if(!f) return;
-    await loadAudio(f);
-  });
-
-  keysSel.addEventListener("change", ()=>{
-    pushUndo();
-    setKeys(parseInt(keysSel.value,10));
-  });
-
-  scrollIn.addEventListener("change", ()=>{
-    pushUndo();
-    state.scrollPxPerSec = clamp(parseInt(scrollIn.value,10)||1700, 250, 9000);
-    state.cacheMeta.edWaveKey = "";
-  });
-
-  tlWinIn.addEventListener("change", ()=>{
-    pushUndo();
-    state.tlWinSec = clamp(parseInt(tlWinIn.value,10)||8, 3, 30);
-    tlWinLbl.textContent = String(state.tlWinSec);
-    state.cacheMeta.tlStaticKey = "";
-    state.cacheMeta.tlWaveKey = "";
-  });
-
-  offsetIn.addEventListener("change", ()=>{
-    pushUndo();
-    setAudioOffset(parseInt(offsetIn.value,10)||0);
-  });
-
-  snapOnSel.addEventListener("change", ()=>{
-    pushUndo();
-    setSnapOn(snapOnSel.value === "on");
-  });
-
-  perfSel.addEventListener("change", ()=>{
-    const v = perfSel.value;
-    state.perfCap = (v==="off") ? 0 : parseFloat(v);
-    pushUndo();
-    doResizeAll();
-  });
-
-  autoSel.addEventListener("change", ()=>{
-    pushUndo();
-    setAutoplay(autoSel.value === "on");
-  });
-
-  exportBtn.addEventListener("click", exportOsu);
-  undoBtn.addEventListener("click", doUndo);
-  deleteBtn.addEventListener("click", deleteSelection);
-  clearBtn.addEventListener("click", clearNotes);
-
-  resetViewBtn.addEventListener("click", ()=>{
-    pushUndo();
-    state.scrollPxPerSec = 1700;
-    state.tlWinSec = 8;
-    state.audioOffsetMs = 0;
-    scrollIn.value = "1700";
-    tlWinIn.value = "8";
-    tlWinLbl.textContent = "8";
-    offsetIn.value = "0";
-    hudOffset.textContent = "0";
-    state.cacheMeta.edWaveKey = "";
-    state.cacheMeta.tlWaveKey = "";
-  });
-
-  tpAddBtn.addEventListener("click", ()=>{
-    if(!state.buffer) return;
-    pushUndo();
-    const ms = Math.round(state.timeMs);
-    const cur = activeTP(ms);
-    state.timing.push({ id: uid(), t: ms, bpm: cur.bpm, meter: cur.meter||4 });
-    normalizeTiming();
-    renderTPList();
-  });
-
-  tpResetBtn.addEventListener("click", ()=>{
-    pushUndo();
-    state.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
-    normalizeTiming();
-    renderTPList();
-  });
-
-  autoBpmBtn.addEventListener("click", autoDetectBpm);
-
-  // canvas events
-  edCanvas.addEventListener("pointerdown", onPointerDownEditor);
-  edCanvas.addEventListener("pointermove", onPointerMoveEditor);
-  edCanvas.addEventListener("pointerup", onPointerUpEditor);
-  edCanvas.addEventListener("pointercancel", onPointerUpEditor);
-
-  tlCanvas.addEventListener("pointerdown", onPointerDownTL);
-  tlCanvas.addEventListener("pointermove", onPointerMoveTL);
-  tlCanvas.addEventListener("pointerup", onPointerUpTL);
-  tlCanvas.addEventListener("pointercancel", onPointerUpTL);
-
-  edCanvas.addEventListener("wheel", onWheelEditor, {passive:false});
-  tlCanvas.addEventListener("wheel", onWheelTimeline, {passive:false});
-
-  // keyboard
   window.addEventListener("keydown", (e)=>{
-    if(e.code==="Space"){
+    if(e.code === "Space"){
       e.preventDefault();
-      state.isPlaying ? pause() : play();
+      if(state.isPlaying) pause(); else play();
       return;
     }
     if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){
@@ -2750,115 +2038,361 @@ SliderTickRate:1
       doUndo();
       return;
     }
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="b"){
-      e.preventDefault();
-      addBookmarkAt(state.timeMs);
-      return;
-    }
-    if(e.code==="Delete"){
+    if(e.code === "Delete"){
       deleteSelection();
       return;
     }
-    if(e.key==="1") setTool("select");
-    if(e.key==="2") setTool("tap");
-    if(e.key==="3") setTool("hold");
-    if(e.key==="4") setTool("erase");
+    if(e.key === "1") setTool("select");
+    if(e.key === "2") setTool("tap");
+    if(e.key === "3") setTool("hold");
+    if(e.key === "4") setTool("erase");
+
+    recKeyDown(e);
   });
+  window.addEventListener("keyup", (e)=> recKeyUp(e));
 
-  /* ==========================
-     Init / HUD
-  ========================== */
-  function renderHUD(){
-    hudTime.textContent = String(Math.round(state.timeMs));
-    tlWinLbl.textContent = String(state.tlWinSec);
+  /* ===== Timing list ===== */
+  function renderTPList(){
+    normalizeTiming();
+    tpList.innerHTML = state.timing.map(tp => `
+      <div class="item" data-id="${tp.id}" style="cursor:default">
+        <span><b class="mono">${Math.round(tp.t)}ms</b> • <span class="mono">${tp.bpm.toFixed(3)} BPM</span></span>
+        <span style="display:flex; gap:8px; align-items:center">
+          <input class="mono" data-k="t" type="number" step="1" value="${Math.round(tp.t)}" style="width:110px">
+          <input class="mono" data-k="bpm" type="number" step="0.001" value="${tp.bpm}" style="width:110px">
+          <span class="mono" style="opacity:.9; cursor:pointer" data-act="del">x</span>
+        </span>
+      </div>
+    `).join("");
 
-    const tp = activeTP(state.timeMs);
-    bpmLbl.textContent = tp ? tp.bpm.toFixed(2) : "—";
+    tpList.querySelectorAll(".item").forEach(row => {
+      const id = row.getAttribute("data-id");
+      const tp = state.timing.find(x => x.id === id);
+      if(!tp) return;
 
-    const label = `1/${snapDiv()}`;
-    snapLbl.textContent = label;
-    hudSnap.textContent = label;
+      const tIn = row.querySelector('input[data-k="t"]');
+      const bpmIn = row.querySelector('input[data-k="bpm"]');
+      const del = row.querySelector('[data-act="del"]');
 
-    noteFmt.textContent = `notes: ${state.notes.length}`;
-    timeFmt.textContent = fmtTime(state.timeMs);
-
-    if(state.buffer){
-      const pct = (state.timeMs / (state.buffer.duration*1000))*100;
-      pctFmt.textContent = `${pct.toFixed(1)}%`;
-    } else {
-      pctFmt.textContent = "0.0%";
-    }
-
-    hudKeys.textContent = String(state.keys);
-    hudOffset.textContent = String(state.audioOffsetMs);
-
-    bookmarkFmt.textContent = `bm: ${state.bookmarks.length}`;
-
-    // options buttons state
-    undoBtn.disabled = state.undo.length===0;
-    deleteBtn.disabled = state.selected.size===0;
+      tIn.addEventListener("change", ()=>{
+        pushUndo();
+        tp.t = Math.max(0, Math.round(Number(tIn.value)||0));
+        normalizeTiming();
+        renderTPList();
+      });
+      bpmIn.addEventListener("change", ()=>{
+        pushUndo();
+        tp.bpm = clamp(Number(bpmIn.value)||180, 30, 400);
+        normalizeTiming();
+        renderTPList();
+      });
+      del.addEventListener("click", ()=>{
+        if(state.timing.length <= 1) return;
+        pushUndo();
+        state.timing = state.timing.filter(x => x.id !== id);
+        normalizeTiming();
+        renderTPList();
+      });
+    });
   }
 
-  /* ==========================
-     Main loop
-  ========================== */
-  function loop(){
-    updateTimeFromAudio();
-    advanceAutoplay();
+  /* ===== Auto BPM (beta, global + segmentos simples) ===== */
+  function estimateBpmSegment(startSec, endSec){
+    const buf = state.buffer;
+    if(!buf) return null;
 
-    // update combo (always derived for autoplay)
-    if(state.preview.autoplay){
-      // during playing it’s kept in sync; during scrubbing it recalcs
-      // (cheap enough and avoids weirdness)
-      const idx = lowerBound(state.notes, state.timeMs);
-      state.preview.combo = idx;
-      comboLbl.textContent = String(idx);
-    } else {
-      comboLbl.textContent = "0";
+    const sr = buf.sampleRate;
+    const chN = buf.numberOfChannels;
+    const start = Math.floor(startSec * sr);
+    const end = Math.min(buf.length, Math.floor(endSec * sr));
+    const len = end - start;
+    if(len < sr * 4) return null;
+
+    // envelope a ~200Hz
+    const envSR = 200;
+    const hop = Math.max(1, Math.floor(sr / envSR));
+    const envLen = Math.floor(len / hop);
+    const env = new Float32Array(envLen);
+
+    const ch = [];
+    for(let c=0;c<chN;c++) ch.push(buf.getChannelData(c));
+
+    // energia curta
+    for(let i=0;i<envLen;i++){
+      const s0 = start + i*hop;
+      const s1 = Math.min(end, s0 + hop);
+      let sum = 0;
+      const n = s1 - s0;
+      for(let s=s0; s<s1; s++){
+        let v=0;
+        for(let c=0;c<chN;c++) v += ch[c][s];
+        v /= chN;
+        sum += v*v;
+      }
+      env[i] = Math.sqrt(sum / Math.max(1,n));
     }
+
+    // remove DC + enfatiza transientes
+    let mean = 0;
+    for(let i=0;i<envLen;i++) mean += env[i];
+    mean /= envLen;
+    for(let i=0;i<envLen;i++) env[i] = Math.max(0, env[i]-mean);
+
+    // derivada (onset-ish)
+    for(let i=envLen-1;i>=1;i--){
+      env[i] = Math.max(0, env[i] - env[i-1]);
+    }
+    env[0]=0;
+
+    // autocorr BPM range
+    const minBpm = 70, maxBpm = 220;
+    const minLag = Math.floor((60/envSR) * envSR / (maxBpm/60)); // fix? vamos direto:
+    const lagMin = Math.floor(envSR * 60 / maxBpm);
+    const lagMax = Math.floor(envSR * 60 / minBpm);
+
+    let bestLag = -1;
+    let best = -1;
+
+    for(let lag=lagMin; lag<=lagMax; lag++){
+      let sum = 0;
+      for(let i=0; i<envLen-lag; i++){
+        sum += env[i] * env[i+lag];
+      }
+      if(sum > best){
+        best = sum;
+        bestLag = lag;
+      }
+    }
+
+    if(bestLag <= 0) return null;
+    let bpm = (60 * envSR) / bestLag;
+
+    // ajusta pra ficar em faixa “humana” (dobro/metade)
+    while(bpm < 85) bpm *= 2;
+    while(bpm > 210) bpm /= 2;
+
+    return bpm;
+  }
+
+  async function autoDetectBpm(){
+    if(!state.buffer) return;
+    autoBpmOut.textContent = "analisando…";
+
+    // pega 3 janelas (começo/meio/fim) e usa mediana
+    const dur = state.buffer.duration;
+    const windows = [
+      [Math.min(2, dur*0.05), Math.min(dur, 18)],
+      [Math.max(0, dur*0.45), Math.min(dur, dur*0.45 + 18)],
+      [Math.max(0, dur-20), dur],
+    ];
+
+    const bpms = [];
+    for(const [a,b] of windows){
+      const bpm = estimateBpmSegment(a,b);
+      if(bpm) bpms.push(bpm);
+      await new Promise(r=>requestAnimationFrame(r));
+    }
+    bpms.sort((x,y)=>x-y);
+    const bpm = bpms.length ? bpms[Math.floor(bpms.length/2)] : null;
+
+    if(!bpm){
+      autoBpmOut.textContent = "não consegui estimar (tenta outra música / silêncio no início?)";
+      return;
+    }
+
+    autoBpmOut.innerHTML = `BPM estimado: <b class="mono">${bpm.toFixed(3)}</b> — <span class="mono">clique p/ aplicar</span>`;
+    autoBpmOut.style.cursor = "pointer";
+
+    const onClick = () => {
+      pushUndo();
+      state.timing = [{ id: uid(), t:0, bpm:bpm, meter:4 }];
+      renderTPList();
+      autoBpmOut.textContent = `aplicado: ${bpm.toFixed(3)} BPM em 0ms`;
+      autoBpmOut.style.cursor = "default";
+      autoBpmOut.removeEventListener("click", onClick);
+    };
+    autoBpmOut.addEventListener("click", onClick);
+  }
+
+  /* ===== UI wiring ===== */
+  tools.forEach(b => b.addEventListener("click", ()=> setTool(b.getAttribute("data-tool"))));
+
+  rtToggle.addEventListener("change", ()=>{
+    state.realtimePreview = !!rtToggle.checked;
+    // reset hits quando trocar modo
+    for(const n of state.notes) n._hit = false;
+    state.combo = 0;
+    updateComboOverlay();
+  });
+  autoplayToggle.addEventListener("change", ()=>{
+    state.autoplay = !!autoplayToggle.checked;
+    for(const n of state.notes) n._hit = false;
+    state.combo = 0;
+    updateComboOverlay();
+  });
+
+  snapOnToggle.addEventListener("change", ()=> state.snapOn = !!snapOnToggle.checked);
+
+  recToggle.addEventListener("change", ()=> state.rec.on = !!recToggle.checked);
+  recQuantToggle.addEventListener("change", ()=> state.rec.quantize = !!recQuantToggle.checked);
+
+  audioFile.addEventListener("change", async ()=>{
+    const f = audioFile.files[0];
+    if(!f) return;
+    await loadAudio(f);
+  });
+
+  keysSel.addEventListener("change", ()=> setKeys(parseInt(keysSel.value,10)));
+
+  scrollIn.addEventListener("change", ()=>{
+    pushUndo();
+    state.scrollPxPerSec = clamp(parseInt(scrollIn.value,10)||1700, 250, 9000);
+  });
+
+  tlWinIn.addEventListener("change", ()=>{
+    pushUndo();
+    state.tlWinSec = clamp(parseInt(tlWinIn.value,10)||8, 3, 30);
+    tlWinLbl.textContent = String(state.tlWinSec);
+  });
+
+  audioOffsetIn.addEventListener("change", ()=>{
+    pushUndo();
+    state.audioOffsetMs = parseInt(audioOffsetIn.value,10)||0;
+    hudOffset.textContent = String(state.audioOffsetMs);
+    // se estiver tocando, reinicia pra aplicar offset
+    if(state.isPlaying){ pause(); play(); }
+  });
+
+  snapRange.addEventListener("input", ()=>{
+    const idx = parseInt(snapRange.value,10);
+    setSnapByIndex(idx);
+  });
+
+  exportBtn.addEventListener("click", exportOsu);
+  undoBtn.addEventListener("click", doUndo);
+  deleteBtn.addEventListener("click", deleteSelection);
+  clearNotesBtn.addEventListener("click", clearNotes);
+
+  tpAdd.addEventListener("click", ()=>{
+    pushUndo();
+    const ms = Math.round(state.timeMs);
+    const cur = activeTP(ms);
+    state.timing.push({ id: uid(), t: ms, bpm: cur.bpm, meter: cur.meter||4 });
+    normalizeTiming();
+    renderTPList();
+  });
+  tpSort.addEventListener("click", ()=>{
+    pushUndo();
+    normalizeTiming();
+    renderTPList();
+  });
+  tpReset.addEventListener("click", ()=>{
+    pushUndo();
+    state.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
+    renderTPList();
+  });
+
+  autoBpmBtn.addEventListener("click", autoDetectBpm);
+
+  playBtn.addEventListener("click", ()=> { if(state.isPlaying) pause(); else play(); });
+  stopBtn.addEventListener("click", stop);
+  volRange.addEventListener("input", ()=>{ if(state.gain) state.gain.gain.value = parseFloat(volRange.value)||1; });
+
+  exitBtn.addEventListener("click", ()=>{
+    // “exit” simples: recarrega
+    location.reload();
+  });
+
+  optionsBtn.addEventListener("click", ()=>{
+    rightPanel.classList.toggle("collapsed");
+  });
+
+  bookmarkBtn.addEventListener("click", addBookmark);
+
+  tlZoomIn.addEventListener("click", ()=>{
+    pushUndo();
+    state.tlWinSec = clamp(state.tlWinSec - 1, 3, 30);
+    tlWinIn.value = String(state.tlWinSec);
+    tlWinLbl.textContent = String(state.tlWinSec);
+  });
+  tlZoomOut.addEventListener("click", ()=>{
+    pushUndo();
+    state.tlWinSec = clamp(state.tlWinSec + 1, 3, 30);
+    tlWinIn.value = String(state.tlWinSec);
+    tlWinLbl.textContent = String(state.tlWinSec);
+  });
+
+  /* ===== HUD update ===== */
+  function renderHUD(){
+    chipTime.textContent = String(Math.round(state.timeMs));
+    chipKeys.textContent = String(state.keys);
+    chipSnap.textContent = `1/${state.snap}`;
+    hudOffset.textContent = String(state.audioOffsetMs);
+    hudNotes.textContent = String(state.notes.length);
+  }
+
+  /* ===== Main loop (throttles p/ reduzir lag) ===== */
+  let lastTL = 0, lastMini = 0, lastWf = 0;
+  function loop(ts){
+    updateTimeFromAudio();
+
+    if(state.realtimePreview) runAutoplay();
+    else updateComboOverlay();
 
     renderHUD();
 
-    // draw
-    drawEdDynamic();
-    drawTimeline();
-    drawPreview();
+    // editor: sempre (mais “responsivo”)
+    drawEditor();
+
+    // timeline: ~30fps
+    if(ts - lastTL > 33){
+      drawTimeline();
+      lastTL = ts;
+    }
+
+    // minimap: ~20fps
+    if(ts - lastMini > 50){
+      drawMinimap();
+      lastMini = ts;
+    }
 
     requestAnimationFrame(loop);
   }
 
-  // baseline state
-  setTool("select");
-  setKeys(4);
-  setSnapIndex(3);
-  setSnapOn(true);
-  setAudioOffset(0);
-  setRealtimePreview(true);
-  setAutoplay(true);
+  /* ===== init ===== */
+  function init(){
+    // defaults
+    setTool("select");
+    keysSel.value = "4";
+    setSnapByIndex(SNAP_OPTS.indexOf(4));
+    snapRange.value = String(SNAP_OPTS.indexOf(4));
 
-  // options defaults
-  keysSel.value = "4";
-  scrollIn.value = "1700";
-  tlWinIn.value = "8";
-  offsetIn.value = "0";
-  snapOnSel.value = "on";
-  perfSel.value = "1.25";
-  autoSel.value = "on";
+    state.realtimePreview = true;
+    state.autoplay = true;
+    state.snapOn = true;
 
-  renderTPList();
-  renderBMList();
-  updateSelectionUI();
+    tlWinLbl.textContent = String(state.tlWinSec);
+    hudOffset.textContent = String(state.audioOffsetMs);
 
-  // disabled until audio load
-  exportBtn.disabled = true;
-  clearBtn.disabled = true;
-  tpAddBtn.disabled = true;
-  tpResetBtn.disabled = true;
-  autoBpmBtn.disabled = true;
+    // disable until audio loaded
+    exportBtn.disabled = true;
+    undoBtn.disabled = true;
+    deleteBtn.disabled = true;
+    clearNotesBtn.disabled = true;
+    tpAdd.disabled = true;
+    tpSort.disabled = true;
+    tpReset.disabled = true;
+    autoBpmBtn.disabled = true;
+    bookmarkBtn.disabled = true;
 
-  // initial resize
-  doResizeAll();
-  requestAnimationFrame(loop);
+    renderTPList();
+    renderBookmarks();
+    updateComboOverlay();
+
+    requestAnimationFrame(loop);
+  }
+
+  init();
 })();
 </script>
 </body>

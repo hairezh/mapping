@@ -3,910 +3,964 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Web Mania Editor V7 — osu-like song strip</title>
+  <title>WebMania Editor — osu-like layout + realtime preview</title>
   <style>
     :root{
       --bg:#0a0c10;
-      --panel:#10141b;
-      --panel2:#0c1016;
-      --panel3:#070a0f;
-      --fg:#e9eef7;
-      --muted:#98a3b3;
-      --muted2:#7b8596;
-      --border:rgba(255,255,255,.10);
-      --border2:rgba(255,255,255,.07);
+      --panel:rgba(20,22,28,.86);
+      --panel2:rgba(28,31,40,.82);
+      --stroke:rgba(255,255,255,.10);
+      --stroke2:rgba(255,255,255,.06);
+      --text:#e8edf7;
+      --muted:#aab3c2;
 
-      --accent:#7dd3fc;
-      --accent2:#a78bfa;
-      --ok:#86efac;
-      --danger:#fb7185;
-      --warn:#fbbf24;
+      --cyan:#26d3ff;
+      --cyan2:#7dd3fc;
+      --yellow:#facc15;
+      --red:#ef4444;
+      --blue:#3b82f6;
 
-      --r1:10px;
-      --r2:14px;
-      --r3:18px;
+      --r:10px;
+      --shadow: 0 10px 24px rgba(0,0,0,.40);
 
       --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-      --pad:10px;
-      --pad2:12px;
-
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --menuH:34px;
+      --bottomH:52px;
+      --leftW:330px;
+      --rightW:330px;
+      --waveW:300px;
+      --previewW:330px;
     }
 
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0;
-      background:
-        radial-gradient(1000px 600px at 25% -10%, rgba(125,211,252,.08), transparent 55%),
-        radial-gradient(900px 600px at 80% -10%, rgba(167,139,250,.07), transparent 55%),
-        var(--bg);
-      color:var(--fg);
       font-family:var(--font);
+      color:var(--text);
+      background:var(--bg);
       overflow:hidden;
+    }
+
+    /* BG image layer */
+    #bgLayer{
+      position:fixed; inset:0;
+      background:#000;
+      z-index:-3;
+    }
+    #bgLayer::before{
+      content:"";
+      position:absolute; inset:0;
+      background: radial-gradient(1000px 700px at 40% 35%, rgba(255,255,255,.06), transparent 55%),
+                  radial-gradient(900px 700px at 70% 55%, rgba(38,211,255,.06), transparent 52%),
+                  linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.65));
+      z-index:1;
+      pointer-events:none;
+    }
+    #bgImg{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:cover;
+      filter: blur(0px);
+      opacity:.35;
+      z-index:0;
+      pointer-events:none;
+    }
+
+    /* Top menubar */
+    .menubar{
+      height:var(--menuH);
+      display:flex;
+      align-items:center;
+      gap:18px;
+      padding:0 14px;
+      background:rgba(18,20,26,.92);
+      border-bottom:1px solid var(--stroke2);
+      user-select:none;
+      font-size:13px;
+    }
+    .menubar .item{
+      color:rgba(255,255,255,.86);
+      opacity:.92;
+      cursor:default;
+    }
+
+    /* Main layout */
+    .main{
+      height: calc(100% - var(--menuH) - var(--bottomH));
+      display:grid;
+      grid-template-columns: var(--leftW) 1fr var(--rightW);
+      gap:14px;
+      padding:14px;
+      min-height:0;
+    }
+
+    .col{
+      min-height:0;
       display:flex;
       flex-direction:column;
+      gap:14px;
     }
 
-    /* ===== Top bar (compact) ===== */
-    .topbar{
-      height:34px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:0 10px;
-      border-bottom:1px solid var(--border2);
-      background:rgba(255,255,255,.03);
-      user-select:none;
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-      font-size:12px; color:var(--muted);
-      letter-spacing:.2px;
-    }
-    .brand b{ color:var(--fg); font-weight:700; }
-    .topbar .sp{flex:1}
-    .tbtn{
-      height:26px;
-      padding:0 10px;
-      border-radius:999px;
-      border:1px solid var(--border2);
-      background:rgba(255,255,255,.02);
-      color:var(--muted);
-      font-size:12px;
-      cursor:pointer;
-    }
-    .tbtn:hover{ color:var(--fg); border-color:rgba(125,211,252,.25); background:rgba(125,211,252,.06) }
-    .tbtn.primary{ border-color:rgba(125,211,252,.35); color:var(--fg); background:rgba(125,211,252,.08) }
-    .tbtn.danger{ border-color:rgba(251,113,133,.35); color:#ffd7df; background:rgba(251,113,133,.08) }
-    .tiny{
-      font-size:11px;
-      color:var(--muted);
-      display:flex; align-items:center; gap:8px;
-    }
-    .tiny .mono{font-family:var(--mono)}
-    .kbd{
-      font-family:var(--mono);
-      font-size:10px;
-      padding:2px 6px;
-      border-radius:999px;
-      border:1px solid var(--border2);
-      background:rgba(255,255,255,.03);
-      color:var(--muted);
-    }
-
-    /* ===== Tabs (compact) ===== */
-    .tabs{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 10px;
-      border-bottom:1px solid var(--border2);
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
-    }
-    .tab{
-      border:1px solid transparent;
-      background:transparent;
-      color:var(--muted);
-      padding:7px 10px;
-      border-radius:999px;
-      font-size:13px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .tab.active{
-      color:var(--fg);
-      border-color:rgba(125,211,252,.30);
-      background:rgba(125,211,252,.10);
-    }
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.18);
-      color:var(--muted);
-      font-size:12px;
-      backdrop-filter: blur(6px);
-    }
-    .pill b{color:var(--fg)}
-    .tabs .sp{flex:1}
-
-    /* ===== App grid ===== */
-    .app{
-      flex:1;
-      display:grid;
-      grid-template-columns: 78px 1fr 340px;
-      gap:10px;
-      padding:10px;
-      min-height:0;
-    }
-
+    /* Panels */
     .panel{
-      background:rgba(16,20,27,.92);
-      border:1px solid var(--border);
-      border-radius:var(--r3);
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:var(--r);
       box-shadow:var(--shadow);
       overflow:hidden;
-      min-height:0;
     }
     .panel .hd{
-      padding:10px 12px;
-      border-bottom:1px solid var(--border2);
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      font-size:12px; color:var(--muted);
-    }
-    .panel .bd{
-      padding:12px;
-      min-height:0;
-    }
-
-    .divider{ height:1px; background:var(--border2); margin:10px 0; }
-
-    /* ===== Left tools ===== */
-    .left{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      min-height:0;
-    }
-    .toolbox{
-      padding:8px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-    .tool{
-      width:100%;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:6px;
-      padding:10px 6px;
-      border-radius:14px;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.18);
-      color:var(--muted);
-      cursor:pointer;
-      user-select:none;
-      font-size:11px;
-      line-height:1;
-    }
-    .tool:hover{ border-color:rgba(125,211,252,.22); background:rgba(125,211,252,.06); color:var(--fg) }
-    .tool.active{
-      color:var(--fg);
-      border-color:rgba(125,211,252,.40);
-      background:rgba(125,211,252,.12);
-    }
-    .tool svg{width:18px; height:18px; opacity:.95}
-    .tool .kbd{opacity:.9}
-
-    .toggleRow{
-      display:flex; gap:8px; align-items:center; justify-content:space-between;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.16);
-      border-radius:12px;
-      padding:8px 10px;
-    }
-    .toggleRow input{transform:scale(1.05)}
-    .small{font-size:12px; color:var(--muted); line-height:1.45}
-    .mono{font-family:var(--mono)}
-
-    /* ===== Center stage ===== */
-    .center{
-      min-height:0;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-
-    .stageWrap{
-      position:relative;
-      flex:1;
-      min-height:0;
-      border-radius:var(--r3);
-      border:1px solid var(--border);
-      background:rgba(0,0,0,.22);
-      overflow:hidden;
-      box-shadow:var(--shadow);
-    }
-
-    .stageInner{
-      position:absolute; inset:0;
-      display:grid;
-      grid-template-columns: 1fr 320px;
-      gap:10px;
-      padding:10px;
-      min-height:0;
-    }
-
-    .pane{
-      position:relative;
-      border-radius:var(--r3);
-      border:1px solid var(--border2);
-      overflow:hidden;
-      background:rgba(0,0,0,.30);
-      min-height:0;
-    }
-
-    .editPane{
-      display:flex;
-      flex-direction:column;
-      min-height:0;
-    }
-
-    /* ===== Song strip (osu-like) INSIDE editor ===== */
-    .songStrip{
-      position:relative;
-      height:78px; /* pequeno tipo osu */
-      border-bottom:1px solid var(--border2);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0)),
-        rgba(0,0,0,.18);
-    }
-    .songStrip canvas{display:block; width:100%; height:100%}
-
-    .songOverlay{
-      position:absolute; inset:8px 10px auto 10px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--stroke2);
+      font-weight:700;
+      letter-spacing:.6px;
+      font-size:14px;
+      color:rgba(255,255,255,.92);
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      pointer-events:none;
-      z-index:3;
+      text-transform:uppercase;
     }
-    .songOverlay .leftInfo{
-      display:flex; gap:8px; flex-wrap:wrap;
+    .panel .bd{
+      padding:14px;
+      min-height:0;
+    }
+
+    .detailsGrid{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px 14px;
+      font-size:14px;
       align-items:center;
+    }
+    .detailsGrid .k{ color:rgba(255,255,255,.88); }
+    .detailsGrid .v{
+      font-family:var(--mono);
+      color:rgba(255,255,255,.92);
+      opacity:.95;
+    }
+    .detailsGrid .v.accent{ color: var(--cyan2); }
+    .detailsGrid .v.yellow{ color: var(--yellow); }
+
+    /* Tools */
+    .toolBtn{
+      width:100%;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:12px 12px;
+      border:none;
+      border-radius:8px;
+      background:transparent;
+      color:rgba(255,255,255,.88);
+      cursor:pointer;
+      font-size:14px;
+      text-align:left;
+      user-select:none;
+    }
+    .toolBtn:hover{ background: rgba(255,255,255,.05); }
+    .toolBtn.active{
+      background: rgba(38,211,255,.14);
+      outline: 1px solid rgba(38,211,255,.32);
+    }
+    .toolIcon{
+      width:16px; height:16px;
+      display:inline-block;
+      flex:0 0 16px;
+      opacity:.95;
+    }
+    .toolIcon svg{width:16px;height:16px; fill: currentColor;}
+    .toolLabel{ font-weight:600; }
+    .toolHint{
+      margin-left:auto;
+      font-family:var(--mono);
+      font-size:12px;
+      opacity:.70;
+    }
+
+    /* Center workspace (waveform + editor + preview) */
+    .workspace{
+      position:relative;
+      min-height:0;
+      flex:1;
+      display:grid;
+      grid-template-columns: var(--waveW) 1fr;
+      gap:14px;
+      align-items:stretch;
+    }
+
+    .wavePanel{
+      position:relative;
+      min-height:0;
+      border-radius:10px;
+      overflow:hidden;
+      background: rgba(0,0,0,.35);
+      border:1px solid var(--stroke);
+      box-shadow:var(--shadow);
+    }
+
+    .waveInner{
+      position:absolute; inset:0;
+      display:grid;
+      grid-template-columns: 56px 1fr;
+      gap:0;
+      min-height:0;
+    }
+    .ampStrip{
+      background: rgba(0,0,0,.20);
+      border-right:1px solid rgba(255,255,255,.10);
+      min-height:0;
+      position:relative;
+    }
+    .ampStrip .snapBadge{
+      position:absolute;
+      top:8px; right:8px;
+      width:30px; height:30px;
+      border-radius:6px;
+      background: rgba(59,130,246,.35);
+      border:1px solid rgba(255,255,255,.12);
+      display:flex; align-items:center; justify-content:center;
+      font-family:var(--mono);
+      font-weight:700;
+    }
+    .waveMain{
+      position:relative;
+      min-height:0;
+      background: rgba(0,0,0,.20);
+    }
+
+    canvas{ display:block; width:100%; height:100%; }
+
+    .zoomBtns{
+      position:absolute;
+      right:10px; top:62px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      z-index:5;
+      user-select:none;
+    }
+    .zoomBtn{
+      width:34px; height:34px;
+      border-radius:999px;
+      background: rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.14);
+      color:rgba(255,255,255,.92);
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      font-weight:800;
+    }
+    .zoomBtn:hover{ background: rgba(0,0,0,.60); }
+
+    .editorPanel{
+      position:relative;
+      min-height:0;
+      border-radius:10px;
+      overflow:hidden;
+      background: rgba(0,0,0,.28);
+      border:1px solid var(--stroke);
+      box-shadow:var(--shadow);
+    }
+
+    .editorGrid{
+      position:absolute; inset:0;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+      min-height:0;
+      padding:0;
+    }
+
+    /* When preview is enabled, we split the editor area */
+    .editorSplit{
+      position:absolute; inset:0;
+      display:grid;
+      grid-template-columns: 1fr; /* becomes 1fr var(--previewW) when enabled */
+      gap:14px;
+      padding:0;
+      min-height:0;
+    }
+    .editorSplit.previewOn{
+      grid-template-columns: 1fr var(--previewW);
+    }
+
+    .editWrap, .previewWrap{
+      position:relative;
+      border-radius:10px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      min-height:0;
+    }
+
+    .hudTop{
+      position:absolute;
+      left:10px; top:10px;
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      z-index:7;
       pointer-events:none;
     }
     .badge{
-      font-size:11px;
-      padding:3px 8px;
+      font-size:12px;
+      padding:6px 10px;
       border-radius:999px;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.35);
-      color:var(--muted);
+      background: rgba(0,0,0,.42);
+      border:1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.86);
       backdrop-filter: blur(6px);
       white-space:nowrap;
     }
-    .badge b{color:var(--fg); font-weight:700}
-    .songOverlay .rightInfo{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:flex-end;
+    .badge b{ font-family:var(--mono); color:#fff; font-weight:800; }
+
+    .previewLabel{
+      position:absolute;
+      left:10px; top:10px;
+      z-index:7;
       pointer-events:none;
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(0,0,0,.42);
+      border:1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.86);
+      backdrop-filter: blur(6px);
     }
 
-    .songControls{
-      position:absolute;
-      inset:auto 10px 8px 10px;
+    /* Right panels */
+    .layerRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      z-index:4;
-      pointer-events:none;
+      padding:12px 12px;
+      border-radius:8px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.06);
+      color: rgba(255,255,255,.86);
+      font-size:14px;
     }
-    .songControls .leftCtl,
-    .songControls .rightCtl{
+    .layerRow .left{
+      display:flex; gap:10px; align-items:center;
+    }
+    .check{
+      width:18px; height:18px;
+      border-radius:4px;
+      border:1px solid rgba(255,255,255,.20);
+      background: rgba(0,0,0,.35);
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; line-height:1;
+    }
+    .layerActions{
+      display:flex; gap:10px; align-items:center;
+    }
+    .iconCircle{
+      width:26px; height:26px;
+      border-radius:999px;
+      display:flex; align-items:center; justify-content:center;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.35);
+      cursor:pointer;
+      user-select:none;
+    }
+    .iconCircle.green{ color:#22c55e; }
+    .iconCircle.red{ color:#ef4444; }
+
+    .hsBtn{
+      width:100%;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 12px;
+      border:none;
+      border-radius:8px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.06);
+      color: rgba(255,255,255,.90);
+      font-size:14px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .hsBtn:hover{ background: rgba(255,255,255,.06); }
+    .hsBtn.active{
+      background: rgba(250,204,21,.12);
+      border-color: rgba(250,204,21,.22);
+    }
+    .hsBtn .ico{
+      width:18px; height:18px;
+      display:flex; align-items:center; justify-content:center;
+      opacity:.92;
+    }
+    .hsBtn .ico svg{width:18px;height:18px; fill: currentColor;}
+    .hsVolRow{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:10px;
+      align-items:center;
+      color:rgba(255,255,255,.86);
+      font-size:13px;
+    }
+    input[type="range"]{ width:100%; }
+
+    /* Bottom bar */
+    .bottom{
+      height:var(--bottomH);
+      display:grid;
+      grid-template-columns: var(--leftW) 1fr var(--rightW);
+      gap:14px;
+      padding:8px 14px;
+      background: rgba(18,20,26,.92);
+      border-top:1px solid var(--stroke2);
+      align-items:center;
+      user-select:none;
+    }
+    .bottom .left, .bottom .right{
+      display:flex; align-items:center; gap:16px;
+    }
+    .bottom .mid{
+      display:flex; align-items:center; justify-content:center; gap:14px;
+    }
+    .bBtn{
       display:flex; align-items:center; gap:8px;
-      pointer-events:none;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.25);
+      color: rgba(255,255,255,.88);
+      cursor:pointer;
+      font-size:13px;
     }
-    .iconBtn{
-      width:34px; height:34px;
-      border-radius:12px;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.25);
+    .bBtn:hover{ background: rgba(0,0,0,.35); }
+    .bBtn.primary{
+      border-color: rgba(38,211,255,.30);
+      background: rgba(38,211,255,.12);
+    }
+    .bBtn.danger{
+      border-color: rgba(239,68,68,.26);
+      background: rgba(239,68,68,.10);
+    }
+    .bBtn .plus{ font-weight:900; font-size:16px; color: var(--cyan2); }
+    .transport{
+      display:flex; gap:10px; align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.28);
+    }
+    .tBtn{
+      width:30px; height:30px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.35);
       display:flex; align-items:center; justify-content:center;
       cursor:pointer;
-      pointer-events:auto;
     }
-    .iconBtn:hover{ border-color:rgba(125,211,252,.28); background:rgba(125,211,252,.08) }
-    .iconBtn svg{width:16px; height:16px; fill:currentColor; color:var(--fg)}
+    .tBtn svg{ width:16px; height:16px; fill: rgba(255,255,255,.92); }
+    .tBtn:hover{ background: rgba(0,0,0,.55); }
 
-    .rateBtns{
-      display:flex; gap:6px; align-items:center;
-      pointer-events:auto;
-    }
-    .rateBtns button{
-      height:34px;
-      padding:0 10px;
-      border-radius:12px;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.22);
-      color:var(--muted);
-      font-size:12px;
-      cursor:pointer;
-    }
-    .rateBtns button:hover{ color:var(--fg); border-color:rgba(125,211,252,.25); background:rgba(125,211,252,.06) }
-    .rateBtns button.active{
-      color:var(--fg);
-      border-color:rgba(125,211,252,.45);
-      background:rgba(125,211,252,.12);
-    }
-
-    .songControls .slider{
+    .chip{
       display:flex; align-items:center; gap:8px;
-      pointer-events:auto;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.20);
-      border-radius:12px;
-      padding:6px 10px;
-      height:34px;
-    }
-    .songControls .slider span{ font-size:11px; color:var(--muted) }
-    input[type="range"]{ width:140px }
-
-    .editCanvasWrap{
-      position:relative;
-      flex:1;
-      min-height:0;
-      background:rgba(0,0,0,.10);
-    }
-    .editCanvasWrap canvas{display:block; width:100%; height:100%}
-
-    .hud{
-      position:absolute;
-      top:10px; left:10px;
-      display:flex; gap:8px; flex-wrap:wrap;
-      z-index:5;
-      pointer-events:none;
-    }
-
-    /* Preview pane toggleable */
-    .previewLabel{
-      position:absolute;
-      top:10px; left:10px;
-      z-index:6;
-      font-size:11px;
-      padding:3px 8px;
+      padding:8px 10px;
       border-radius:999px;
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.35);
-      color:var(--muted);
-      pointer-events:none;
-      backdrop-filter: blur(6px);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.28);
+      color: rgba(255,255,255,.86);
+      font-size:13px;
     }
-
-    /* ===== Right inspector ===== */
-    .right{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      min-height:0;
-    }
-
-    label{
-      display:flex; flex-direction:column; gap:6px;
-      font-size:12px; color:var(--muted);
-    }
-
-    input[type="text"], input[type="number"], select, button{
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.22);
-      color:var(--fg);
-      border-radius:var(--r2);
-      padding:9px 10px;
-      font-size:14px;
-      outline:none;
-    }
-    input[type="file"]{ color:var(--muted); font-size:13px }
-    button{ cursor:pointer; user-select:none }
-    button.primary{ border-color:rgba(125,211,252,.45) }
-    button.ok{ border-color:rgba(134,239,172,.45); color:#d1fae5 }
-    button.danger{ border-color:rgba(251,113,133,.55); color:#ffd7df }
-    button:disabled{ opacity:.55; cursor:not-allowed }
-
-    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-    .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
-
-    .list{
-      border:1px solid var(--border2);
-      border-radius:14px;
-      background:rgba(0,0,0,.18);
-      overflow:auto;
-      max-height:22vh;
-    }
-    .item{
-      padding:9px 10px;
-      border-bottom:1px solid var(--border2);
-      display:flex; justify-content:space-between; gap:10px;
-      font-size:12px; color:var(--muted);
-    }
-    .item:last-child{border-bottom:none}
-    .item.sel{background:rgba(125,211,252,.10)}
-    .item b{color:var(--fg); font-weight:700}
-    .hint{
-      border:1px solid var(--border2);
-      background:rgba(0,0,0,.16);
-      border-radius:14px;
-      padding:10px;
+    .chip b{ font-family:var(--mono); color:#fff; }
+    .chip .sep{ opacity:.35; margin:0 4px; }
+    .chip .link{
+      opacity:.92;
+      text-transform:uppercase;
+      letter-spacing:.4px;
       font-size:12px;
-      color:var(--muted);
-      line-height:1.45;
     }
 
-    .section{ display:none; }
-    .section.active{ display:block; }
-
-    /* Right sidebar collapse */
-    .right.hidden{ display:none; }
-    .app.noright{ grid-template-columns: 78px 1fr; }
-
-    /* Help overlay */
-    .overlay{
+    /* Modal */
+    .modalBackdrop{
       position:fixed; inset:0;
-      background:rgba(0,0,0,.62);
+      background: rgba(0,0,0,.55);
       display:none;
-      z-index:1000;
-      padding:22px;
-      overflow:auto;
-    }
-    .overlay.show{ display:block; }
-    .helpCard{
-      max-width:980px;
-      margin:0 auto;
-      background:rgba(16,20,27,.94);
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:18px;
-      box-shadow:0 20px 60px rgba(0,0,0,.45);
+      align-items:center;
+      justify-content:center;
+      z-index:50;
       padding:18px;
     }
-    .helpCard h2{ margin:0 0 10px; font-size:16px }
-    .helpGrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
-    }
-    .helpCard .row{
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.18);
+    .modalBackdrop.show{ display:flex; }
+
+    .modal{
+      width:min(980px, 96vw);
+      max-height: 92vh;
+      overflow:auto;
+      background: rgba(18,20,26,.96);
+      border:1px solid rgba(255,255,255,.12);
       border-radius:14px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.55);
+    }
+    .modalHd{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .modalHd b{ letter-spacing:.6px; text-transform:uppercase; }
+    .modalBd{ padding:16px; }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+    .field{
+      display:flex; flex-direction:column; gap:8px;
+      color: rgba(255,255,255,.86);
+      font-size:13px;
+    }
+    .field input[type="text"],
+    .field input[type="number"],
+    .field select{
+      padding:10px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.28);
+      color:#fff;
+      outline:none;
+      font-size:14px;
+    }
+    .field input[type="file"]{
+      color: rgba(255,255,255,.78);
+      font-size:13px;
+    }
+    .row{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.86);
+      font-size:13px;
+    }
+    .row input[type="checkbox"]{ transform: scale(1.1); }
+    .hint{
       padding:12px;
-      color:var(--muted);
+      border-radius:12px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      color: rgba(255,255,255,.72);
       font-size:13px;
       line-height:1.55;
     }
-    .helpCard .row b{ color:var(--fg) }
-    .helpCard .row code{
-      font-family:var(--mono);
-      font-size:12px;
-      padding:2px 6px;
-      border-radius:8px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.04);
-      color:var(--fg);
-    }
-    .helpActions{
-      display:flex; justify-content:flex-end; gap:10px;
-      margin-top:12px;
-    }
 
+    /* Responsive */
     @media (max-width: 1200px){
-      .stageInner{ grid-template-columns: 1fr; }
-      .pane.preview{ display:none; }
+      :root{ --leftW: 300px; --rightW: 300px; --waveW: 280px; }
     }
     @media (max-width: 980px){
-      .app{ grid-template-columns: 78px 1fr; }
-      .right{ display:none; }
-      .helpGrid{ grid-template-columns: 1fr; }
+      .main{ grid-template-columns: 1fr; }
+      .bottom{ grid-template-columns: 1fr; height:auto; gap:10px; }
+      .bottom .left, .bottom .mid, .bottom .right{ justify-content:center; flex-wrap:wrap; }
+      .col.rightCol{ display:none; }
+      .col.leftCol{ order:2; }
+      .workspace{ grid-template-columns: 1fr; }
     }
   </style>
 </head>
 
 <body>
-  <!-- hidden file inputs -->
-  <input id="osuImportFile" type="file" accept=".osu,text/plain" hidden>
-  <input id="projImportFile" type="file" accept=".json,application/json" hidden>
-
-  <div class="topbar">
-    <div class="brand">
-      <b>WebMania</b><span>Editor V7</span>
-      <span class="kbd">F1</span><span style="color:var(--muted2); font-size:11px">help</span>
-    </div>
-
-    <button class="tbtn" id="newBtn" title="Novo projeto (zera tudo)">New</button>
-    <button class="tbtn" id="importOsuBtn" title="Importar .osu (mania)">Import .osu</button>
-    <button class="tbtn" id="saveProjBtn" title="Salvar projeto .json">Save .json</button>
-    <button class="tbtn" id="loadProjBtn" title="Abrir projeto .json">Open .json</button>
-    <button class="tbtn primary" id="exportBtnTop" title="Exportar .osu">Export .osu</button>
-
-    <div class="sp"></div>
-
-    <div class="tiny">
-      <span class="mono" id="topTime">00:00:000</span>
-      <span class="mono" id="topPct">0.0%</span>
-      <span class="mono" id="topNotes">notes: 0</span>
-      <span class="mono" id="topSel">sel: 0</span>
-      <button class="tbtn" id="toggleRightBtn" title="Esconder/mostrar sidebar (\\)">Sidebar</button>
-    </div>
+  <div id="bgLayer">
+    <img id="bgImg" alt="" />
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="compose">compose</button>
-    <button class="tab" data-tab="design">design</button>
-    <button class="tab" data-tab="timing">timing</button>
-    <button class="tab" data-tab="song">song setup</button>
-
-    <div class="sp"></div>
-
-    <div class="pill">Keys: <b id="pillKeys">4</b></div>
-    <div class="pill">Snap: <b id="pillSnap">1/4</b></div>
-    <div class="pill">Tool: <b id="pillTool">Select</b></div>
+  <div class="menubar">
+    <div class="item">File</div>
+    <div class="item">Edit</div>
+    <div class="item">View</div>
+    <div class="item">Audio</div>
+    <div class="item">Web</div>
+    <div class="item">Tools</div>
+    <div class="item">Plugins</div>
+    <div class="item">Help</div>
+    <div style="flex:1"></div>
+    <div class="item" style="opacity:.75;font-family:var(--mono)" id="topStatus">—</div>
   </div>
 
-  <div class="app" id="appRoot">
+  <div class="main">
     <!-- LEFT -->
-    <section class="left">
+    <section class="col leftCol">
       <div class="panel">
-        <div class="hd">Tools</div>
-        <div class="toolbox">
-          <button class="tool active" data-tool="select" title="Select (1)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 17 2-7 7-2L4 4z"/></svg>
-            <div>Select</div>
-            <div class="kbd">1</div>
-          </button>
-          <button class="tool" data-tool="tap" title="Tap (2)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20v-8"/><path d="M8 12h8"/><circle cx="12" cy="6" r="3"/></svg>
-            <div>Tap</div>
-            <div class="kbd">2</div>
-          </button>
-          <button class="tool" data-tool="hold" title="Hold (3)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M12 8v8"/></svg>
-            <div>Hold</div>
-            <div class="kbd">3</div>
-          </button>
-          <button class="tool" data-tool="erase" title="Erase (4)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H8l-4-4L14 6l6 6-8 8"/><path d="M13 7l6 6"/></svg>
-            <div>Erase</div>
-            <div class="kbd">4</div>
-          </button>
-
-          <div class="divider"></div>
-
-          <div class="toggleRow" title="Key recording (tocar e gravar)">
-            <div class="small"><b class="mono">REC</b> Key recording</div>
-            <input id="recToggle" type="checkbox" />
+        <div class="hd">DETAILS</div>
+        <div class="bd">
+          <div class="detailsGrid">
+            <div class="k">Object Count</div><div class="v" id="dCount">0</div>
+            <div class="k">Playback Speed</div><div class="v" id="dSpeed">100%</div>
+            <div class="k">BPM</div><div class="v" id="dBpm">—</div>
+            <div class="k">Beat Snap</div><div class="v accent" id="dSnap">1/4th</div>
+            <div class="k">Difficulty Rating</div><div class="v yellow" id="dDiff">—</div>
           </div>
+        </div>
+      </div>
 
-          <div class="toggleRow" title="Quantize durante gravação">
-            <div class="small">Quantize REC</div>
-            <input id="recQuantToggle" type="checkbox" checked/>
+      <div class="panel">
+        <div class="hd">COMPOSITION TOOLS</div>
+        <div class="bd" style="padding:10px">
+          <button class="toolBtn active" data-tool="select">
+            <span class="toolIcon">
+              <svg viewBox="0 0 24 24"><path d="M4 4l7 17 2-7 7-2L4 4z"/></svg>
+            </span>
+            <span class="toolLabel">Select</span>
+            <span class="toolHint">1</span>
+          </button>
+          <button class="toolBtn" data-tool="note">
+            <span class="toolIcon">
+              <svg viewBox="0 0 24 24"><path d="M6 4h12v4H6zM6 10h12v10H6z"/></svg>
+            </span>
+            <span class="toolLabel">Note</span>
+            <span class="toolHint">2</span>
+          </button>
+          <button class="toolBtn" data-tool="ln">
+            <span class="toolIcon">
+              <svg viewBox="0 0 24 24"><path d="M7 4h10v16H7zM11 7h2v10h-2z"/></svg>
+            </span>
+            <span class="toolLabel">Long Note</span>
+            <span class="toolHint">3</span>
+          </button>
+          <button class="toolBtn" data-tool="erase">
+            <span class="toolIcon">
+              <svg viewBox="0 0 24 24"><path d="M20 20H8l-4-4L14 6l6 6-8 8M13 7l6 6" /></svg>
+            </span>
+            <span class="toolLabel">Erase</span>
+            <span class="toolHint">4</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel" style="flex:1; min-height:0">
+        <div class="bd">
+          <div class="hint">
+            <b>Atalhos</b><br>
+            • <span style="font-family:var(--mono)">Space</span> play/pause<br>
+            • <span style="font-family:var(--mono)">Wheel</span> rola o tempo<br>
+            • <span style="font-family:var(--mono)">Alt + arrastar</span> scrub (voltar/avançar com o mouse)<br>
+            • <span style="font-family:var(--mono)">Ctrl+Z</span> undo • <span style="font-family:var(--mono)">Delete</span> apagar seleção<br>
+            • <span style="font-family:var(--mono)">Ctrl+B</span> add bookmark
           </div>
-
-          <div class="divider"></div>
-
-          <div class="toggleRow" title="Preview pane (P)">
-            <div class="small">Preview</div>
-            <input id="previewToggle" type="checkbox" checked/>
-          </div>
-
-          <div class="toggleRow" title="Snap On/Off (Q)">
-            <div class="small">Snap</div>
-            <input id="snapToggle" type="checkbox" checked/>
+          <div class="hint" style="margin-top:12px">
+            <b>Bookmarks</b> (clique para ir, botão direito para deletar)
+            <div id="bmList" style="margin-top:10px; display:flex; flex-direction:column; gap:8px; max-height: 28vh; overflow:auto;"></div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- CENTER -->
-    <section class="center">
-      <div class="stageWrap" id="stageWrap">
-        <div class="stageInner" id="stageInner">
-          <!-- EDIT PANE -->
-          <div class="pane editPane" id="editPane">
-            <!-- Song strip INSIDE editor -->
-            <div class="songStrip" id="songStripWrap" title="Waveform (osu-like): clique/arraste para seek • wheel=zoom • shift+wheel=scroll">
-              <canvas id="songCanvas"></canvas>
-
-              <div class="songOverlay">
-                <div class="leftInfo">
-                  <span class="badge">Time: <b class="mono" id="hudTime">0</b> ms</span>
-                  <span class="badge">TP: <b class="mono" id="hudTP">—</b></span>
-                  <span class="badge">Snap: <b class="mono" id="hudSnap">1/4</b> <span class="mono" id="hudSnapOn">(on)</span></span>
-                </div>
-                <div class="rightInfo">
-                  <span class="badge">Wf: <b class="mono" id="wfStatus">—</b></span>
-                  <span class="badge">Zoom: <b class="mono" id="zoomLbl">1.00x</b></span>
-                </div>
-              </div>
-
-              <div class="songControls">
-                <div class="leftCtl">
-                  <div class="iconBtn" id="playBtn" title="Play/Pause (Space)">
-                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  </div>
-                  <div class="iconBtn" id="stopBtn" title="Stop (S)">
-                    <svg viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></svg>
-                  </div>
-
-                  <div class="rateBtns" title="Playback rate">
-                    <button data-rate="0.25">25%</button>
-                    <button data-rate="0.50">50%</button>
-                    <button data-rate="0.75">75%</button>
-                    <button data-rate="1.00" class="active">100%</button>
-                  </div>
-                </div>
-
-                <div class="rightCtl">
-                  <div class="slider" title="Volume">
-                    <span>Vol</span>
-                    <input id="volRange" type="range" min="0" max="1" step="0.01" value="1">
-                  </div>
-                </div>
-              </div>
+    <section class="col">
+      <div class="workspace">
+        <!-- Waveform -->
+        <div class="wavePanel" id="wavePanel">
+          <div class="waveInner">
+            <div class="ampStrip" id="ampWrap">
+              <div class="snapBadge" id="snapBadge">4</div>
+              <canvas id="ampCanvas"></canvas>
             </div>
-
-            <div class="editCanvasWrap" id="editWrap">
-              <div class="hud" style="top:10px">
-                <span class="badge">Notes: <b class="mono" id="hudCount">0</b></span>
-                <span class="badge">Sel: <b class="mono" id="hudSel">0</b></span>
-                <span class="badge">Scroll: <b class="mono" id="hudScroll">1700</b> px/s</span>
+            <div class="waveMain" id="waveWrap">
+              <div class="zoomBtns">
+                <div class="zoomBtn" id="zoomIn">+</div>
+                <div class="zoomBtn" id="zoomOut">−</div>
               </div>
-              <canvas id="stageCanvas"></canvas>
+              <canvas id="waveCanvas"></canvas>
             </div>
           </div>
+        </div>
 
-          <!-- PREVIEW PANE -->
-          <div class="pane preview" id="previewWrap">
-            <div class="previewLabel">In-game preview</div>
-            <canvas id="previewCanvas"></canvas>
+        <!-- Editor + optional realtime preview -->
+        <div class="editorPanel" id="editorPanel">
+          <div class="editorSplit" id="editorSplit">
+            <div class="editWrap" id="editWrap">
+              <div class="hudTop">
+                <span class="badge">Time: <b id="hudTime">0</b> ms</span>
+                <span class="badge">Keys: <b id="hudKeys">4</b></span>
+                <span class="badge">Snap: <b id="hudSnap">1/4</b></span>
+                <span class="badge">Tool: <b id="hudTool">Select</b></span>
+              </div>
+              <canvas id="editCanvas"></canvas>
+            </div>
+
+            <div class="previewWrap" id="previewWrap" style="display:none">
+              <div class="previewLabel">Realtime preview</div>
+              <canvas id="previewCanvas"></canvas>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- RIGHT -->
-    <section class="right" id="rightSide">
+    <section class="col rightCol">
       <div class="panel">
         <div class="hd">
-          Inspector
-          <span class="small mono" id="inspectorHint">—</span>
+          LAYERS
+          <div style="display:flex; gap:10px; align-items:center">
+            <div class="iconCircle" title="Visibility">👁</div>
+            <div class="iconCircle green" id="layerAdd" title="Add layer">+</div>
+            <div class="iconCircle red" id="layerDel" title="Remove layer">−</div>
+          </div>
         </div>
-        <div class="bd" style="overflow:auto; max-height:calc(100vh - 140px)">
-          <!-- COMPOSE -->
-          <div class="section active" data-section="compose">
-            <label>Áudio (obrigatório)
-              <input id="audioFile" type="file" accept="audio/*">
-            </label>
-
-            <div class="grid2" style="margin-top:10px">
-              <label>Keys (4–7)
-                <select id="keysSel">
-                  <option>4</option><option>5</option><option>6</option><option>7</option>
-                </select>
-              </label>
-              <label>Scroll speed (px/s)
-                <input id="scrollIn" type="number" min="250" max="9000" step="50" value="1700">
-              </label>
-              <label>Timeline window (s)
-                <input id="tlWinIn" type="number" min="3" max="30" step="1" value="8">
-              </label>
-              <label>Snap divisor
-                <select id="snapSel">
-                  <option value="1">1/1</option>
-                  <option value="2">1/2</option>
-                  <option value="3">1/3</option>
-                  <option value="4" selected>1/4</option>
-                  <option value="6">1/6</option>
-                  <option value="8">1/8</option>
-                  <option value="12">1/12</option>
-                  <option value="16">1/16</option>
-                </select>
-              </label>
+        <div class="bd">
+          <div class="layerRow">
+            <div class="left">
+              <div class="check">✓</div>
+              <div>Default Layer</div>
             </div>
-
-            <div class="grid2" style="margin-top:10px">
-              <button id="undoBtn" disabled>Undo</button>
-              <button id="redoBtn" disabled>Redo</button>
-              <button id="deleteBtn" class="danger" disabled>Delete sel.</button>
-              <button id="clearNotesBtn" class="danger" disabled>Clear notes</button>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="panel" style="background:transparent; border:none; box-shadow:none">
-              <div class="small" style="margin-bottom:8px"><b>Selected note</b></div>
-              <div class="small" id="selLine">—</div>
-
-              <div class="grid2" style="margin-top:10px">
-                <label>Time (ms)
-                  <input id="propTime" type="number" step="1" disabled>
-                </label>
-                <label>Lane (1..K)
-                  <input id="propLane" type="number" step="1" min="1" max="7" disabled>
-                </label>
-                <label>Type
-                  <select id="propType" disabled>
-                    <option value="tap">tap</option>
-                    <option value="hold">hold</option>
-                  </select>
-                </label>
-                <label>End (ms)
-                  <input id="propEnd" type="number" step="1" disabled>
-                </label>
-              </div>
-
-              <div class="divider"></div>
-
-              <div class="small" style="margin-bottom:8px">Hitsounds</div>
-              <div class="grid3">
-                <button id="hsWhistle" disabled>Whistle</button>
-                <button id="hsFinish" disabled>Finish</button>
-                <button id="hsClap" disabled>Clap</button>
-              </div>
-              <div class="grid2" style="margin-top:10px">
-                <label>Volume (0..100)
-                  <input id="hsVol" type="number" min="0" max="100" step="5" value="0" disabled>
-                </label>
-                <label>Flags
-                  <input id="hsFlags" type="number" min="0" max="14" step="1" value="0" disabled>
-                </label>
-              </div>
-
-              <div class="hint" style="margin-top:10px">
-                whistle=2, finish=4, clap=8 (combináveis somando).<br/>
-                Dica: <code>Ctrl+C</code>/<code>Ctrl+V</code> copia/cola seleção • <code>D</code> duplica • setas nudgem.
-              </div>
+            <div class="layerActions">
+              <div class="iconCircle" title="Rename">✎</div>
             </div>
           </div>
+          <div class="hint" style="margin-top:12px">
+            (Layers aqui é “visual” por enquanto — mas já deixei o esqueleto certinho pro layout.)
+          </div>
+        </div>
+      </div>
 
-          <!-- DESIGN -->
-          <div class="section" data-section="design">
-            <label>Background image (opcional)
-              <input id="bgFile" type="file" accept="image/*">
-            </label>
+      <div class="panel" style="flex:1; min-height:0">
+        <div class="hd">HITSOUNDS</div>
+        <div class="bd" style="min-height:0; display:flex; flex-direction:column; gap:10px">
+          <button class="hsBtn" id="hsWhistle">
+            <span class="ico">
+              <svg viewBox="0 0 24 24"><path d="M3 12h10l4-4v8l-4-4H3z"/></svg>
+            </span>
+            Whistle
+          </button>
+          <button class="hsBtn" id="hsFinish">
+            <span class="ico">
+              <svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4 2 7-6.5-4.5L5.5 20l2-7L2 9h7z"/></svg>
+            </span>
+            Finish
+          </button>
+          <button class="hsBtn" id="hsClap">
+            <span class="ico">
+              <svg viewBox="0 0 24 24"><path d="M7 11l1-5 3 1 1 6-5-2zM12 8l3-1 2 6-5 0zM6 14l7 3 5-2-2 5-8 2-3-3z"/></svg>
+            </span>
+            Clap
+          </button>
 
-            <div class="grid2" style="margin-top:10px">
-              <label>BG opacity
-                <input id="bgOpacity" type="number" min="0" max="1" step="0.05" value="0.35">
-              </label>
-              <label>Lane opacity
-                <input id="laneOpacity" type="number" min="0" max="1" step="0.05" value="0.08">
-              </label>
-            </div>
+          <div class="hsVolRow">
+            <div>Volume</div>
+            <div style="font-family:var(--mono)" id="hsVolVal">0</div>
+          </div>
+          <input id="hsVol" type="range" min="0" max="100" step="5" value="0"/>
 
-            <div class="divider"></div>
-
-            <div class="grid2">
-              <label>Preview look-ahead (ms)
-                <input id="prevAhead" type="number" min="200" max="6000" step="50" value="2200">
-              </label>
-              <label>Preview speed factor
-                <input id="prevSpeed" type="number" min="0.2" max="2.0" step="0.05" value="0.70">
-              </label>
-            </div>
-
-            <div class="hint" style="margin-top:10px">
-              Preview é “in-game-ish”, não perfeito 1:1, mas bem útil pra sentir o flow.
-            </div>
+          <div class="hint" style="margin-top:8px">
+            Seleciona 1 nota (Select) e aplica hitsound/volume nela.
           </div>
 
-          <!-- TIMING -->
-          <div class="section" data-section="timing">
-            <div class="grid2">
-              <button id="breakBtn" class="primary" disabled>Insert Break Time</button>
-              <button id="tpAdd" class="ok" disabled>Add TP @ tempo</button>
-            </div>
-
-            <div class="grid2" style="margin-top:10px">
-              <button id="tpSort" disabled>Sort TPs</button>
-              <button id="tpReset" class="danger" disabled>Reset TPs</button>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="small" style="margin-bottom:6px">Break list</div>
-            <div class="list" id="breakList" style="max-height:16vh"></div>
-
-            <div class="divider"></div>
-
-            <div class="small" style="margin-bottom:6px">Timing points</div>
-            <div class="list" id="tpList" style="max-height:24vh"></div>
-
-            <div class="hint" style="margin-top:10px">
-              Break: clique 1=início • clique 2=fim. <br/>
-              Song strip: wheel=zoom, shift+wheel=scroll, arraste pra seek.
-            </div>
-          </div>
-
-          <!-- SONG SETUP -->
-          <div class="section" data-section="song">
-            <div class="grid2">
-              <label>Title <input id="mTitle" type="text" value="WebManiaEditor"></label>
-              <label>Artist <input id="mArtist" type="text" value="Unknown"></label>
-              <label>Creator <input id="mCreator" type="text" value="reze"></label>
-              <label>Version <input id="mVersion" type="text" value="Easy"></label>
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="hint">
-              <b>Import .osu</b> traz: notes, timing, breaks e metadata. <br/>
-              <b>Áudio</b> você carrega aqui pelo navegador.
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="grid2">
-              <button id="selectAllBtn">Select all</button>
-              <button id="deselectBtn">Deselect</button>
-            </div>
-
-            <div class="grid2" style="margin-top:10px">
-              <button id="snapToGridBtn">Quantize selection</button>
-              <button id="sortNotesBtn">Sort notes</button>
-            </div>
-
-            <div class="hint" style="margin-top:10px">
-              Teclas úteis: <code>Q</code> snap • <code>P</code> preview • <code>\\</code> sidebar • <code>Ctrl+Z</code>/<code>Ctrl+Y</code> undo/redo.
-            </div>
+          <div class="hint">
+            <b>Export</b> escreve hitsounds no formato osu!mania (hs flags + sample volume).
           </div>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- Help overlay -->
-  <div class="overlay" id="helpOverlay">
-    <div class="helpCard">
-      <h2>Atalhos & Controles</h2>
-      <div class="helpGrid">
-        <div class="row">
-          <b>Playback</b><br/>
-          <code>Space</code> play/pause • <code>S</code> stop • botões no song strip<br/>
-          <code>Wheel</code> no playfield = scrubbing (tempo) • <code>Shift+Wheel</code> = mais rápido
+  <!-- Bottom bar -->
+  <div class="bottom">
+    <div class="left">
+      <div class="bBtn" id="exitBtn">⟵ EXIT</div>
+      <div class="bBtn" id="optionsBtn">⚙ OPTIONS</div>
+      <div class="bBtn primary" id="addBmBtn"><span class="plus">+</span> ADD BOOKMARK</div>
+    </div>
+
+    <div class="mid">
+      <div class="transport" title="Transport">
+        <div class="tBtn" id="prevBtn" title="Seek -1 beat">
+          <svg viewBox="0 0 24 24"><path d="M11 18V6h2v12h-2zM21 18L12 12l9-6v12z"/></svg>
         </div>
-        <div class="row">
-          <b>Waveform (song strip)</b><br/>
-          Clique/arraste = seek • <code>Wheel</code> = zoom • <code>Shift+Wheel</code> = scroll (pan)<br/>
-          <code>Ctrl+Wheel</code> = zoom fino
+        <div class="tBtn" id="playBtn" title="Play/Pause (Space)">
+          <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </div>
-        <div class="row">
-          <b>Ferramentas</b><br/>
-          <code>1</code> select • <code>2</code> tap • <code>3</code> hold • <code>4</code> erase<br/>
-          Select: arraste nota = move • arraste vazio = box select
+        <div class="tBtn" id="stopBtn" title="Stop">
+          <svg viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></svg>
         </div>
-        <div class="row">
-          <b>Edição</b><br/>
-          <code>Delete</code> apagar seleção • <code>D</code> duplicar • <code>Ctrl+C/V</code> copiar/colar<br/>
-          Setas = nudge lane/time • <code>Shift</code> = nudge maior
-        </div>
-        <div class="row">
-          <b>Interface</b><br/>
-          <code>Q</code> snap on/off • <code>P</code> preview on/off • <code>\\</code> sidebar<br/>
-          <code>F1</code> abre/fecha esta ajuda
-        </div>
-        <div class="row">
-          <b>Rec (Key recording)</b><br/>
-          Ative <code>REC</code>, dê play e use as teclas bindadas (ex.: 4K = D F J K).<br/>
-          Soltar tecla fecha hold (vira tap se for curtinho).
+        <div class="tBtn" id="nextBtn" title="Seek +1 beat">
+          <svg viewBox="0 0 24 24"><path d="M11 18V6h2v12h-2zM3 18V6l9 6-9 6z"/></svg>
         </div>
       </div>
-      <div class="helpActions">
-        <button class="tbtn" id="closeHelpBtn">Fechar</button>
+
+      <div class="chip">
+        <span class="link">Playback Speed</span>
+        <span class="sep">•</span>
+        <b id="chipRate">100%</b>
+      </div>
+
+      <div class="chip">
+        <span class="link">Beat Snap</span>
+        <span class="sep">•</span>
+        <b id="chipSnap">1/4</b>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="bBtn" id="testPlayBtn">▶ TEST PLAY</div>
+      <div class="chip" style="gap:10px">
+        <span style="opacity:.85">Time</span>
+        <b id="timeStr">00:00:000</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTIONS MODAL -->
+  <div class="modalBackdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modalHd">
+        <b>OPTIONS</b>
+        <div style="display:flex; gap:10px; align-items:center">
+          <button class="bBtn" id="exportBtn">Export .osu</button>
+          <button class="bBtn" id="closeModal">Fechar</button>
+        </div>
+      </div>
+
+      <div class="modalBd">
+        <div class="grid2">
+          <div class="field">
+            <div>Áudio</div>
+            <input id="audioFile" type="file" accept="audio/*"/>
+            <div class="hint">
+              O navegador não pode “abrir pelo nome do .osu”. Então: importe o .osu (se quiser), e carregue o áudio manualmente aqui.
+            </div>
+          </div>
+
+          <div class="field">
+            <div>Background (opcional)</div>
+            <input id="bgFile" type="file" accept="image/*"/>
+            <div class="grid2" style="margin-top:10px">
+              <div class="field">
+                <div>BG Opacity (0..1)</div>
+                <input id="bgOpacity" type="number" min="0" max="1" step="0.05" value="0.35"/>
+              </div>
+              <div class="field">
+                <div>BG Blur (px)</div>
+                <input id="bgBlur" type="number" min="0" max="20" step="1" value="0"/>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="grid3">
+          <div class="field">
+            <div>Title</div>
+            <input id="mTitle" type="text" value="WebManiaEditor"/>
+          </div>
+          <div class="field">
+            <div>Artist</div>
+            <input id="mArtist" type="text" value="Unknown"/>
+          </div>
+          <div class="field">
+            <div>Creator</div>
+            <input id="mCreator" type="text" value="reze"/>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="grid3">
+          <div class="field">
+            <div>Version</div>
+            <input id="mVersion" type="text" value="Easy"/>
+          </div>
+
+          <div class="field">
+            <div>Keys</div>
+            <select id="keysSel">
+              <option>4</option><option>5</option><option>6</option><option>7</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <div>Beat Snap</div>
+            <select id="snapSel">
+              <option value="1">1/1</option>
+              <option value="2">1/2</option>
+              <option value="3">1/3</option>
+              <option value="4" selected>1/4</option>
+              <option value="6">1/6</option>
+              <option value="8">1/8</option>
+              <option value="12">1/12</option>
+              <option value="16">1/16</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="grid3">
+          <div class="field">
+            <div>BPM</div>
+            <input id="bpmIn" type="number" min="30" max="400" step="0.001" value="180"/>
+          </div>
+          <div class="field">
+            <div>Offset (ms)</div>
+            <input id="offIn" type="number" min="0" step="1" value="0"/>
+          </div>
+          <div class="field">
+            <div>Playback Speed</div>
+            <select id="rateSel">
+              <option value="0.25">25%</option>
+              <option value="0.50">50%</option>
+              <option value="0.75">75%</option>
+              <option value="1.00" selected>100%</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="grid2">
+          <div class="row">
+            <div>
+              <b>Realtime Preview</b><br>
+              <span style="opacity:.75">Mostra o “in-game” ao lado (círculos + LNs) e só o combo.</span>
+            </div>
+            <input id="previewToggle" type="checkbox"/>
+          </div>
+
+          <div class="row">
+            <div>
+              <b>Quantize/Snap</b><br>
+              <span style="opacity:.75">Quando ligado, notas colocadas/movidas são quantizadas no grid.</span>
+            </div>
+            <input id="snapOnToggle" type="checkbox" checked/>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="grid2">
+          <div class="field">
+            <div>Import .osu (mania)</div>
+            <input id="osuIn" type="file" accept=".osu"/>
+            <div class="hint">
+              Importa notas/timing/metadados. Se o áudio não existir aqui no navegador, você carrega manualmente em “Áudio”.
+            </div>
+          </div>
+
+          <div class="field">
+            <div>Ações</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap">
+              <button class="bBtn danger" id="clearBtn">Clear notes</button>
+              <button class="bBtn" id="undoBtn">Undo</button>
+            </div>
+            <div class="hint" style="margin-top:10px">
+              Dica: timeline/waveform e editor aceitam drag pra seek. Use <span style="font-family:var(--mono)">Alt</span>+drag no editor pra scrub.
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -914,249 +968,183 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const qsa = (sel) => Array.from(document.querySelectorAll(sel));
   const clamp = (v,a,b)=> Math.max(a, Math.min(b, v));
   const uid = ()=> Math.random().toString(36).slice(2,10);
 
-  // ===== Elements =====
-  const appRoot = $("appRoot");
-  const stageInner = $("stageInner");
+  /* UI */
+  const topStatus = $("topStatus");
 
-  const tabs = qsa(".tab");
-  const tools = qsa(".tool");
+  const dCount = $("dCount");
+  const dSpeed = $("dSpeed");
+  const dBpm = $("dBpm");
+  const dSnap = $("dSnap");
+  const dDiff = $("dDiff");
 
-  const pillKeys = $("pillKeys");
-  const pillSnap = $("pillSnap");
-  const pillTool = $("pillTool");
+  const toolBtns = Array.from(document.querySelectorAll(".toolBtn"));
 
-  // Top buttons
-  const newBtn = $("newBtn");
-  const importOsuBtn = $("importOsuBtn");
-  const saveProjBtn = $("saveProjBtn");
-  const loadProjBtn = $("loadProjBtn");
-  const exportBtnTop = $("exportBtnTop");
-  const toggleRightBtn = $("toggleRightBtn");
+  const wavePanel = $("wavePanel");
+  const ampWrap = $("ampWrap");
+  const waveWrap = $("waveWrap");
+  const ampCanvas = $("ampCanvas");
+  const waveCanvas = $("waveCanvas");
 
-  const osuImportFile = $("osuImportFile");
-  const projImportFile = $("projImportFile");
+  const editorPanel = $("editorPanel");
+  const editorSplit = $("editorSplit");
+  const editWrap = $("editWrap");
+  const editCanvas = $("editCanvas");
 
-  // Right sections
-  const sections = qsa(".section");
-  const inspectorHint = $("inspectorHint");
+  const previewWrap = $("previewWrap");
+  const previewCanvas = $("previewCanvas");
 
-  // Compose controls
-  const audioFile = $("audioFile");
-  const keysSel = $("keysSel");
-  const scrollIn = $("scrollIn");
-  const tlWinIn = $("tlWinIn");
-  const snapSel = $("snapSel");
+  const zoomIn = $("zoomIn");
+  const zoomOut = $("zoomOut");
 
-  const undoBtn = $("undoBtn");
-  const redoBtn = $("redoBtn");
-  const deleteBtn = $("deleteBtn");
-  const clearNotesBtn = $("clearNotesBtn");
+  const hudTime = $("hudTime");
+  const hudKeys = $("hudKeys");
+  const hudSnap = $("hudSnap");
+  const hudTool = $("hudTool");
 
-  // Timing controls
-  const breakBtn = $("breakBtn");
-  const breakList = $("breakList");
-  const tpAdd = $("tpAdd");
-  const tpSort = $("tpSort");
-  const tpReset = $("tpReset");
-  const tpList = $("tpList");
+  const bmList = $("bmList");
+  const addBmBtn = $("addBmBtn");
 
-  // Props / hitsounds
-  const propTime = $("propTime");
-  const propLane = $("propLane");
-  const propType = $("propType");
-  const propEnd = $("propEnd");
   const hsWhistle = $("hsWhistle");
   const hsFinish = $("hsFinish");
   const hsClap = $("hsClap");
   const hsVol = $("hsVol");
-  const hsFlags = $("hsFlags");
-  const selLine = $("selLine");
+  const hsVolVal = $("hsVolVal");
 
-  // Design
+  const exitBtn = $("exitBtn");
+  const optionsBtn = $("optionsBtn");
+
+  const prevBtn = $("prevBtn");
+  const playBtn = $("playBtn");
+  const stopBtn = $("stopBtn");
+  const nextBtn = $("nextBtn");
+  const playIcon = $("playIcon");
+
+  const chipRate = $("chipRate");
+  const chipSnap = $("chipSnap");
+  const timeStr = $("timeStr");
+  const testPlayBtn = $("testPlayBtn");
+
+  /* Modal */
+  const modalBackdrop = $("modalBackdrop");
+  const closeModal = $("closeModal");
+  const exportBtn = $("exportBtn");
+  const audioFile = $("audioFile");
   const bgFile = $("bgFile");
   const bgOpacity = $("bgOpacity");
-  const laneOpacity = $("laneOpacity");
-  const prevAhead = $("prevAhead");
-  const prevSpeed = $("prevSpeed");
+  const bgBlur = $("bgBlur");
+  const bgImg = $("bgImg");
 
-  // Song setup
   const mTitle = $("mTitle");
   const mArtist = $("mArtist");
   const mCreator = $("mCreator");
   const mVersion = $("mVersion");
-  const selectAllBtn = $("selectAllBtn");
-  const deselectBtn = $("deselectBtn");
-  const snapToGridBtn = $("snapToGridBtn");
-  const sortNotesBtn = $("sortNotesBtn");
 
-  // Left toggles
-  const recToggle = $("recToggle");
-  const recQuantToggle = $("recQuantToggle");
+  const keysSel = $("keysSel");
+  const snapSel = $("snapSel");
+  const bpmIn = $("bpmIn");
+  const offIn = $("offIn");
+  const rateSel = $("rateSel");
+
   const previewToggle = $("previewToggle");
-  const snapToggle = $("snapToggle");
+  const snapOnToggle = $("snapOnToggle");
 
-  // Canvases
-  const editWrap = $("editWrap");
-  const stageCanvas = $("stageCanvas");
-  const sctx = stageCanvas.getContext("2d");
+  const osuIn = $("osuIn");
+  const clearBtn = $("clearBtn");
+  const undoBtn = $("undoBtn");
 
-  const previewWrap = $("previewWrap");
-  const previewCanvas = $("previewCanvas");
+  const snapBadge = $("snapBadge");
+
+  /* Canvas contexts */
+  const actx = ampCanvas.getContext("2d");
+  const wctx = waveCanvas.getContext("2d");
+  const ectx = editCanvas.getContext("2d");
   const prctx = previewCanvas.getContext("2d");
 
-  const songStripWrap = $("songStripWrap");
-  const songCanvas = $("songCanvas");
-  const soctx = songCanvas.getContext("2d");
+  function fitCanvas(canvas){
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(r.width * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
 
-  // HUD
-  const hudTime = $("hudTime");
-  const hudTP = $("hudTP");
-  const hudSnap = $("hudSnap");
-  const hudSnapOn = $("hudSnapOn");
-  const wfStatus = $("wfStatus");
-  const zoomLbl = $("zoomLbl");
+  const ro = new ResizeObserver(() => {
+    fitCanvas(ampCanvas);
+    fitCanvas(waveCanvas);
+    fitCanvas(editCanvas);
+    if(state.preview.enabled) fitCanvas(previewCanvas);
+  });
+  ro.observe(wavePanel);
+  ro.observe(editorPanel);
 
-  const hudCount = $("hudCount");
-  const hudSel = $("hudSel");
-  const hudScroll = $("hudScroll");
-
-  // Song strip controls
-  const playBtn = $("playBtn");
-  const stopBtn = $("stopBtn");
-  const volRange = $("volRange");
-  const rateBtns = qsa(".rateBtns button");
-
-  // Top info
-  const topTime = $("topTime");
-  const topPct = $("topPct");
-  const topNotes = $("topNotes");
-  const topSel = $("topSel");
-
-  // Help overlay
-  const helpOverlay = $("helpOverlay");
-  const closeHelpBtn = $("closeHelpBtn");
-
-  // ===== State =====
+  /* State */
   const state = {
-    tab: "compose",
     tool: "select",
 
     keys: 4,
     snap: 4,
     snapOn: true,
 
-    scrollPxPerSec: 1700,
-    tlWinSec: 8,
+    // view scaling (px per ms)
+    view: {
+      pxPerMs: 0.40, // default zoom
+      min: 0.12,
+      max: 1.40,
+      zoomStep: 1.18,
+    },
 
-    // audio engine
+    timing: [{ id: uid(), t: 0, bpm: 180, meter: 4 }],
+
+    notes: [],
+    bookmarks: [],
+    selected: new Set(),
+    undo: [],
+
+    // audio
     ac: null,
     buffer: null,
-    source: null,
     gain: null,
+    source: null,
     startedAt: 0,
     startOffsetSec: 0,
-    isPlaying: false,
     timeMs: 0,
+    isPlaying: false,
     rate: 1,
+    playRateAtStart: 1, // critical fix
 
-    // waveform (peaks)
-    wf: { ready:false, peaks:null, blockSize:2048, blockSec:0, max:1, progress:0 },
+    // waveform
+    wf: { ready:false, peaks:null, blockSec:0, max:1, progress:0 },
 
-    // osu-like song strip navigation
-    songZoom: 1.0,      // 1 = mostra a música toda, >1 zoom in
-    songPanMs: 0,       // offset do centro
-    songDrag: { down:false, x0:0, did:false },
+    // background
+    bg: { opacity: 0.35, blur: 0 },
 
-    // assets
-    bgImg: null,
-    bgName: "",
-    bgOpacity: 0.35,
-    laneOpacity: 0.08,
+    // editor drag
+    drag: { down:false, mode:"none", x0:0, y0:0, holdId:null, moveSnap:null },
 
-    // timing
-    timing: [{ id: uid(), t:0, bpm:180, meter:4 }],
-    breaks: [],
-    breakArming: false,
-    breakStart: null,
+    // scrub (Alt+drag)
+    scrub: { on:false, wasPlaying:false },
 
-    // notes
-    notes: [],
-    selected: new Set(),
-    clipboard: [],
-    undo: [],
-    redo: [],
-
-    drag: { down:false, mode:"none", x0:0, y0:0, box:null, moveSnap:null, holdId:null },
-
-    rec: {
-      on:false,
-      quantize:true,
-      bindsByKeys: {
-        4:["d","f","j","k"],
-        5:["d","f","space","j","k"],
-        6:["s","d","f","j","k","l"],
-        7:["s","d","f","space","j","k","l"],
-      },
-      downMap: new Map(),
-    },
-
+    // preview
     preview: {
-      enabled:true,
-      lookAheadMs: 2200,
-      lookBackMs: 250,
-      hitLinePad: 70,
-      speedFactor: 0.70,
+      enabled: false,
+      speedFactor: 0.85,   // how fast notes fall in preview vs editor scroll
+      lookAheadMs: 2300,
+      hitLinePad: 92,
     },
-
-    // render throttle
-    lastDraw: 0,
-    forceRedraw: true,
+    previewRuntime: {
+      dirty: true,
+      sorted: [],
+      idx: 0,
+      combo: 0,
+      lastMs: 0,
+    }
   };
 
-  // ===== Canvas resize =====
-  function resizeCanvas(canvas, wrap){
-    const r = wrap.getBoundingClientRect();
-    canvas.width = Math.max(1, Math.floor(r.width * devicePixelRatio));
-    canvas.height = Math.max(1, Math.floor(r.height * devicePixelRatio));
-    const ctx = canvas.getContext("2d");
-    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-  }
-
-  const roStage = new ResizeObserver(()=> { resizeCanvas(stageCanvas, editWrap); state.forceRedraw=true; });
-  const roPrev  = new ResizeObserver(()=> { resizeCanvas(previewCanvas, previewWrap); state.forceRedraw=true; });
-  const roSong  = new ResizeObserver(()=> { resizeCanvas(songCanvas, songStripWrap); state.forceRedraw=true; });
-
-  roStage.observe(editWrap);
-  roPrev.observe(previewWrap);
-  roSong.observe(songStripWrap);
-
-  resizeCanvas(stageCanvas, editWrap);
-  resizeCanvas(previewCanvas, previewWrap);
-  resizeCanvas(songCanvas, songStripWrap);
-
-  const SW = ()=> stageCanvas.width / devicePixelRatio;
-  const SH = ()=> stageCanvas.height / devicePixelRatio;
-  const PW = ()=> previewCanvas.width / devicePixelRatio;
-  const PH = ()=> previewCanvas.height / devicePixelRatio;
-  const SoW = ()=> songCanvas.width / devicePixelRatio;
-  const SoH = ()=> songCanvas.height / devicePixelRatio;
-
-  // ===== Geometry =====
-  const centerY = ()=> Math.floor(SH()*0.56);
-  const pxPerMs = ()=> state.scrollPxPerSec / 1000;
-  const laneW = ()=> SW() / state.keys;
-
-  const xFromLane = (lane)=> lane * laneW();
-  const laneFromX = (x)=> clamp(Math.floor(x / laneW()), 0, state.keys-1);
-
-  const yFromTime = (tMs)=> centerY() - (tMs - state.timeMs) * pxPerMs();
-  const timeFromY = (y)=> state.timeMs + (centerY() - y) / pxPerMs();
-
-  // ===== Timing helpers =====
+  /* ===== Timing / Snap ===== */
   function normalizeTiming(){
     state.timing.sort((a,b)=>a.t-b.t);
     const out=[];
@@ -1175,7 +1163,7 @@
     }
     return best;
   }
-  function snapMsAt(ms){
+  function snapStepMsAt(ms){
     const tp = activeTP(ms);
     const beatLen = 60000 / tp.bpm;
     return beatLen / state.snap;
@@ -1190,19 +1178,118 @@
     return base + n*step;
   }
 
-  // ===== Audio =====
+  /* ===== Audio (FIXED) ===== */
   async function ensureAC(){
     if(state.ac) return state.ac;
     state.ac = new (window.AudioContext || window.webkitAudioContext)();
     state.gain = state.ac.createGain();
-    state.gain.gain.value = parseFloat(volRange.value) || 1;
+    state.gain.gain.value = 1;
     state.gain.connect(state.ac.destination);
     return state.ac;
   }
+
   function cleanupSource(){
-    try{ if(state.source) state.source.stop(); }catch(e){}
+    const src = state.source;
+    if(!src) return;
+    try{ src.onended = null; }catch(e){}
+    try{ src.stop(0); }catch(e){}
+    try{ src.disconnect(); }catch(e){}
     state.source = null;
   }
+
+  async function play(){
+    if(!state.buffer) return;
+    const ac = await ensureAC();
+    if(ac.state === "suspended") await ac.resume();
+
+    if(state.isPlaying) pause();
+
+    state.startOffsetSec = clamp(state.startOffsetSec, 0, state.buffer.duration || 0);
+    if(state.startOffsetSec >= (state.buffer.duration || 0)) state.startOffsetSec = 0;
+
+    cleanupSource();
+
+    const src = ac.createBufferSource();
+    src.buffer = state.buffer;
+    src.playbackRate.value = state.rate;
+    src.connect(state.gain);
+
+    state.playRateAtStart = state.rate; // FIX
+    state.startedAt = ac.currentTime;
+    state.isPlaying = true;
+
+    src.onended = () => {
+      if(state.source === src){
+        state.isPlaying = false;
+        state.source = null;
+      }
+    };
+
+    state.source = src;
+    src.start(0, state.startOffsetSec);
+
+    updatePlayIcon();
+  }
+
+  function pause(){
+    if(!state.ac || !state.isPlaying) return;
+
+    const ac = state.ac;
+    const elapsedReal = ac.currentTime - state.startedAt;
+    const playedSec = elapsedReal * state.playRateAtStart; // FIX
+
+    state.startOffsetSec = clamp(state.startOffsetSec + playedSec, 0, state.buffer?.duration || 0);
+    state.timeMs = Math.round(state.startOffsetSec * 1000);
+
+    state.isPlaying = false;
+    cleanupSource();
+
+    updatePlayIcon();
+  }
+
+  function stop(){
+    pause();
+    state.startOffsetSec = 0;
+    state.timeMs = 0;
+    resetPreviewRuntime();
+    updatePlayIcon();
+  }
+
+  function updateTimeFromAudio(){
+    if(!state.isPlaying || !state.ac) return;
+    const ac = state.ac;
+
+    const elapsedReal = ac.currentTime - state.startedAt;
+    const playedSec = elapsedReal * state.playRateAtStart; // FIX
+    const tSec = state.startOffsetSec + playedSec;
+
+    const dur = (state.buffer?.duration || 0);
+    const clamped = clamp(tSec, 0, dur);
+
+    state.timeMs = Math.round(clamped * 1000);
+
+    if(dur > 0 && clamped >= dur - 0.0005){
+      state.isPlaying = false;
+      cleanupSource();
+      updatePlayIcon();
+    }
+  }
+
+  function seekMs(ms){
+    if(!state.buffer) return;
+    ms = Math.round(ms);
+    const max = state.buffer.duration * 1000;
+    state.timeMs = clamp(ms, 0, max);
+    state.startOffsetSec = state.timeMs / 1000;
+
+    resetPreviewRuntime();
+
+    if(state.isPlaying){
+      pause();
+      play();
+    }
+  }
+
   async function loadAudio(file){
     const ac = await ensureAC();
     const arr = await file.arrayBuffer();
@@ -1213,101 +1300,48 @@
     state.isPlaying = false;
     cleanupSource();
 
-    // enable buttons
-    exportBtnTop.disabled = false;
-    clearNotesBtn.disabled = false;
-    breakBtn.disabled = false;
-    tpAdd.disabled = false;
-    tpSort.disabled = false;
-    tpReset.disabled = false;
-
-    // waveform
     state.wf.ready = false;
     state.wf.peaks = null;
-    wfStatus.textContent = "gerando…";
+    state.wf.progress = 0;
+
+    resetPreviewRuntime();
     buildPeaks();
-    state.forceRedraw = true;
+
+    topStatus.textContent = `${file.name} • ${Math.round(state.buffer.duration)}s`;
   }
-  async function play(){
-    if(!state.buffer) return;
-    const ac = await ensureAC();
-    if(ac.state === "suspended") await ac.resume();
 
-    cleanupSource();
-
-    const src = ac.createBufferSource();
-    src.buffer = state.buffer;
-    src.playbackRate.value = state.rate;
-    src.connect(state.gain);
-
-    state.startedAt = ac.currentTime;
-    src.start(0, state.startOffsetSec);
-
-    state.source = src;
-    state.isPlaying = true;
-
-    src.onended = ()=>{
-      if(state.isPlaying){ state.isPlaying=false; state.forceRedraw=true; }
-    };
-    state.forceRedraw=true;
-  }
-  function pause(){
-    if(!state.ac) return;
-    const ac = state.ac;
-    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
-    state.startOffsetSec += playedSec;
-    cleanupSource();
-    state.isPlaying = false;
-    state.forceRedraw=true;
-  }
-  function stop(){
-    pause();
-    state.startOffsetSec = 0;
-    state.timeMs = 0;
-    state.forceRedraw=true;
-  }
-  function seekMs(ms){
-    if(!state.buffer) return;
-    const max = state.buffer.duration * 1000;
-    state.timeMs = clamp(ms, 0, max);
-    state.startOffsetSec = state.timeMs / 1000;
-
+  function updatePlayIcon(){
     if(state.isPlaying){
-      pause();
-      play();
+      playIcon.innerHTML = `<path d="M7 6h4v12H7zM13 6h4v12h-4z"/>`;
     } else {
-      state.forceRedraw=true;
+      playIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`;
     }
   }
-  function updateTimeFromAudio(){
-    if(!state.isPlaying || !state.ac) return;
-    const ac = state.ac;
-    const playedSec = (ac.currentTime - state.startedAt) * state.rate;
-    const tSec = state.startOffsetSec + playedSec;
-    state.timeMs = clamp(tSec*1000, 0, state.buffer.duration*1000);
-  }
 
-  // ===== Waveform peaks =====
+  /* ===== Waveform peaks (vertical time) ===== */
   function buildPeaks(){
     const buf = state.buffer;
     if(!buf) return;
 
     const wf = state.wf;
     const dur = buf.duration;
-    wf.blockSize = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
+    const sr = buf.sampleRate;
 
-    const channels = buf.numberOfChannels;
+    // choose block size
+    const block = dur > 240 ? 4096 : (dur > 120 ? 2048 : 1024);
     const len = buf.length;
-    const block = wf.blockSize;
     const blocks = Math.ceil(len / block);
 
     wf.peaks = new Float32Array(blocks);
-    wf.blockSec = block / buf.sampleRate;
+    wf.blockSec = block / sr;
 
+    const chN = buf.numberOfChannels;
     const ch = [];
-    for(let c=0;c<channels;c++) ch.push(buf.getChannelData(c));
+    for(let c=0;c<chN;c++) ch.push(buf.getChannelData(c));
 
-    let i=0, max=0;
+    let i = 0;
+    let max = 0;
+
     function step(){
       const t0 = performance.now();
       const budget = 12;
@@ -1315,12 +1349,12 @@
       while(i < blocks && performance.now() - t0 < budget){
         const start = i * block;
         const end = Math.min(len, start + block);
-        let peak=0;
 
+        let peak = 0;
         for(let s=start; s<end; s++){
-          let v=0;
-          for(let c=0;c<channels;c++) v += ch[c][s];
-          v /= channels;
+          let v = 0;
+          for(let c=0;c<chN;c++) v += ch[c][s];
+          v /= chN;
           const a = Math.abs(v);
           if(a > peak) peak = a;
         }
@@ -1329,127 +1363,133 @@
         i++;
       }
 
-      wf.progress = i/blocks;
-      wfStatus.textContent = wf.progress >= 1 ? "ok" : (Math.round(wf.progress*100) + "%");
+      wf.progress = i / blocks;
 
-      if(i < blocks) requestAnimationFrame(step);
-      else {
+      if(i < blocks){
+        requestAnimationFrame(step);
+      } else {
         wf.max = max || 1;
         wf.ready = true;
-        wfStatus.textContent = "ok";
-        state.forceRedraw = true;
       }
     }
     requestAnimationFrame(step);
   }
-  function ampAtSec(sec){
+
+  function ampAtMs(ms){
     const wf = state.wf;
     if(!wf.ready || !wf.peaks) return 0;
+    const sec = ms / 1000;
     const idx = Math.floor(sec / wf.blockSec);
     if(idx < 0 || idx >= wf.peaks.length) return 0;
     return wf.peaks[idx] / wf.max;
   }
 
-  // ===== Undo/Redo (snapshot) =====
-  function getMeta(){
-    return {
-      title: mTitle.value || "WebManiaEditor",
-      artist: mArtist.value || "Unknown",
-      creator: mCreator.value || "reze",
-      version: mVersion.value || "Easy"
-    };
+  /* ===== Editor geometry ===== */
+  const EW = ()=> editCanvas.width / (window.devicePixelRatio||1);
+  const EH = ()=> editCanvas.height / (window.devicePixelRatio||1);
+  const WW = ()=> waveCanvas.width / (window.devicePixelRatio||1);
+  const WH = ()=> waveCanvas.height / (window.devicePixelRatio||1);
+  const AW = ()=> ampCanvas.width / (window.devicePixelRatio||1);
+  const AH = ()=> ampCanvas.height / (window.devicePixelRatio||1);
+  const PW = ()=> previewCanvas.width / (window.devicePixelRatio||1);
+  const PH = ()=> previewCanvas.height / (window.devicePixelRatio||1);
+
+  function centerYEditor(){ return Math.floor(EH() * 0.50); }
+  function centerYWave(){ return Math.floor(WH() * 0.50); }
+
+  function laneW(){ return EW() / state.keys; }
+  function laneFromX(x){ return clamp(Math.floor(x / laneW()), 0, state.keys-1); }
+  function xFromLane(l){ return l * laneW(); }
+
+  function yFromTimeEditor(ms){
+    return centerYEditor() - (ms - state.timeMs) * state.view.pxPerMs;
   }
-  function setMeta(m){
-    mTitle.value = m.title ?? mTitle.value;
-    mArtist.value = m.artist ?? mArtist.value;
-    mCreator.value = m.creator ?? mCreator.value;
-    mVersion.value = m.version ?? mVersion.value;
+  function timeFromYEditor(y){
+    return state.timeMs + (centerYEditor() - y) / state.view.pxPerMs;
   }
 
-  function snapshot(){
-    return JSON.stringify({
+  function yFromTimeWave(ms){
+    return centerYWave() - (ms - state.timeMs) * state.view.pxPerMs;
+  }
+  function timeFromYWave(y){
+    return state.timeMs + (centerYWave() - y) / state.view.pxPerMs;
+  }
+
+  /* ===== Notes + selection ===== */
+  function sortNotes(){ state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane); }
+  function markPreviewDirty(){ state.previewRuntime.dirty = true; }
+
+  function pushUndo(){
+    state.undo.push(JSON.stringify({
       keys: state.keys,
       snap: state.snap,
       snapOn: state.snapOn,
-      scrollPxPerSec: state.scrollPxPerSec,
-      tlWinSec: state.tlWinSec,
+      view: state.view,
       timing: state.timing,
-      breaks: state.breaks,
       notes: state.notes,
+      bookmarks: state.bookmarks,
       meta: getMeta(),
-      bgOpacity: state.bgOpacity,
-      laneOpacity: state.laneOpacity,
-      bgName: state.bgName || "",
+      rate: state.rate,
+      bg: state.bg,
       preview: state.preview,
-      songZoom: state.songZoom,
-      songPanMs: state.songPanMs
-    });
+    }));
+    if(state.undo.length > 250) state.undo.shift();
+    undoBtn.textContent = `Undo (${state.undo.length})`;
   }
-  function restore(raw){
+
+  function doUndo(){
+    const raw = state.undo.pop();
+    if(!raw) return;
     const s = JSON.parse(raw);
 
     state.keys = s.keys ?? state.keys;
     state.snap = s.snap ?? state.snap;
     state.snapOn = s.snapOn ?? state.snapOn;
-    state.scrollPxPerSec = s.scrollPxPerSec ?? state.scrollPxPerSec;
-    state.tlWinSec = s.tlWinSec ?? state.tlWinSec;
+    state.view = s.view ?? state.view;
     state.timing = s.timing ?? state.timing;
-    state.breaks = s.breaks ?? state.breaks;
     state.notes = s.notes ?? state.notes;
+    state.bookmarks = s.bookmarks ?? state.bookmarks;
     if(s.meta) setMeta(s.meta);
-    state.bgOpacity = s.bgOpacity ?? state.bgOpacity;
-    state.laneOpacity = s.laneOpacity ?? state.laneOpacity;
-    state.bgName = s.bgName ?? state.bgName;
+    state.rate = s.rate ?? state.rate;
+    state.bg = s.bg ?? state.bg;
     state.preview = s.preview ?? state.preview;
-    state.songZoom = s.songZoom ?? state.songZoom;
-    state.songPanMs = s.songPanMs ?? state.songPanMs;
 
+    // sync UI
     keysSel.value = String(state.keys);
-    scrollIn.value = String(state.scrollPxPerSec);
-    tlWinIn.value = String(state.tlWinSec);
     snapSel.value = String(state.snap);
+    snapOnToggle.checked = !!state.snapOn;
 
-    snapToggle.checked = !!state.snapOn;
+    const tp0 = state.timing[0] || {bpm:180,t:0};
+    bpmIn.value = String(tp0.bpm);
+    offIn.value = String(tp0.t);
 
-    bgOpacity.value = String(state.bgOpacity);
-    laneOpacity.value = String(state.laneOpacity);
-    prevAhead.value = String(state.preview.lookAheadMs);
-    prevSpeed.value = String(state.preview.speedFactor);
+    rateSel.value = String(state.rate);
+    chipRate.textContent = `${Math.round(state.rate*100)}%`;
+
+    bgOpacity.value = String(state.bg.opacity);
+    bgBlur.value = String(state.bg.blur);
+    bgImg.style.opacity = String(state.bg.opacity);
+    bgImg.style.filter = `blur(${state.bg.blur}px)`;
+
+    previewToggle.checked = !!state.preview.enabled;
+    applyPreviewLayout();
+
+    // clamp lanes
+    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
 
     state.selected.clear();
-    updateSelectionUI();
-    renderTPList();
-    renderBreakList();
-    updatePills();
-    updatePreviewVisibility();
-    state.forceRedraw = true;
-  }
-  function pushUndo(){
-    state.undo.push(snapshot());
-    if(state.undo.length > 250) state.undo.shift();
-    state.redo.length = 0;
-    undoBtn.disabled = state.undo.length === 0;
-    redoBtn.disabled = state.redo.length === 0;
-  }
-  function doUndo(){
-    const raw = state.undo.pop();
-    if(!raw) return;
-    state.redo.push(snapshot());
-    restore(raw);
-    undoBtn.disabled = state.undo.length === 0;
-    redoBtn.disabled = state.redo.length === 0;
-  }
-  function doRedo(){
-    const raw = state.redo.pop();
-    if(!raw) return;
-    state.undo.push(snapshot());
-    restore(raw);
-    undoBtn.disabled = state.undo.length === 0;
-    redoBtn.disabled = state.redo.length === 0;
+    markPreviewDirty();
+    resetPreviewRuntime();
+    renderBookmarks();
   }
 
-  // ===== Notes =====
-  function sortNotes(){ state.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane); }
+  function clearNotes(){
+    pushUndo();
+    state.notes = [];
+    state.selected.clear();
+    markPreviewDirty();
+    resetPreviewRuntime();
+  }
 
   function addNote(note){
     pushUndo();
@@ -1457,8 +1497,8 @@
     sortNotes();
     state.selected.clear();
     state.selected.add(note.id);
-    updateSelectionUI();
-    state.forceRedraw = true;
+    markPreviewDirty();
+    resetPreviewRuntime();
   }
 
   function deleteSelection(){
@@ -1466,16 +1506,8 @@
     pushUndo();
     state.notes = state.notes.filter(n => !state.selected.has(n.id));
     state.selected.clear();
-    updateSelectionUI();
-    state.forceRedraw = true;
-  }
-
-  function clearNotes(){
-    pushUndo();
-    state.notes = [];
-    state.selected.clear();
-    updateSelectionUI();
-    state.forceRedraw = true;
+    markPreviewDirty();
+    resetPreviewRuntime();
   }
 
   function getSelectedOne(){
@@ -1484,237 +1516,62 @@
     return state.notes.find(n => n.id === id) || null;
   }
 
-  function setPropsEnabled(on){
-    propTime.disabled = !on;
-    propLane.disabled = !on;
-    propType.disabled = !on;
-    propEnd.disabled = !on;
-    hsVol.disabled = !on;
-    hsFlags.disabled = !on;
-    hsWhistle.disabled = !on;
-    hsFinish.disabled = !on;
-    hsClap.disabled = !on;
-  }
-
-  function updateSelectionUI(){
-    const countSel = state.selected.size;
-    hudSel.textContent = String(countSel);
-    topSel.textContent = `sel: ${countSel}`;
-    deleteBtn.disabled = countSel === 0;
-
-    if(countSel === 0){
-      selLine.textContent = "—";
-      setPropsEnabled(false);
-      return;
-    }
-    if(countSel > 1){
-      selLine.textContent = `${countSel} notas selecionadas`;
-      setPropsEnabled(false);
-      return;
-    }
-
-    const n = getSelectedOne();
-    if(!n){ selLine.textContent="—"; setPropsEnabled(false); return; }
-
-    selLine.textContent = `lane ${n.lane+1} @ ${Math.round(n.t)}ms`;
-    setPropsEnabled(true);
-
-    propTime.value = Math.round(n.t);
-    propLane.value = n.lane+1;
-    propType.value = n.type;
-    propEnd.value = Math.round(n.end ?? n.t);
-    hsVol.value = String(n.vol ?? 0);
-    hsFlags.value = String(n.hs ?? 0);
-
-    const hs = n.hs ?? 0;
-    hsWhistle.classList.toggle("active", (hs & 2) !== 0);
-    hsFinish.classList.toggle("active", (hs & 4) !== 0);
-    hsClap.classList.toggle("active", (hs & 8) !== 0);
-  }
-
-  function applyProps(){
-    const n = getSelectedOne();
-    if(!n) return;
-
-    pushUndo();
-
-    const tRaw = Number(propTime.value)||0;
-    const laneRaw = (Number(propLane.value)||1) - 1;
-    const lane = clamp(laneRaw, 0, state.keys-1);
-    const type = propType.value === "hold" ? "hold" : "tap";
-
-    n.lane = lane;
-    n.t = state.snapOn ? quantizeAt(tRaw) : tRaw;
-
-    if(type === "tap"){
-      n.type = "tap";
-      n.end = n.t;
-    } else {
-      const endRaw = Number(propEnd.value)||n.t;
-      const endQ = state.snapOn ? quantizeAt(endRaw) : endRaw;
-      n.type = "hold";
-      n.end = Math.max(n.t + 1, endQ);
-    }
-
-    n.vol = clamp(Number(hsVol.value)||0, 0, 100);
-    n.hs = clamp(Number(hsFlags.value)||0, 0, 14);
-
-    sortNotes();
-    updateSelectionUI();
-    state.forceRedraw = true;
-  }
-
   function toggleHs(bit){
     const n = getSelectedOne();
     if(!n) return;
     pushUndo();
     n.hs = (n.hs ?? 0) ^ bit;
-    hsFlags.value = String(n.hs);
-    updateSelectionUI();
-    state.forceRedraw = true;
+    syncHitsoundUI();
   }
 
-  // Copy/paste/duplicate
-  function copySelection(){
-    if(state.selected.size === 0) return;
-    const sel = state.notes.filter(n => state.selected.has(n.id));
-    if(sel.length === 0) return;
-    state.clipboard = sel.map(n => ({...n}));
-    inspectorHint.textContent = `copiado: ${state.clipboard.length}`;
-  }
-  function pasteClipboard(){
-    if(state.clipboard.length === 0) return;
+  function setHsVol(v){
+    const n = getSelectedOne();
+    if(!n) return;
     pushUndo();
-
-    // cola perto do tempo atual mantendo offsets relativos
-    const minT = Math.min(...state.clipboard.map(n=>n.t));
-    const delta = state.timeMs - minT;
-
-    const newIds = [];
-    for(const n of state.clipboard){
-      const id = uid();
-      const t = state.snapOn ? quantizeAt(n.t + delta) : (n.t + delta);
-      const end = (n.type === "hold")
-        ? Math.max(t+1, (state.snapOn ? quantizeAt(n.end + delta) : (n.end + delta)))
-        : t;
-
-      const lane = clamp(n.lane, 0, state.keys-1);
-      state.notes.push({ ...n, id, t, end, lane });
-      newIds.push(id);
-    }
-    sortNotes();
-    state.selected.clear();
-    newIds.forEach(id=> state.selected.add(id));
-    updateSelectionUI();
-    state.forceRedraw = true;
-  }
-  function duplicateSelection(){
-    if(state.selected.size === 0) return;
-    pushUndo();
-
-    const sel = state.notes.filter(n => state.selected.has(n.id));
-    if(sel.length === 0) return;
-
-    // duplica +1 snap step por padrão
-    const step = snapMsAt(state.timeMs);
-    const newIds = [];
-    for(const n of sel){
-      const id = uid();
-      const t = state.snapOn ? quantizeAt(n.t + step) : (n.t + step);
-      const end = (n.type === "hold") ? Math.max(t+1, (state.snapOn ? quantizeAt(n.end + step) : (n.end + step))) : t;
-      state.notes.push({ ...n, id, t, end });
-      newIds.push(id);
-    }
-    sortNotes();
-    state.selected.clear();
-    newIds.forEach(id=> state.selected.add(id));
-    updateSelectionUI();
-    state.forceRedraw = true;
+    n.vol = clamp(v, 0, 100);
+    syncHitsoundUI();
   }
 
-  // Nudge selection with keyboard
-  function nudgeSelection(deltaLane, deltaMs){
-    if(state.selected.size === 0) return;
-    pushUndo();
-
-    for(const n of state.notes){
-      if(!state.selected.has(n.id)) continue;
-      n.lane = clamp(n.lane + deltaLane, 0, state.keys-1);
-      let t = n.t + deltaMs;
-      t = state.snapOn ? quantizeAt(t) : t;
-      if(n.type === "hold"){
-        let end = n.end + deltaMs;
-        end = state.snapOn ? quantizeAt(end) : end;
-        n.t = t;
-        n.end = Math.max(n.t+1, end);
-      } else {
-        n.t = t;
-        n.end = n.t;
-      }
-    }
-    sortNotes();
-    updateSelectionUI();
-    state.forceRedraw = true;
+  function syncHitsoundUI(){
+    const n = getSelectedOne();
+    const hs = n?.hs ?? 0;
+    hsWhistle.classList.toggle("active", (hs & 2) !== 0);
+    hsFinish.classList.toggle("active", (hs & 4) !== 0);
+    hsClap.classList.toggle("active", (hs & 8) !== 0);
+    const vol = n?.vol ?? 0;
+    hsVol.value = String(vol);
+    hsVolVal.textContent = String(vol);
   }
 
-  // ===== Hit test =====
-  function findNoteAt(mx, my){
+  function findNoteAt(x,y){
+    const l = laneFromX(x);
     const lw = laneW();
-    const lane = laneFromX(mx);
-    const x0 = xFromLane(lane);
+    const x0 = xFromLane(l);
 
-    for(let i=state.notes.length-1;i>=0;i--){
+    for(let i=state.notes.length-1; i>=0; i--){
       const n = state.notes[i];
-      if(n.lane !== lane) continue;
+      if(n.lane !== l) continue;
 
-      const y = yFromTime(n.t);
-      const pad = 7;
-      const rectW = lw - pad*2;
-      const rectH = 12;
+      const yHead = yFromTimeEditor(n.t);
+      const pad = 8;
+      const rw = lw - pad*2;
+      const rh = 12;
 
-      const rx = x0+pad, ry = y-rectH/2, rw = rectW, rh=rectH;
-      if(mx>=rx && mx<=rx+rw && my>=ry && my<=ry+rh) return n;
+      // head rect
+      const rx = x0 + pad;
+      const ry = yHead - rh/2;
+
+      if(x>=rx && x<=rx+rw && y>=ry && y<=ry+rh) return n;
 
       if(n.type === "hold"){
-        const y2 = yFromTime(n.end);
-        const top = Math.min(y,y2);
-        const bot = Math.max(y,y2);
-        const barX = x0 + lw/2 - 3;
-        if(mx>=barX-7 && mx<=barX+13 && my>=top-7 && my<=bot+7) return n;
+        const yTail = yFromTimeEditor(n.end);
+        const top = Math.min(yHead, yTail);
+        const bot = Math.max(yHead, yTail);
+        const cx = x0 + lw/2;
+        if(x>=cx-10 && x<=cx+10 && y>=top-8 && y<=bot+8) return n;
       }
     }
     return null;
-  }
-
-  function rectNorm(box){
-    return {
-      x0: Math.min(box.x0, box.x1),
-      y0: Math.min(box.y0, box.y1),
-      x1: Math.max(box.x0, box.x1),
-      y1: Math.max(box.y0, box.y1),
-    };
-  }
-
-  function selectByBox(box, additive=false){
-    const b = rectNorm(box);
-    const tA = state.snapOn ? quantizeAt(timeFromY(b.y1)) : timeFromY(b.y1);
-    const tB = state.snapOn ? quantizeAt(timeFromY(b.y0)) : timeFromY(b.y0);
-    const tMin = Math.min(tA,tB), tMax = Math.max(tA,tB);
-
-    const laneMin = laneFromX(b.x0);
-    const laneMax = laneFromX(b.x1);
-
-    if(!additive) state.selected.clear();
-
-    for(const n of state.notes){
-      if(n.lane < laneMin || n.lane > laneMax) continue;
-      if(n.type === "tap"){
-        if(n.t >= tMin && n.t <= tMax) state.selected.add(n.id);
-      } else {
-        if(!(n.end < tMin || n.t > tMax)) state.selected.add(n.id);
-      }
-    }
-    updateSelectionUI();
   }
 
   function beginMoveSelection(){
@@ -1736,7 +1593,7 @@
       const base = snap.get(n.id);
       if(!base) continue;
 
-      const lane = clamp(base.lane + deltaLane, 0, state.keys-1);
+      let lane = clamp(base.lane + deltaLane, 0, state.keys-1);
       let t = base.t + deltaMs;
       t = state.snapOn ? quantizeAt(t) : t;
 
@@ -1752,233 +1609,854 @@
       }
     }
     sortNotes();
-    updateSelectionUI();
-    state.forceRedraw = true;
+    markPreviewDirty();
+    resetPreviewRuntime();
   }
 
-  // ===== Breaks =====
-  function setBreakStatus(){
-    if(!state.breakArming){ inspectorHint.textContent = "—"; return; }
-    if(state.breakStart == null) inspectorHint.textContent = "break: click p/ start";
-    else inspectorHint.textContent = `break start ${Math.round(state.breakStart)}ms`;
-  }
-  function toggleBreakMode(){
-    state.breakArming = !state.breakArming;
-    state.breakStart = null;
-    setBreakStatus();
-    state.forceRedraw = true;
-  }
-  function commitBreakAt(ms){
-    if(!state.breakArming) return;
-
-    if(state.breakStart == null){
-      state.breakStart = ms;
-      setBreakStatus();
-      return;
-    }
-    const a = Math.round(Math.min(state.breakStart, ms));
-    const b = Math.round(Math.max(state.breakStart, ms));
-    if(b - a < 10){
-      state.breakStart = null;
-      setBreakStatus();
-      return;
-    }
+  /* ===== Bookmarks ===== */
+  function addBookmark(){
     pushUndo();
-    state.breaks.push({ id: uid(), start:a, end:b });
-    state.breaks.sort((x,y)=>x.start-y.start);
-    state.breakStart = null;
-    setBreakStatus();
-    renderBreakList();
-    state.forceRedraw = true;
+    state.bookmarks.push({ id: uid(), t: Math.round(state.timeMs), label: `BM @ ${fmtTime(state.timeMs)}` });
+    state.bookmarks.sort((a,b)=>a.t-b.t);
+    renderBookmarks();
   }
 
-  function renderBreakList(){
-    if(state.breaks.length === 0){
-      breakList.innerHTML = `<div class="item"><span>—</span><span class="mono">sem breaks</span></div>`;
+  function renderBookmarks(){
+    bmList.innerHTML = "";
+    if(state.bookmarks.length === 0){
+      const div = document.createElement("div");
+      div.style.opacity = ".72";
+      div.style.fontFamily = "var(--mono)";
+      div.textContent = "—";
+      bmList.appendChild(div);
       return;
     }
-    breakList.innerHTML = state.breaks.map(b => {
-      return `<div class="item" data-id="${b.id}" style="cursor:pointer">
-        <span><b class="mono">${b.start}</b> → <b class="mono">${b.end}</b></span>
-        <span class="mono" style="opacity:.9">del</span>
-      </div>`;
-    }).join("");
-
-    breakList.querySelectorAll(".item").forEach(el => {
-      el.addEventListener("click", () => {
-        const id = el.getAttribute("data-id");
+    for(const bm of state.bookmarks){
+      const row = document.createElement("div");
+      row.className = "row";
+      row.style.cursor = "pointer";
+      row.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:2px">
+          <b style="font-family:var(--mono)">${fmtTime(bm.t)}</b>
+          <span style="opacity:.72; font-size:12px">${bm.label}</span>
+        </div>
+        <div style="opacity:.7; font-family:var(--mono)">${bm.t}ms</div>
+      `;
+      row.addEventListener("click", () => seekMs(bm.t));
+      row.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
         pushUndo();
-        state.breaks = state.breaks.filter(b => b.id !== id);
-        renderBreakList();
-        state.forceRedraw = true;
+        state.bookmarks = state.bookmarks.filter(x => x.id !== bm.id);
+        renderBookmarks();
       });
-    });
+      bmList.appendChild(row);
+    }
   }
 
-  // ===== Timing list =====
-  function renderTPList(){
+  /* ===== Preview runtime ===== */
+  function rebuildPreviewSorted(){
+    state.previewRuntime.sorted = state.notes
+      .slice()
+      .map(n => ({ id:n.id, t:n.t, lane:n.lane, type:n.type, end:n.end }))
+      .sort((a,b)=>a.t-b.t || a.lane-b.lane);
+    state.previewRuntime.dirty = false;
+  }
+
+  function resetPreviewRuntime(){
+    state.previewRuntime.idx = 0;
+    state.previewRuntime.combo = 0;
+    state.previewRuntime.lastMs = state.timeMs;
+    state.previewRuntime.dirty = true;
+  }
+
+  function syncPreviewRuntimeToTime(){
+    if(state.previewRuntime.dirty) rebuildPreviewSorted();
+    // recompute combo deterministically up to current time
+    let combo = 0;
+    let idx = 0;
+    const arr = state.previewRuntime.sorted;
+    while(idx < arr.length && arr[idx].t <= state.timeMs){
+      combo++;
+      idx++;
+    }
+    state.previewRuntime.combo = combo;
+    state.previewRuntime.idx = idx;
+    state.previewRuntime.lastMs = state.timeMs;
+  }
+
+  /* ===== Drawing ===== */
+  function crispY(y){ return Math.round(y) + 0.5; }
+
+  function drawAmpStrip(){
+    const w = AW(), h = AH();
+    actx.clearRect(0,0,w,h);
+    actx.fillStyle = "rgba(0,0,0,.15)";
+    actx.fillRect(0,0,w,h);
+
+    // colored bars from waveform amplitude
+    const stepY = 3;
+    for(let y=0; y<h; y+=stepY){
+      const ms = timeFromYWave(y);
+      const a = ampAtMs(ms);
+      // map amplitude to a heat color
+      const t = clamp(a,0,1);
+      const r = Math.round(60 + 180*t);
+      const g = Math.round(120 + 80*(1-t));
+      const b = Math.round(220 - 120*t);
+      actx.fillStyle = `rgba(${r},${g},${b},0.85)`;
+      const barW = 8 + t*(w-12);
+      actx.fillRect(w - barW, y, barW, stepY-1);
+    }
+
+    // playhead
+    const yph = crispY(yFromTimeWave(state.timeMs));
+    actx.strokeStyle = "rgba(255,255,255,.55)";
+    actx.lineWidth = 1;
+    actx.beginPath();
+    actx.moveTo(0, yph);
+    actx.lineTo(w, yph);
+    actx.stroke();
+  }
+
+  function drawWaveform(){
+    const w = WW(), h = WH();
+    wctx.clearRect(0,0,w,h);
+
+    // background
+    wctx.fillStyle = "rgba(0,0,0,.22)";
+    wctx.fillRect(0,0,w,h);
+
+    // grid lines (snap + measures) with timing segments
     normalizeTiming();
-    tpList.innerHTML = state.timing.map(tp => {
-      return `<div class="item" data-id="${tp.id}" style="cursor:default">
-        <span><b class="mono">${Math.round(tp.t)}ms</b> • <span class="mono">${tp.bpm.toFixed(3)} BPM</span></span>
-        <span style="display:flex; gap:8px; align-items:center">
-          <input class="mono" data-k="t" type="number" step="1" value="${Math.round(tp.t)}" style="width:110px">
-          <input class="mono" data-k="bpm" type="number" step="0.001" value="${tp.bpm}" style="width:110px">
-          <span class="mono" style="opacity:.9; cursor:pointer" data-act="del">x</span>
-        </span>
-      </div>`;
-    }).join("");
+    const startMs = timeFromYWave(h);
+    const endMs = timeFromYWave(0);
+    const tps = state.timing.slice();
 
-    tpList.querySelectorAll(".item").forEach(row => {
-      const id = row.getAttribute("data-id");
-      const tp = state.timing.find(x => x.id === id);
-      if(!tp) return;
+    for(let i=0;i<tps.length;i++){
+      const tp = tps[i];
+      const next = tps[i+1];
+      const segStart = Math.max(startMs, tp.t);
+      const segEnd = Math.min(endMs, next ? next.t : Infinity);
+      if(segEnd <= segStart) continue;
 
-      const tIn = row.querySelector('input[data-k="t"]');
-      const bpmIn = row.querySelector('input[data-k="bpm"]');
-      const del = row.querySelector('[data-act="del"]');
+      const beatLen = 60000 / tp.bpm;
+      const meter = tp.meter || 4;
+      const step = beatLen / state.snap;
+      const base = tp.t;
 
-      tIn.addEventListener("change", ()=>{
-        pushUndo();
-        tp.t = Math.max(0, Math.round(Number(tIn.value)||0));
-        normalizeTiming();
-        renderTPList();
-        state.forceRedraw = true;
-      });
-      bpmIn.addEventListener("change", ()=>{
-        pushUndo();
-        tp.bpm = clamp(Number(bpmIn.value)||180, 30, 400);
-        normalizeTiming();
-        renderTPList();
-        state.forceRedraw = true;
-      });
-      del.addEventListener("click", ()=>{
-        if(state.timing.length <= 1) return;
-        pushUndo();
-        state.timing = state.timing.filter(x => x.id !== id);
-        normalizeTiming();
-        renderTPList();
-        state.forceRedraw = true;
-      });
-    });
+      const n0 = Math.ceil((segStart - base) / step);
+      for(let t = base + n0*step; t <= segEnd; t += step){
+        const y = crispY(yFromTimeWave(t));
+        const rel = t - base;
+        const beatIndex = Math.round(rel / beatLen);
+        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+        const isBar = isBeat && (beatIndex % meter === 0);
+
+        const a = isBar ? 0.22 : isBeat ? 0.14 : 0.08;
+        wctx.strokeStyle = `rgba(255,255,255,${a})`;
+        wctx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
+
+        wctx.beginPath();
+        wctx.moveTo(0,y);
+        wctx.lineTo(w,y);
+        wctx.stroke();
+      }
+    }
+
+    // waveform
+    if(state.wf.ready){
+      wctx.globalAlpha = 0.92;
+      wctx.strokeStyle = "rgba(38,211,255,.75)";
+      wctx.lineWidth = 1;
+      const mid = w*0.55;
+      const stepY = 2;
+      for(let y=0; y<h; y+=stepY){
+        const ms = timeFromYWave(y);
+        const a = ampAtMs(ms);
+        const amp = a*(w*0.42);
+        wctx.beginPath();
+        wctx.moveTo(mid-amp, y);
+        wctx.lineTo(mid+amp, y);
+        wctx.stroke();
+      }
+      wctx.globalAlpha = 1;
+    } else if(state.buffer){
+      wctx.fillStyle = "rgba(255,255,255,.10)";
+      wctx.fillText("gerando waveform…", 12, 18);
+    }
+
+    // notes as blocks in waveform (like screenshot)
+    const laneWv = w / Math.max(1,state.keys);
+    for(const n of state.notes){
+      const y = yFromTimeWave(n.t);
+      if(y < -80 || y > h+80) continue;
+      const x = (n.lane + 0.15) * laneWv;
+      const bw = laneWv * 0.72;
+      const bh = 12;
+
+      wctx.fillStyle = "rgba(38,211,255,.85)";
+      wctx.fillRect(x, y - bh/2, bw, bh);
+
+      if(n.type === "hold"){
+        const y2 = yFromTimeWave(n.end);
+        const top = Math.min(y, y2);
+        const bot = Math.max(y, y2);
+        wctx.fillStyle = "rgba(38,211,255,.35)";
+        wctx.fillRect(x + bw*0.42, top, bw*0.16, bot-top);
+      }
+    }
+
+    // bookmarks ticks
+    for(const bm of state.bookmarks){
+      const y = crispY(yFromTimeWave(bm.t));
+      if(y < -20 || y > h+20) continue;
+      wctx.strokeStyle = "rgba(255,255,255,.85)";
+      wctx.lineWidth = 2;
+      wctx.beginPath();
+      wctx.moveTo(0, y);
+      wctx.lineTo(w, y);
+      wctx.stroke();
+    }
+
+    // playhead
+    const yph = crispY(yFromTimeWave(state.timeMs));
+    wctx.strokeStyle = "rgba(239,68,68,.85)"; // red-ish like osu
+    wctx.lineWidth = 2;
+    wctx.beginPath();
+    wctx.moveTo(0, yph);
+    wctx.lineTo(w, yph);
+    wctx.stroke();
   }
 
-  // ===== Export / Import =====
+  function drawEditor(){
+    const w = EW(), h = EH();
+    ectx.clearRect(0,0,w,h);
+
+    // bg
+    ectx.fillStyle = "rgba(0,0,0,.18)";
+    ectx.fillRect(0,0,w,h);
+
+    // lanes shading
+    const lw = laneW();
+    for(let i=0;i<state.keys;i++){
+      ectx.fillStyle = "rgba(255,255,255,.03)";
+      ectx.fillRect(i*lw, 0, lw-1, h);
+      ectx.fillStyle = "rgba(255,255,255,.08)";
+      ectx.fillRect(i*lw, 0, 1, h);
+    }
+    ectx.fillStyle = "rgba(255,255,255,.12)";
+    ectx.fillRect(w-1,0,1,h);
+
+    // grid lines
+    normalizeTiming();
+    const startMs = timeFromYEditor(h);
+    const endMs = timeFromYEditor(0);
+    const tps = state.timing.slice();
+
+    for(let i=0;i<tps.length;i++){
+      const tp = tps[i];
+      const next = tps[i+1];
+      const segStart = Math.max(startMs, tp.t);
+      const segEnd = Math.min(endMs, next ? next.t : Infinity);
+      if(segEnd <= segStart) continue;
+
+      const beatLen = 60000 / tp.bpm;
+      const meter = tp.meter || 4;
+      const step = beatLen / state.snap;
+      const base = tp.t;
+
+      const n0 = Math.ceil((segStart - base) / step);
+      for(let t = base + n0*step; t <= segEnd; t += step){
+        const y = crispY(yFromTimeEditor(t));
+        const rel = t - base;
+        const beatIndex = Math.round(rel / beatLen);
+        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
+        const isBar = isBeat && (beatIndex % meter === 0);
+
+        const a = isBar ? 0.22 : isBeat ? 0.14 : 0.08;
+        ectx.strokeStyle = `rgba(255,255,255,${a})`;
+        ectx.lineWidth = isBar ? 1.6 : isBeat ? 1.1 : 1;
+
+        ectx.beginPath();
+        ectx.moveTo(0,y);
+        ectx.lineTo(w,y);
+        ectx.stroke();
+      }
+    }
+
+    // playhead
+    const yph = crispY(centerYEditor());
+    ectx.strokeStyle = "rgba(239,68,68,.85)";
+    ectx.lineWidth = 2;
+    ectx.beginPath();
+    ectx.moveTo(0, yph);
+    ectx.lineTo(w, yph);
+    ectx.stroke();
+
+    // notes (editor rectangles)
+    for(const n of state.notes){
+      const y = yFromTimeEditor(n.t);
+      if(y < -140 || y > h+140) continue;
+
+      const x0 = xFromLane(n.lane);
+      const pad = 10;
+      const rw = lw - pad*2;
+      const rh = 12;
+
+      const sel = state.selected.has(n.id);
+
+      if(n.type === "hold"){
+        const y2 = yFromTimeEditor(n.end);
+        const top = Math.min(y, y2);
+        const bot = Math.max(y, y2);
+
+        ectx.fillStyle = sel ? "rgba(167,139,250,.42)" : "rgba(255,255,255,.14)";
+        ectx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
+
+        ectx.fillStyle = sel ? "rgba(167,139,250,.92)" : "rgba(255,255,255,.70)";
+        ectx.fillRect(x0 + pad, y2 - rh/2, rw, rh);
+      }
+
+      ectx.fillStyle = sel ? "rgba(38,211,255,.95)" : "rgba(255,255,255,.78)";
+      ectx.fillRect(x0 + pad, y - rh/2, rw, rh);
+
+      if(sel){
+        ectx.strokeStyle = "rgba(38,211,255,.95)";
+        ectx.lineWidth = 1.3;
+        ectx.strokeRect(x0 + pad, y - rh/2, rw, rh);
+      }
+    }
+  }
+
+  function drawPreview(){
+    if(!state.preview.enabled) return;
+
+    // keep runtime synced (combo)
+    syncPreviewRuntimeToTime();
+
+    const w = PW(), h = PH();
+    prctx.clearRect(0,0,w,h);
+
+    prctx.fillStyle = "#000";
+    prctx.fillRect(0,0,w,h);
+
+    const padX = 34;
+    const keys = state.keys;
+    const playW = w - padX*2;
+    const lw = playW / keys;
+
+    const receptorY = h - state.preview.hitLinePad;
+
+    // circle size osu-like
+    const r = Math.min(lw * 0.42, 46);
+    const strokeW = 3;
+
+    function circle(cx, cy, rad, fill, stroke){
+      prctx.beginPath();
+      prctx.arc(cx, cy, rad, 0, Math.PI*2);
+      if(fill){
+        prctx.fillStyle = fill;
+        prctx.fill();
+      }
+      if(stroke){
+        prctx.lineWidth = strokeW;
+        prctx.strokeStyle = stroke;
+        prctx.stroke();
+      }
+    }
+
+    // receptors (empty circles)
+    for(let lane=0; lane<keys; lane++){
+      const cx = padX + (lane+0.5)*lw;
+      circle(cx, receptorY, r, null, "rgba(255,255,255,0.92)");
+    }
+
+    const pxPerMsPrev = state.view.pxPerMs * state.preview.speedFactor;
+    const t0 = state.timeMs - 250;
+    const t1 = state.timeMs + state.preview.lookAheadMs;
+
+    // holds body behind
+    for(const n of state.notes){
+      if(n.type !== "hold") continue;
+      if(n.t > t1 || n.end < t0) continue;
+
+      const cx = padX + (n.lane+0.5)*lw;
+      const headY = receptorY - (n.t - state.timeMs) * pxPerMsPrev;
+      const tailY = receptorY - (n.end - state.timeMs) * pxPerMsPrev;
+
+      prctx.lineCap = "round";
+      prctx.lineWidth = Math.max(10, r*0.46);
+      prctx.strokeStyle = "rgba(185,205,255,0.30)";
+      prctx.beginPath();
+      prctx.moveTo(cx, headY);
+      prctx.lineTo(cx, tailY);
+      prctx.stroke();
+
+      // tail circle (soft)
+      circle(cx, tailY, r, "rgba(185,205,255,0.70)", "rgba(255,255,255,0.92)");
+    }
+
+    // heads / taps
+    for(const n of state.notes){
+      if(n.t > t1 || (n.type === "hold" ? n.end < t0 : n.t < t0)) continue;
+
+      const cx = padX + (n.lane+0.5)*lw;
+      const y  = receptorY - (n.t - state.timeMs) * pxPerMsPrev;
+
+      circle(cx, y, r, "rgba(185,205,255,0.85)", "rgba(255,255,255,0.92)");
+    }
+
+    // combo only (no other HUD)
+    prctx.fillStyle = "rgba(255,255,255,0.95)";
+    prctx.font = "800 44px " + getComputedStyle(document.body).fontFamily;
+    prctx.textAlign = "right";
+    prctx.textBaseline = "top";
+    prctx.fillText(String(state.previewRuntime.combo), w - 18, 14);
+
+    // subtle vignette
+    const grd = prctx.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, "rgba(0,0,0,.70)");
+    grd.addColorStop(0.18, "rgba(0,0,0,.00)");
+    grd.addColorStop(0.86, "rgba(0,0,0,.10)");
+    grd.addColorStop(1, "rgba(0,0,0,.75)");
+    prctx.fillStyle = grd;
+    prctx.fillRect(0,0,w,h);
+  }
+
+  /* ===== UI refresh ===== */
+  function fmtTime(ms){
+    ms = Math.max(0, Math.floor(ms));
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const t = ms % 1000;
+    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}:${String(t).padStart(3,"0")}`;
+  }
+
+  function getMeta(){
+    return {
+      title: mTitle.value || "WebManiaEditor",
+      artist: mArtist.value || "Unknown",
+      creator: mCreator.value || "reze",
+      version: mVersion.value || "Easy",
+    };
+  }
+  function setMeta(meta){
+    mTitle.value = meta.title ?? mTitle.value;
+    mArtist.value = meta.artist ?? mArtist.value;
+    mCreator.value = meta.creator ?? mCreator.value;
+    mVersion.value = meta.version ?? mVersion.value;
+  }
+
+  function refreshHUD(){
+    const tp = activeTP(state.timeMs);
+
+    hudTime.textContent = String(Math.round(state.timeMs));
+    hudKeys.textContent = String(state.keys);
+    hudSnap.textContent = `1/${state.snap}`;
+    hudTool.textContent = state.tool[0].toUpperCase() + state.tool.slice(1);
+
+    dCount.textContent = String(state.notes.length);
+    dSpeed.textContent = `${Math.round(state.rate*100)}%`;
+    dBpm.textContent = tp ? tp.bpm.toFixed(5) : "—";
+    dSnap.textContent = `1/${state.snap}th`;
+
+    // simple "difficulty-ish" estimator
+    const dur = state.buffer ? state.buffer.duration : 0;
+    let diff = "—";
+    if(dur > 0){
+      const nps = state.notes.length / dur;
+      const est = (nps * 7.4) + (state.keys - 3) * 0.9; // heuristic
+      diff = est.toFixed(2);
+    }
+    dDiff.textContent = diff;
+
+    chipRate.textContent = `${Math.round(state.rate*100)}%`;
+    chipSnap.textContent = `1/${state.snap}`;
+    timeStr.textContent = fmtTime(state.timeMs);
+
+    snapBadge.textContent = String(state.snap);
+    topStatus.textContent = state.buffer ? `time ${fmtTime(state.timeMs)} • ${state.notes.length} objs` : "carregue um áudio em OPTIONS";
+  }
+
+  function setTool(tool){
+    state.tool = tool;
+    toolBtns.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
+    refreshHUD();
+  }
+
+  function applyPreviewLayout(){
+    if(state.preview.enabled){
+      previewWrap.style.display = "";
+      editorSplit.classList.add("previewOn");
+      fitCanvas(previewCanvas);
+    } else {
+      previewWrap.style.display = "none";
+      editorSplit.classList.remove("previewOn");
+    }
+  }
+
+  /* ===== Interaction helpers ===== */
+  function mousePos(e, wrap){
+    const r = wrap.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  /* ===== Editor interactions ===== */
+  editWrap.addEventListener("contextmenu", (e)=> e.preventDefault());
+
+  editWrap.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    if(!state.buffer) return;
+    // scroll time with wheel; scale by zoom
+    const delta = e.deltaY;
+    const ms = delta * (2.2 / state.view.pxPerMs);
+    seekMs(state.timeMs + ms);
+  }, {passive:false});
+
+  // Alt+drag scrub
+  editWrap.addEventListener("mousedown", (e)=>{
+    if(!state.buffer) return;
+    if(!e.altKey) return;
+    e.preventDefault();
+
+    state.scrub.on = true;
+    state.scrub.wasPlaying = state.isPlaying;
+    if(state.isPlaying) pause();
+
+    const m = mousePos(e, editWrap);
+    const ms = timeFromYEditor(m.y);
+    seekMs(state.snapOn ? quantizeAt(ms) : ms);
+  });
+
+  window.addEventListener("mousemove", (e)=>{
+    if(!state.scrub.on) return;
+    const m = mousePos(e, editWrap);
+    const ms = timeFromYEditor(m.y);
+    seekMs(state.snapOn ? quantizeAt(ms) : ms);
+  });
+
+  window.addEventListener("mouseup", ()=>{
+    if(!state.scrub.on) return;
+    state.scrub.on = false;
+    if(state.scrub.wasPlaying) play();
+  });
+
+  editWrap.addEventListener("mousedown", (e)=>{
+    if(!state.buffer) return;
+    if(e.altKey) return; // scrub handles
+
+    const m = mousePos(e, editWrap);
+    state.drag.down = true;
+    state.drag.x0 = m.x;
+    state.drag.y0 = m.y;
+
+    const hit = findNoteAt(m.x, m.y);
+
+    if(state.tool === "select"){
+      const additive = e.ctrlKey || e.metaKey;
+
+      if(hit){
+        if(additive){
+          if(state.selected.has(hit.id)) state.selected.delete(hit.id);
+          else state.selected.add(hit.id);
+        } else {
+          if(!state.selected.has(hit.id)){
+            state.selected.clear();
+            state.selected.add(hit.id);
+          }
+        }
+        syncHitsoundUI();
+
+        state.drag.mode = "move";
+        beginMoveSelection();
+      } else {
+        if(!additive) state.selected.clear();
+        syncHitsoundUI();
+        state.drag.mode = "none";
+      }
+      return;
+    }
+
+    if(state.tool === "erase"){
+      if(hit){
+        pushUndo();
+        state.notes = state.notes.filter(n => n.id !== hit.id);
+        state.selected.delete(hit.id);
+        markPreviewDirty();
+        resetPreviewRuntime();
+      }
+      return;
+    }
+
+    if(state.tool === "note"){
+      const lane = laneFromX(m.x);
+      const tRaw = timeFromYEditor(m.y);
+      const t = state.snapOn ? quantizeAt(tRaw) : tRaw;
+      addNote({ id: uid(), lane, t, type:"tap", end:t, hs:0, vol:0 });
+      syncHitsoundUI();
+      return;
+    }
+
+    if(state.tool === "ln"){
+      const lane = laneFromX(m.x);
+      const t0Raw = timeFromYEditor(m.y);
+      const t0 = state.snapOn ? quantizeAt(t0Raw) : t0Raw;
+      const id = uid();
+      addNote({ id, lane, t:t0, type:"hold", end: t0 + snapStepMsAt(t0), hs:0, vol:0 });
+      state.drag.mode = "lnCreate";
+      state.drag.holdId = id;
+      syncHitsoundUI();
+      return;
+    }
+  });
+
+  editWrap.addEventListener("mousemove", (e)=>{
+    if(!state.drag.down) return;
+    if(state.tool === "select" && state.drag.mode === "move"){
+      const m = mousePos(e, editWrap);
+      const dl = laneFromX(m.x) - laneFromX(state.drag.x0);
+      const ms0 = state.snapOn ? quantizeAt(timeFromYEditor(state.drag.y0)) : timeFromYEditor(state.drag.y0);
+      const ms1 = state.snapOn ? quantizeAt(timeFromYEditor(m.y)) : timeFromYEditor(m.y);
+      const dt = ms1 - ms0;
+      applyMoveSelection(dl, dt);
+      return;
+    }
+
+    if(state.tool === "ln" && state.drag.mode === "lnCreate"){
+      const m = mousePos(e, editWrap);
+      const id = state.drag.holdId;
+      const n = state.notes.find(x => x.id === id);
+      if(!n) return;
+      const endRaw = timeFromYEditor(m.y);
+      const end = state.snapOn ? quantizeAt(endRaw) : endRaw;
+      n.end = Math.max(n.t + 1, end);
+      sortNotes();
+      markPreviewDirty();
+      resetPreviewRuntime();
+      return;
+    }
+  });
+
+  window.addEventListener("mouseup", ()=>{
+    if(!state.drag.down) return;
+    state.drag.down = false;
+    state.drag.mode = "none";
+    state.drag.holdId = null;
+    state.drag.moveSnap = null;
+  });
+
+  /* ===== Wave interactions (seek + bookmarks) ===== */
+  waveWrap.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    if(!state.buffer) return;
+    const delta = e.deltaY;
+    const ms = delta * (2.2 / state.view.pxPerMs);
+    seekMs(state.timeMs + ms);
+  }, {passive:false});
+
+  waveWrap.addEventListener("mousedown", (e)=>{
+    if(!state.buffer) return;
+    const m = mousePos(e, waveWrap);
+    const ms = timeFromYWave(m.y);
+    seekMs(state.snapOn ? quantizeAt(ms) : ms);
+
+    const onMove = (ev)=>{
+      const mm = mousePos(ev, waveWrap);
+      const t = timeFromYWave(mm.y);
+      seekMs(state.snapOn ? quantizeAt(t) : t);
+    };
+    const onUp = ()=>{
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  });
+
+  /* ===== Zoom ===== */
+  function zoom(mult){
+    const z = clamp(state.view.pxPerMs * mult, state.view.min, state.view.max);
+    state.view.pxPerMs = z;
+  }
+  zoomIn.addEventListener("click", ()=> zoom(state.view.zoomStep));
+  zoomOut.addEventListener("click", ()=> zoom(1/state.view.zoomStep));
+
+  /* ===== Tools ===== */
+  toolBtns.forEach(btn => {
+    btn.addEventListener("click", ()=> setTool(btn.getAttribute("data-tool")));
+  });
+
+  /* ===== Hitsounds ===== */
+  hsWhistle.addEventListener("click", ()=> toggleHs(2));
+  hsFinish.addEventListener("click", ()=> toggleHs(4));
+  hsClap.addEventListener("click", ()=> toggleHs(8));
+  hsVol.addEventListener("input", ()=> setHsVol(parseInt(hsVol.value,10) || 0));
+
+  /* ===== Bottom controls ===== */
+  function beatLenMsAtNow(){
+    const tp = activeTP(state.timeMs);
+    return 60000 / (tp?.bpm || 180);
+  }
+
+  prevBtn.addEventListener("click", ()=>{
+    if(!state.buffer) return;
+    seekMs(state.timeMs - beatLenMsAtNow());
+  });
+  nextBtn.addEventListener("click", ()=>{
+    if(!state.buffer) return;
+    seekMs(state.timeMs + beatLenMsAtNow());
+  });
+
+  playBtn.addEventListener("click", ()=> state.isPlaying ? pause() : play());
+  stopBtn.addEventListener("click", stop);
+
+  testPlayBtn.addEventListener("click", ()=>{
+    if(!state.buffer) return;
+    if(!state.preview.enabled){
+      // liga preview automaticamente pra "test play"
+      pushUndo();
+      state.preview.enabled = true;
+      previewToggle.checked = true;
+      applyPreviewLayout();
+    }
+    if(state.isPlaying) pause(); else play();
+  });
+
+  exitBtn.addEventListener("click", ()=> alert("EXIT (placeholder) — aqui você pode redirecionar para a home do seu site."));
+
+  addBmBtn.addEventListener("click", addBookmark);
+
+  /* ===== Modal open/close ===== */
+  optionsBtn.addEventListener("click", ()=>{
+    modalBackdrop.classList.add("show");
+  });
+  closeModal.addEventListener("click", ()=>{
+    modalBackdrop.classList.remove("show");
+  });
+  modalBackdrop.addEventListener("mousedown", (e)=>{
+    if(e.target === modalBackdrop) modalBackdrop.classList.remove("show");
+  });
+
+  /* ===== Options wiring ===== */
+  audioFile.addEventListener("change", async ()=>{
+    const f = audioFile.files[0];
+    if(!f) return;
+    await loadAudio(f);
+  });
+
+  bgFile.addEventListener("change", async ()=>{
+    const f = bgFile.files[0];
+    if(!f) return;
+    const url = URL.createObjectURL(f);
+    bgImg.onload = ()=> URL.revokeObjectURL(url);
+    bgImg.src = url;
+  });
+
+  bgOpacity.addEventListener("input", ()=>{
+    state.bg.opacity = clamp(parseFloat(bgOpacity.value)||0.35, 0, 1);
+    bgImg.style.opacity = String(state.bg.opacity);
+  });
+  bgBlur.addEventListener("input", ()=>{
+    state.bg.blur = clamp(parseInt(bgBlur.value,10)||0, 0, 20);
+    bgImg.style.filter = `blur(${state.bg.blur}px)`;
+  });
+
+  keysSel.addEventListener("change", ()=>{
+    pushUndo();
+    state.keys = clamp(parseInt(keysSel.value,10), 4, 7);
+    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
+    markPreviewDirty();
+    resetPreviewRuntime();
+    syncHitsoundUI();
+  });
+
+  snapSel.addEventListener("change", ()=>{
+    pushUndo();
+    state.snap = clamp(parseInt(snapSel.value,10), 1, 16);
+  });
+
+  snapOnToggle.addEventListener("change", ()=>{
+    pushUndo();
+    state.snapOn = !!snapOnToggle.checked;
+  });
+
+  bpmIn.addEventListener("change", ()=>{
+    pushUndo();
+    const bpm = clamp(parseFloat(bpmIn.value)||180, 30, 400);
+    state.timing[0].bpm = bpm;
+  });
+  offIn.addEventListener("change", ()=>{
+    pushUndo();
+    const off = Math.max(0, Math.round(parseFloat(offIn.value)||0));
+    state.timing[0].t = off;
+    normalizeTiming();
+  });
+
+  rateSel.addEventListener("change", ()=>{
+    pushUndo();
+    state.rate = parseFloat(rateSel.value) || 1;
+    if(state.isPlaying){
+      pause();
+      play();
+    }
+  });
+
+  previewToggle.addEventListener("change", ()=>{
+    pushUndo();
+    state.preview.enabled = !!previewToggle.checked;
+    applyPreviewLayout();
+  });
+
+  clearBtn.addEventListener("click", clearNotes);
+  undoBtn.addEventListener("click", doUndo);
+
+  /* ===== Keyboard ===== */
+  window.addEventListener("keydown", (e)=>{
+    if(e.code === "Space"){
+      e.preventDefault();
+      if(state.isPlaying) pause(); else play();
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){
+      e.preventDefault();
+      doUndo();
+      return;
+    }
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="b"){
+      e.preventDefault();
+      addBookmark();
+      return;
+    }
+    if(e.code === "Delete"){
+      deleteSelection();
+      return;
+    }
+    if(e.key === "1") setTool("select");
+    if(e.key === "2") setTool("note");
+    if(e.key === "3") setTool("ln");
+    if(e.key === "4") setTool("erase");
+  });
+
+  /* ===== Export / Import ===== */
   function laneToOsuX(lane){
     const x = Math.floor((lane + 0.5) * 512 / state.keys);
     return clamp(x, 0, 511);
   }
-  function parseOsu(content){
-    const lines = content.replace(/\r/g,"").split("\n");
-    let sec = "";
-    const getSec = (name)=> name.toLowerCase();
-
-    const data = {
-      general:{},
-      metadata:{},
-      difficulty:{},
-      timing:[],
-      breaks:[],
-      notes:[]
-    };
-
-    function kv(line){
-      const i = line.indexOf(":");
-      if(i<0) return null;
-      return [line.slice(0,i).trim(), line.slice(i+1).trim()];
-    }
-
-    for(const raw of lines){
-      const line = raw.trim();
-      if(!line || line.startsWith("//")) continue;
-      if(line.startsWith("[") && line.endsWith("]")){
-        sec = getSec(line.slice(1,-1));
-        continue;
-      }
-
-      if(sec === "general" || sec === "metadata" || sec === "difficulty"){
-        const pair = kv(line);
-        if(!pair) continue;
-        const [k,v] = pair;
-        data[sec][k] = v;
-      }
-      else if(sec === "timingpoints"){
-        const parts = line.split(",").map(s=>s.trim());
-        if(parts.length < 2) continue;
-        const t = Number(parts[0])||0;
-        const beatLen = Number(parts[1])||0;
-        if(beatLen <= 0) continue; // ignora SV negatives aqui
-        const bpm = 60000/beatLen;
-        data.timing.push({ id: uid(), t: Math.max(0, Math.round(t)), bpm: clamp(bpm, 30, 400), meter: Number(parts[2])||4 });
-      }
-      else if(sec === "events"){
-        // breaks: 2,start,end
-        const parts = line.split(",").map(s=>s.trim());
-        if(parts[0] === "2" && parts.length >= 3){
-          const a = Number(parts[1])||0;
-          const b = Number(parts[2])||0;
-          if(b>a) data.breaks.push({ id: uid(), start: Math.round(a), end: Math.round(b) });
-        }
-      }
-      else if(sec === "hitobjects"){
-        const p = line.split(",");
-        if(p.length < 6) continue;
-        const x = Number(p[0])||0;
-        const t = Number(p[2])||0;
-        const type = Number(p[3])||1;
-        const hs = Number(p[4])||0;
-
-        // mania: tap = 1, hold = 128
-        const isHold = (type & 128) !== 0;
-        const keys = clamp(Number(data.difficulty.CircleSize)||4, 1, 18);
-        const lane = clamp(Math.floor(x * keys / 512), 0, keys-1);
-
-        // sample volume: hitSample "0:0:0:vol:"
-        let vol = 0;
-        const hsStr = p[5] || "";
-        if(isHold){
-          // objectParams: end:hitSample
-          const op = p[5] || "";
-          const sp = op.split(":");
-          const end = Number(sp[0])||t;
-          // sample part after end
-          if(sp.length >= 5){
-            vol = clamp(Number(sp[3])||0, 0, 100);
-          }
-          data.notes.push({ id: uid(), lane, t: Math.round(t), type:"hold", end: Math.max(Math.round(t)+1, Math.round(end)), hs: clamp(hs,0,14), vol });
-        } else {
-          // hitSample in p[5]
-          const sp = hsStr.split(":");
-          if(sp.length >= 5){
-            vol = clamp(Number(sp[3])||0, 0, 100);
-          }
-          data.notes.push({ id: uid(), lane, t: Math.round(t), type:"tap", end: Math.round(t), hs: clamp(hs,0,14), vol });
-        }
-      }
-    }
-
-    // fallback timing
-    if(data.timing.length === 0){
-      data.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
-    }
-    data.timing.sort((a,b)=>a.t-b.t);
-    data.breaks.sort((a,b)=>a.start-b.start);
-    data.notes.sort((a,b)=>a.t-b.t || a.lane-b.lane);
-
-    return data;
-  }
 
   function exportOsu(){
     if(!state.buffer){
-      inspectorHint.textContent = "carregue o áudio antes";
+      alert("Carregue um áudio antes de exportar (OPTIONS > Áudio).");
       return;
     }
+
     normalizeTiming();
     sortNotes();
 
     const meta = getMeta();
     const audioName = (audioFile.files[0]?.name || "audio.mp3").replaceAll("\\","/");
     const keys = state.keys;
+
+    const bgName = bgFile.files[0]?.name ? bgFile.files[0].name.replaceAll("\\","/") : "";
 
     const header =
 `osu file format v14
@@ -2020,15 +2498,9 @@ SliderTickRate:1
 //Background and Video events
 `;
 
-    const bgLine = state.bgName ? `0,0,"${state.bgName}",0,0\n` : "";
-    const breaks = state.breaks
-      .slice()
-      .sort((a,b)=>a.start-b.start)
-      .map(b => `2,${Math.round(b.start)},${Math.round(b.end)}`)
-      .join("\n");
+    const events = bgName ? `0,0,"${bgName}",0,0\n` : "";
 
     const timingHeader = `
-
 [TimingPoints]
 `;
     const tps = state.timing
@@ -2040,7 +2512,6 @@ SliderTickRate:1
       }).join("\n");
 
     const hitHeader = `
-
 [HitObjects]
 `;
 
@@ -2060,1162 +2531,218 @@ SliderTickRate:1
       }
     }).join("\n");
 
-    const out = header + bgLine + (breaks ? breaks + "\n" : "") + timingHeader + tps + hitHeader + hitLines + "\n";
+    const out = header + events + timingHeader + tps + "\n" + hitHeader + hitLines + "\n";
+
     const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `${meta.title} - ${meta.artist} (${meta.creator}) [${keys}K ${meta.version}].osu`;
     a.click();
     URL.revokeObjectURL(a.href);
-    inspectorHint.textContent = "export ok";
   }
 
-  function newProject(){
-    pushUndo();
-    state.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
-    state.breaks = [];
-    state.notes = [];
-    state.selected.clear();
-    state.songZoom = 1.0;
-    state.songPanMs = 0;
-    setMeta({title:"WebManiaEditor", artist:"Unknown", creator:mCreator.value || "reze", version:"Easy"});
-    renderTPList();
-    renderBreakList();
-    updateSelectionUI();
-    state.forceRedraw = true;
-    inspectorHint.textContent = "novo projeto";
-  }
+  exportBtn.addEventListener("click", exportOsu);
 
-  function saveProjectJson(){
-    const payload = {
-      version: 1,
-      savedAt: new Date().toISOString(),
-      project: JSON.parse(snapshot()),
-      meta: getMeta()
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json;charset=utf-8"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${(payload.meta.title||"project").replace(/[^\w\- ]+/g,"")}.webmania.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    inspectorHint.textContent = "projeto salvo";
-  }
+  function parseOsu(text){
+    const lines = text.replace(/\r/g,"").split("\n");
+    let section = "";
+    const meta = {};
+    let keys = 4;
+    const timing = [];
+    const notes = [];
 
-  async function loadProjectJsonFile(file){
-    const txt = await file.text();
-    const payload = JSON.parse(txt);
-    if(!payload || !payload.project){
-      inspectorHint.textContent = "json inválido";
-      return;
-    }
-    pushUndo();
-    restore(JSON.stringify(payload.project));
-    inspectorHint.textContent = "projeto aberto";
-  }
-
-  async function importOsuFile(file){
-    const txt = await file.text();
-    const data = parseOsu(txt);
-
-    pushUndo();
-
-    // apply
-    const k = clamp(Number(data.difficulty.CircleSize)||4, 4, 7);
-    state.keys = k;
-    keysSel.value = String(k);
-    pillKeys.textContent = String(k);
-
-    state.timing = data.timing.length ? data.timing : [{ id: uid(), t:0, bpm:180, meter:4 }];
-    state.breaks = data.breaks || [];
-    state.notes = data.notes || [];
-    state.selected.clear();
-
-    // meta
-    setMeta({
-      title: data.metadata.Title || mTitle.value,
-      artist: data.metadata.Artist || mArtist.value,
-      creator: data.metadata.Creator || mCreator.value,
-      version: (data.metadata.Version || mVersion.value).replace(/^\d+K\s*/i,"")
-    });
-
-    normalizeTiming();
-    sortNotes();
-    renderTPList();
-    renderBreakList();
-    updateSelectionUI();
-    updatePills();
-
-    // enable exporting (mas áudio ainda precisa carregar)
-    exportBtnTop.disabled = false;
-    clearNotesBtn.disabled = false;
-    breakBtn.disabled = false;
-    tpAdd.disabled = false;
-    tpSort.disabled = false;
-    tpReset.disabled = false;
-
-    inspectorHint.textContent = `.osu importado (${state.notes.length} notes)`;
-    state.forceRedraw = true;
-  }
-
-  // ===== Song strip mapping (osu-like) =====
-  function songVisibleMs(){
-    if(!state.buffer) return 10000;
-    const durMs = state.buffer.duration * 1000;
-    const base = durMs / state.songZoom;
-    return clamp(base, 1800, durMs);
-  }
-
-  function songCenterMs(){
-    // centro = tempo atual + pan manual
-    return clamp(state.timeMs + state.songPanMs, 0, state.buffer ? state.buffer.duration*1000 : 1e9);
-  }
-
-  function songRange(){
-    if(!state.buffer) return {start:0, end:10000};
-    const durMs = state.buffer.duration * 1000;
-    const vis = songVisibleMs();
-    const c = songCenterMs();
-    let start = c - vis/2;
-    let end = c + vis/2;
-
-    if(start < 0){ end -= start; start = 0; }
-    if(end > durMs){ start -= (end - durMs); end = durMs; }
-    start = clamp(start, 0, durMs);
-    end = clamp(end, 0, durMs);
-    return { start, end };
-  }
-
-  function xFromTimeSong(ms){
-    const {start,end} = songRange();
-    const w = SoW();
-    return ((ms - start) / (end - start)) * w;
-  }
-  function timeFromXSong(x){
-    const {start,end} = songRange();
-    const w = SoW();
-    return start + (x / w) * (end - start);
-  }
-
-  function songSeekAtX(x){
-    seekMs(timeFromXSong(x));
-  }
-
-  // ===== Rendering =====
-  function fmtTime(ms){
-    ms = Math.max(0, Math.floor(ms));
-    const m = Math.floor(ms / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    const t = ms % 1000;
-    return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}:${String(t).padStart(3,"0")}`;
-  }
-
-  function drawStage(){
-    const w = SW(), h = SH();
-    sctx.clearRect(0,0,w,h);
-
-    // bg
-    if(state.bgImg){
-      sctx.globalAlpha = state.bgOpacity;
-      const img = state.bgImg;
-      const scale = Math.max(w/img.width, h/img.height);
-      const iw = img.width*scale, ih = img.height*scale;
-      const ix = (w-iw)/2, iy=(h-ih)/2;
-      sctx.drawImage(img, ix, iy, iw, ih);
-      sctx.globalAlpha = 1;
-      sctx.fillStyle = "rgba(0,0,0,.30)";
-      sctx.fillRect(0,0,w,h);
-    } else {
-      sctx.fillStyle = "#07090d";
-      sctx.fillRect(0,0,w,h);
+    function parseKV(line){
+      const i = line.indexOf(":");
+      if(i<0) return null;
+      return [line.slice(0,i).trim(), line.slice(i+1).trim()];
     }
 
-    // lanes
-    const lw = laneW();
-    for(let i=0;i<state.keys;i++){
-      sctx.fillStyle = `rgba(255,255,255,${state.laneOpacity})`;
-      sctx.fillRect(i*lw, 0, lw-1, h);
-      sctx.fillStyle = "rgba(255,255,255,.08)";
-      sctx.fillRect(i*lw, 0, 1, h);
-    }
-    sctx.fillStyle = "rgba(255,255,255,.12)";
-    sctx.fillRect(w-1,0,1,h);
-
-    // grid
-    const viewMs = h / pxPerMs();
-    const tMin = state.timeMs - viewMs*0.70;
-    const tMax = state.timeMs + viewMs*0.50;
-
-    normalizeTiming();
-    const tps = state.timing.slice();
-    for(let i=0;i<tps.length;i++){
-      const tp = tps[i];
-      const next = tps[i+1];
-      const segStart = Math.max(tMin, tp.t);
-      const segEnd = Math.min(tMax, next ? next.t : Infinity);
-      if(segEnd <= segStart) continue;
-
-      const beatLen = 60000 / tp.bpm;
-      const meter = tp.meter || 4;
-      const step = beatLen / state.snap;
-
-      const base = tp.t;
-      const n0 = Math.ceil((segStart - base) / step);
-      for(let t = base + n0*step; t <= segEnd; t += step){
-        const y = yFromTime(t);
-        if(y < -50 || y > h+50) continue;
-
-        const rel = t - base;
-        const beatIndex = Math.round(rel / beatLen);
-        const isBeat = Math.abs(rel - beatIndex*beatLen) < 0.001;
-        const isBar = isBeat && (beatIndex % meter === 0);
-
-        const a = isBar ? 0.22 : isBeat ? 0.14 : 0.08;
-        sctx.strokeStyle = `rgba(255,255,255,${a})`;
-        sctx.lineWidth = isBar ? 1.8 : isBeat ? 1.2 : 1;
-        sctx.beginPath();
-        sctx.moveTo(0,y);
-        sctx.lineTo(w,y);
-        sctx.stroke();
-      }
-    }
-
-    // hit line
-    sctx.strokeStyle = "rgba(125,211,252,.92)";
-    sctx.lineWidth = 2;
-    sctx.beginPath();
-    sctx.moveTo(0, centerY());
-    sctx.lineTo(w, centerY());
-    sctx.stroke();
-
-    // breaks overlay
-    if(state.breaks.length){
-      sctx.globalAlpha = 0.10;
-      sctx.fillStyle = "rgba(134,239,172,1)";
-      for(const b of state.breaks){
-        const y1 = yFromTime(b.start);
-        const y2 = yFromTime(b.end);
-        const top = Math.min(y1,y2);
-        const bot = Math.max(y1,y2);
-        if(bot < -50 || top > h+50) continue;
-        sctx.fillRect(0, top, w, bot-top);
-      }
-      sctx.globalAlpha = 1;
-    }
-
-    // notes
-    for(const n of state.notes){
-      const y = yFromTime(n.t);
-      if(y < -160 || y > h+160) continue;
-
-      const x0 = xFromLane(n.lane);
-      const pad = 7;
-      const rectW = lw - pad*2;
-      const rectH = 12;
-      const isSel = state.selected.has(n.id);
-
-      if(n.type === "hold"){
-        const y2 = yFromTime(n.end);
-        const top = Math.min(y,y2);
-        const bot = Math.max(y,y2);
-        sctx.fillStyle = isSel ? "rgba(167,139,250,.40)" : "rgba(255,255,255,.16)";
-        sctx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
-
-        sctx.fillStyle = isSel ? "rgba(167,139,250,.92)" : "rgba(255,255,255,.72)";
-        sctx.fillRect(x0 + pad, y2 - rectH/2, rectW, rectH);
+    for(const raw of lines){
+      const line = raw.trim();
+      if(!line || line.startsWith("//")) continue;
+      if(line.startsWith("[") && line.endsWith("]")){
+        section = line.slice(1,-1);
+        continue;
       }
 
-      sctx.fillStyle = isSel ? "rgba(125,211,252,.95)" : "rgba(255,255,255,.78)";
-      sctx.fillRect(x0 + pad, y - rectH/2, rectW, rectH);
-
-      if(isSel){
-        sctx.strokeStyle = "rgba(125,211,252,.95)";
-        sctx.lineWidth = 1.2;
-        sctx.strokeRect(x0 + pad, y - rectH/2, rectW, rectH);
-      }
-    }
-
-    // selection box
-    if(state.drag.mode === "box" && state.drag.box){
-      const b = rectNorm(state.drag.box);
-      sctx.fillStyle = "rgba(125,211,252,.12)";
-      sctx.strokeStyle = "rgba(125,211,252,.72)";
-      sctx.lineWidth = 1.4;
-      sctx.fillRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
-      sctx.strokeRect(b.x0,b.y0,b.x1-b.x0,b.y1-b.y0);
-    }
-  }
-
-  function drawPreview(){
-    if(!state.preview.enabled) return;
-    const w = PW(), h = PH();
-    prctx.clearRect(0,0,w,h);
-
-    prctx.fillStyle = "#07090d";
-    prctx.fillRect(0,0,w,h);
-
-    if(state.bgImg){
-      prctx.globalAlpha = Math.min(0.18, state.bgOpacity*0.45);
-      const img = state.bgImg;
-      const scale = Math.max(w/img.width, h/img.height);
-      const iw = img.width*scale, ih = img.height*scale;
-      const ix = (w-iw)/2, iy=(h-ih)/2;
-      prctx.drawImage(img, ix, iy, iw, ih);
-      prctx.globalAlpha = 1;
-    }
-
-    prctx.fillStyle = "rgba(0,0,0,.28)";
-    prctx.fillRect(10, 10, w-20, h-20);
-    prctx.strokeStyle = "rgba(255,255,255,.10)";
-    prctx.lineWidth = 1;
-    prctx.strokeRect(10, 10, w-20, h-20);
-
-    const padX = 18;
-    const topY = 18;
-    const botY = h-18;
-    const playW = w - padX*2;
-    const playH = botY - topY;
-
-    const keys = state.keys;
-    const lw = playW / keys;
-
-    for(let i=0;i<keys;i++){
-      prctx.fillStyle = "rgba(255,255,255,.04)";
-      prctx.fillRect(padX + i*lw, topY, lw-1, playH);
-      prctx.fillStyle = "rgba(255,255,255,.08)";
-      prctx.fillRect(padX + i*lw, topY, 1, playH);
-    }
-    prctx.fillStyle = "rgba(255,255,255,.12)";
-    prctx.fillRect(padX + playW - 1, topY, 1, playH);
-
-    const hitY = botY - state.preview.hitLinePad;
-    prctx.strokeStyle = "rgba(125,211,252,.95)";
-    prctx.lineWidth = 2;
-    prctx.beginPath();
-    prctx.moveTo(padX, hitY);
-    prctx.lineTo(padX + playW, hitY);
-    prctx.stroke();
-
-    const pxPerMsPrev = (state.scrollPxPerSec * state.preview.speedFactor) / 1000;
-    const t0 = state.timeMs - state.preview.lookBackMs;
-    const t1 = state.timeMs + state.preview.lookAheadMs;
-
-    if(state.breaks.length){
-      prctx.globalAlpha = 0.10;
-      prctx.fillStyle = "rgba(134,239,172,1)";
-      for(const b of state.breaks){
-        if(b.end < t0 || b.start > t1) continue;
-        const yA = hitY - (b.start - state.timeMs) * pxPerMsPrev;
-        const yB = hitY - (b.end   - state.timeMs) * pxPerMsPrev;
-        const top = Math.min(yA,yB);
-        const bot = Math.max(yA,yB);
-        prctx.fillRect(padX, top, playW, bot-top);
-      }
-      prctx.globalAlpha = 1;
-    }
-
-    for(const n of state.notes){
-      if(n.t > t1 || (n.type === "hold" ? n.end < t0 : n.t < t0)) continue;
-
-      const lane = n.lane;
-      const x0 = padX + lane*lw;
-      const isSel = state.selected.has(n.id);
-
-      const headY = hitY - (n.t - state.timeMs) * pxPerMsPrev;
-      const rectH = 12;
-      const rectW = lw - 12;
-
-      if(n.type === "hold"){
-        const tailY = hitY - (n.end - state.timeMs) * pxPerMsPrev;
-        const top = Math.min(headY, tailY);
-        const bot = Math.max(headY, tailY);
-
-        prctx.fillStyle = isSel ? "rgba(167,139,250,.35)" : "rgba(255,255,255,.14)";
-        prctx.fillRect(x0 + lw/2 - 3, top, 6, bot-top);
-
-        prctx.fillStyle = isSel ? "rgba(167,139,250,.90)" : "rgba(255,255,255,.70)";
-        prctx.fillRect(x0 + 6, tailY - rectH/2, rectW, rectH);
-      }
-
-      prctx.fillStyle = isSel ? "rgba(125,211,252,.95)" : "rgba(255,255,255,.78)";
-      prctx.fillRect(x0 + 6, headY - rectH/2, rectW, rectH);
-
-      if(isSel){
-        prctx.strokeStyle = "rgba(125,211,252,.95)";
-        prctx.lineWidth = 1.2;
-        prctx.strokeRect(x0 + 6, headY - rectH/2, rectW, rectH);
-      }
-    }
-
-    const grd = prctx.createLinearGradient(0, topY, 0, botY);
-    grd.addColorStop(0, "rgba(0,0,0,.55)");
-    grd.addColorStop(0.20, "rgba(0,0,0,.00)");
-    grd.addColorStop(0.85, "rgba(0,0,0,.10)");
-    grd.addColorStop(1, "rgba(0,0,0,.55)");
-    prctx.fillStyle = grd;
-    prctx.fillRect(padX, topY, playW, playH);
-  }
-
-  function drawSongStrip(){
-    const w = SoW(), h = SoH();
-    soctx.clearRect(0,0,w,h);
-
-    // base bg
-    soctx.fillStyle = "rgba(0,0,0,.22)";
-    soctx.fillRect(0,0,w,h);
-
-    // faint top line
-    soctx.fillStyle = "rgba(255,255,255,.06)";
-    soctx.fillRect(0,0,w,1);
-
-    if(!state.buffer){
-      // placeholder
-      soctx.fillStyle = "rgba(255,255,255,.08)";
-      soctx.fillRect(10, h/2 - 6, w-20, 12);
-      soctx.fillStyle = "rgba(255,255,255,.35)";
-      soctx.font = "12px " + getComputedStyle(document.body).fontFamily;
-      soctx.fillText("Carregue o áudio para ver o waveform", 14, h/2 - 10);
-      return;
-    }
-
-    const durMs = state.buffer.duration * 1000;
-    const {start,end} = songRange();
-    const midY = Math.floor(h*0.52);
-
-    // waveform
-    if(state.wf.ready){
-      soctx.globalAlpha = 0.85;
-      soctx.lineWidth = 1;
-
-      // draw as vertical bars (fast)
-      const stepPx = 1;
-      for(let x=0; x<w; x+=stepPx){
-        const ms = start + (x / w) * (end - start);
-        const a = ampAtSec(ms/1000);
-        const amp = a * (h*0.34);
-        soctx.strokeStyle = "rgba(125,211,252,.75)";
-        soctx.beginPath();
-        soctx.moveTo(x+0.5, midY-amp);
-        soctx.lineTo(x+0.5, midY+amp);
-        soctx.stroke();
-      }
-      soctx.globalAlpha = 1;
-    } else {
-      // progress bar
-      soctx.fillStyle = "rgba(125,211,252,.18)";
-      soctx.fillRect(0, h-4, w*(state.wf.progress||0), 4);
-    }
-
-    // breaks overlay
-    if(state.breaks.length){
-      soctx.globalAlpha = 0.12;
-      soctx.fillStyle = "rgba(134,239,172,1)";
-      for(const b of state.breaks){
-        if(b.end < start || b.start > end) continue;
-        const x1 = xFromTimeSong(b.start);
-        const x2 = xFromTimeSong(b.end);
-        soctx.fillRect(Math.min(x1,x2), 0, Math.abs(x2-x1), h);
-      }
-      soctx.globalAlpha = 1;
-    }
-
-    // note density mini-histogram
-    soctx.globalAlpha = 0.25;
-    soctx.fillStyle = "rgba(255,255,255,1)";
-    const bins = Math.min(220, Math.max(60, Math.floor(w/4)));
-    const binMs = (end - start) / bins;
-    const counts = new Array(bins).fill(0);
-
-    for(const n of state.notes){
-      if(n.t < start || n.t > end) continue;
-      const idx = clamp(Math.floor((n.t - start) / binMs), 0, bins-1);
-      counts[idx]++;
-    }
-    const maxC = Math.max(1, ...counts);
-    for(let i=0;i<bins;i++){
-      const x0 = (i/bins)*w;
-      const x1 = ((i+1)/bins)*w;
-      const hh = (counts[i]/maxC) * (h*0.18);
-      soctx.fillRect(x0, h - hh, Math.max(1, x1-x0), hh);
-    }
-    soctx.globalAlpha = 1;
-
-    // current time playhead
-    const xPH = xFromTimeSong(state.timeMs);
-    soctx.strokeStyle = "rgba(125,211,252,.95)";
-    soctx.lineWidth = 2;
-    soctx.beginPath();
-    soctx.moveTo(xPH+0.5, 0);
-    soctx.lineTo(xPH+0.5, h);
-    soctx.stroke();
-
-    // small center line
-    soctx.strokeStyle = "rgba(255,255,255,.08)";
-    soctx.lineWidth = 1;
-    soctx.beginPath();
-    soctx.moveTo(0, midY+0.5);
-    soctx.lineTo(w, midY+0.5);
-    soctx.stroke();
-
-    // zoom label
-    zoomLbl.textContent = state.songZoom.toFixed(2) + "x";
-  }
-
-  function updateHUD(){
-    const tp = activeTP(state.timeMs);
-    hudTime.textContent = String(Math.round(state.timeMs));
-    hudCount.textContent = String(state.notes.length);
-    hudTP.textContent = `${tp.bpm.toFixed(3)} @ ${Math.round(tp.t)}ms`;
-    hudSnap.textContent = `1/${state.snap}`;
-    hudSnapOn.textContent = state.snapOn ? "(on)" : "(off)";
-    hudScroll.textContent = String(state.scrollPxPerSec);
-
-    pillKeys.textContent = String(state.keys);
-    pillSnap.textContent = `1/${state.snap}`;
-    topNotes.textContent = `notes: ${state.notes.length}`;
-    topTime.textContent = fmtTime(state.timeMs);
-
-    if(state.buffer){
-      const pct = (state.timeMs / (state.buffer.duration*1000)) * 100;
-      topPct.textContent = `${pct.toFixed(1)}%`;
-    } else {
-      topPct.textContent = "0.0%";
-    }
-  }
-
-  function updatePills(){
-    pillKeys.textContent = String(state.keys);
-    pillSnap.textContent = `1/${state.snap}`;
-    pillTool.textContent = state.tool[0].toUpperCase()+state.tool.slice(1);
-    snapToggle.checked = !!state.snapOn;
-  }
-
-  // ===== UI: tabs/tools/keys/snap/preview/sidebar =====
-  function setTool(tool){
-    state.tool = tool;
-    tools.forEach(b => b.classList.toggle("active", b.getAttribute("data-tool") === tool));
-    pillTool.textContent = tool[0].toUpperCase()+tool.slice(1);
-  }
-  function setTab(tab){
-    state.tab = tab;
-    tabs.forEach(t => t.classList.toggle("active", t.getAttribute("data-tab")===tab));
-    sections.forEach(s => s.classList.toggle("active", s.getAttribute("data-section")===tab));
-    inspectorHint.textContent = tab;
-  }
-  function setKeys(k){
-    state.keys = clamp(k,4,7);
-    for(const n of state.notes) n.lane = clamp(n.lane, 0, state.keys-1);
-    keysSel.value = String(state.keys);
-    updateSelectionUI();
-    updatePills();
-    state.forceRedraw = true;
-  }
-  function setSnap(v){
-    state.snap = clamp(v,1,16);
-    snapSel.value = String(state.snap);
-    updatePills();
-    state.forceRedraw = true;
-  }
-  function setSnapOn(on){
-    state.snapOn = !!on;
-    snapToggle.checked = !!on;
-    updatePills();
-    state.forceRedraw = true;
-  }
-  function updatePreviewVisibility(){
-    state.preview.enabled = !!previewToggle.checked;
-    previewWrap.style.display = state.preview.enabled ? "" : "none";
-    // if preview hidden, stageInner becomes 1 col
-    if(!state.preview.enabled){
-      stageInner.style.gridTemplateColumns = "1fr";
-    } else {
-      stageInner.style.gridTemplateColumns = "1fr 320px";
-    }
-    state.forceRedraw = true;
-  }
-
-  function toggleRight(){
-    const right = $("rightSide");
-    const hidden = right.classList.toggle("hidden");
-    appRoot.classList.toggle("noright", hidden);
-    state.forceRedraw = true;
-  }
-
-  // ===== Mouse helpers =====
-  function mousePos(e, wrap){
-    const r = wrap.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
-
-  // ===== Interactions: stage =====
-  editWrap.addEventListener("wheel", (e)=>{
-    e.preventDefault();
-    if(!state.buffer) return;
-    const mult = e.shiftKey ? 6.0 : 2.2;
-    seekMs(state.timeMs + e.deltaY * mult);
-  }, {passive:false});
-
-  editWrap.addEventListener("mousedown", (e)=>{
-    if(!state.buffer) return;
-    const m = mousePos(e, editWrap);
-    state.drag.down = true;
-    state.drag.x0 = m.x; state.drag.y0 = m.y;
-
-    // break arming: click 1/2 uses current time
-    if(state.breakArming){
-      commitBreakAt(state.timeMs);
-      return;
-    }
-
-    const hit = findNoteAt(m.x, m.y);
-    const additive = e.ctrlKey || e.metaKey;
-
-    if(state.tool === "select"){
-      if(hit){
-        if(additive){
-          if(state.selected.has(hit.id)) state.selected.delete(hit.id);
-          else state.selected.add(hit.id);
-        } else {
-          if(!state.selected.has(hit.id)){
-            state.selected.clear();
-            state.selected.add(hit.id);
+      if(section === "Metadata"){
+        const kv = parseKV(line);
+        if(kv){
+          const [k,v] = kv;
+          if(k==="Title") meta.title=v;
+          if(k==="Artist") meta.artist=v;
+          if(k==="Creator") meta.creator=v;
+          if(k==="Version"){
+            // might be "4K X"
+            meta.version = v.replace(/^\d+K\s*/,"");
           }
         }
-        updateSelectionUI();
-
-        // start move action (single undo)
-        pushUndo();
-        state.drag.mode = "move";
-        beginMoveSelection();
-      } else {
-        state.drag.mode = "box";
-        state.drag.box = { x0:m.x, y0:m.y, x1:m.x, y1:m.y };
-        if(!additive) state.selected.clear();
-        updateSelectionUI();
       }
-      state.forceRedraw = true;
-      return;
-    }
 
-    if(state.tool === "erase"){
-      if(hit){
-        pushUndo();
-        state.notes = state.notes.filter(n => n.id !== hit.id);
-        state.selected.delete(hit.id);
-        updateSelectionUI();
-        state.forceRedraw = true;
+      if(section === "Difficulty"){
+        const kv = parseKV(line);
+        if(kv && kv[0]==="CircleSize"){
+          keys = clamp(parseInt(kv[1],10)||4, 4, 7);
+        }
       }
-      return;
+
+      if(section === "TimingPoints"){
+        const parts = line.split(",");
+        if(parts.length >= 2){
+          const t = Math.max(0, Math.round(parseFloat(parts[0])||0));
+          const beatLen = parseFloat(parts[1]);
+          if(beatLen > 0){
+            const bpm = clamp(60000/beatLen, 30, 400);
+            timing.push({ id: uid(), t, bpm, meter:4 });
+          }
+        }
+      }
+
+      if(section === "HitObjects"){
+        const p = line.split(",");
+        if(p.length < 6) continue;
+        const x = parseInt(p[0],10)||0;
+        const t = Math.round(parseFloat(p[2])||0);
+        const type = parseInt(p[3],10)||1;
+        const hs = parseInt(p[4],10)||0;
+
+        const lane = clamp(Math.floor((x/512)*keys), 0, keys-1);
+
+        if((type & 128) !== 0){
+          // hold: p[5] like "end:sample"
+          const extra = p[5] || "";
+          const endStr = extra.split(":")[0];
+          const end = Math.max(t+1, Math.round(parseFloat(endStr)||t+1));
+          notes.push({ id: uid(), lane, t, type:"hold", end, hs, vol:0 });
+        } else {
+          notes.push({ id: uid(), lane, t, type:"tap", end:t, hs, vol:0 });
+        }
+      }
     }
 
-    if(state.tool === "tap"){
-      pushUndo();
-      const lane = laneFromX(m.x);
-      const tRaw = timeFromY(m.y);
-      const t = state.snapOn ? quantizeAt(tRaw) : tRaw;
-      state.notes.push({ id: uid(), lane, t, type:"tap", end:t, hs:0, vol:0 });
-      sortNotes();
-      state.selected.clear();
-      // select the newly added (approx)
-      const last = state.notes.find(n=>n.lane===lane && n.t===t && n.type==="tap");
-      if(last) state.selected.add(last.id);
-      updateSelectionUI();
-      state.forceRedraw = true;
-      return;
-    }
+    if(timing.length === 0) timing.push({ id: uid(), t:0, bpm:180, meter:4 });
+    timing.sort((a,b)=>a.t-b.t);
 
-    if(state.tool === "hold"){
-      pushUndo();
-      const lane = laneFromX(m.x);
-      const t0Raw = timeFromY(m.y);
-      const t0 = state.snapOn ? quantizeAt(t0Raw) : t0Raw;
-      const id = uid();
-      state.notes.push({ id, lane, t:t0, type:"hold", end:t0 + snapMsAt(t0), hs:0, vol:0 });
-      sortNotes();
-      state.selected.clear();
-      state.selected.add(id);
-      updateSelectionUI();
-      state.drag.mode = "holdCreate";
-      state.drag.holdId = id;
-      state.forceRedraw = true;
-      return;
-    }
-  });
-
-  editWrap.addEventListener("mousemove", (e)=>{
-    if(!state.drag.down) return;
-    const m = mousePos(e, editWrap);
-
-    if(state.tool === "select" && state.drag.mode === "box" && state.drag.box){
-      state.drag.box.x1 = m.x;
-      state.drag.box.y1 = m.y;
-      selectByBox(state.drag.box, e.ctrlKey || e.metaKey);
-      state.forceRedraw = true;
-      return;
-    }
-
-    if(state.tool === "select" && state.drag.mode === "move"){
-      const dxLane = laneFromX(m.x) - laneFromX(state.drag.x0);
-      const dMsRaw = (state.snapOn ? quantizeAt(timeFromY(m.y)) : timeFromY(m.y))
-                   - (state.snapOn ? quantizeAt(timeFromY(state.drag.y0)) : timeFromY(state.drag.y0));
-      applyMoveSelection(dxLane, dMsRaw);
-      return;
-    }
-
-    if(state.tool === "hold" && state.drag.mode === "holdCreate"){
-      const id = state.drag.holdId;
-      const n = state.notes.find(x => x.id === id);
-      if(!n) return;
-      const endRaw = timeFromY(m.y);
-      const end = state.snapOn ? quantizeAt(endRaw) : endRaw;
-      n.end = Math.max(n.t + 1, end);
-      updateSelectionUI();
-      state.forceRedraw = true;
-      return;
-    }
-  });
-
-  window.addEventListener("mouseup", ()=>{
-    state.drag.down=false;
-    state.drag.mode="none";
-    state.drag.box=null;
-    state.drag.moveSnap=null;
-    state.drag.holdId=null;
-
-    state.songDrag.down=false;
-    state.forceRedraw = true;
-  });
-
-  // ===== Song strip interactions =====
-  songStripWrap.addEventListener("mousedown", (e)=>{
-    if(!state.buffer) return;
-    const m = mousePos(e, songStripWrap);
-    state.songDrag.down = true;
-    state.songDrag.x0 = m.x;
-    state.songDrag.did = false;
-    songSeekAtX(m.x);
-  });
-
-  window.addEventListener("mousemove", (e)=>{
-    if(!state.songDrag.down) return;
-    const m = mousePos(e, songStripWrap);
-    state.songDrag.did = true;
-    songSeekAtX(m.x);
-  });
-
-  songStripWrap.addEventListener("wheel", (e)=>{
-    e.preventDefault();
-    if(!state.buffer) return;
-
-    const fine = e.ctrlKey || e.metaKey;
-    const zStep = fine ? 1.03 : 1.10;
-
-    if(e.shiftKey){
-      // pan/scroll
-      const {start,end} = songRange();
-      const vis = end-start;
-      const pan = e.deltaY * (vis/900);
-      state.songPanMs = clamp(state.songPanMs + pan, -state.timeMs, (state.buffer.duration*1000 - state.timeMs));
-      state.forceRedraw = true;
-      return;
-    }
-
-    // zoom
-    if(e.deltaY < 0) state.songZoom *= zStep;
-    else state.songZoom /= zStep;
-    state.songZoom = clamp(state.songZoom, 1.0, 120.0);
-    state.forceRedraw = true;
-  }, {passive:false});
-
-  // ===== Recording =====
-  function normalizeKey(e){
-    if(e.code === "Space") return "space";
-    return (e.key || "").toLowerCase();
+    return { meta, keys, timing, notes };
   }
-  function recKeyDown(e){
-    if(!state.rec.on) return;
-    if(!state.isPlaying) return;
-    if(e.repeat) return;
-    if(e.ctrlKey || e.metaKey || e.altKey) return;
 
-    const key = normalizeKey(e);
-    const binds = state.rec.bindsByKeys[state.keys];
-    const lane = binds.indexOf(key);
-    if(lane < 0) return;
-    if(state.rec.downMap.has(key)) return;
+  osuIn.addEventListener("change", async ()=>{
+    const f = osuIn.files[0];
+    if(!f) return;
+    const text = await f.text();
+    const parsed = parseOsu(text);
 
     pushUndo();
 
-    const ms = state.timeMs;
-    const t = state.rec.quantize ? quantizeAt(ms) : ms;
-
-    const id = uid();
-    const note = { id, lane, t, type:"hold", end: t + snapMsAt(t), hs:0, vol:0 };
-    state.notes.push(note);
+    if(parsed.meta) setMeta(parsed.meta);
+    state.keys = parsed.keys;
+    state.timing = parsed.timing;
+    state.notes = parsed.notes;
     sortNotes();
-
-    state.rec.downMap.set(key, { noteId:id });
-    state.selected.clear();
-    state.selected.add(id);
-    updateSelectionUI();
-    state.forceRedraw = true;
-
-    e.preventDefault();
-  }
-  function recKeyUp(e){
-    if(!state.rec.on) return;
-    const key = normalizeKey(e);
-    const info = state.rec.downMap.get(key);
-    if(!info) return;
-
-    const n = state.notes.find(x => x.id === info.noteId);
-    state.rec.downMap.delete(key);
-    if(!n) return;
-
-    const ms = state.timeMs;
-    const end = state.rec.quantize ? quantizeAt(ms) : ms;
-    const minHold = snapMsAt(n.t) * 0.6;
-
-    if(end - n.t < minHold){
-      n.type = "tap";
-      n.end = n.t;
-    } else {
-      n.type = "hold";
-      n.end = Math.max(n.t + 1, end);
-    }
-    sortNotes();
-    updateSelectionUI();
-    state.forceRedraw = true;
-    e.preventDefault();
-  }
-
-  // ===== Keyboard shortcuts =====
-  window.addEventListener("keydown", (e)=>{
-    // Help
-    if(e.key === "F1"){
-      e.preventDefault();
-      helpOverlay.classList.toggle("show");
-      return;
-    }
-
-    // Ignore typing in inputs
-    const tag = (document.activeElement && document.activeElement.tagName || "").toLowerCase();
-    const isTyping = tag === "input" || tag === "select" || tag === "textarea";
-    if(isTyping){
-      // still allow Esc to unfocus/help
-      if(e.key === "Escape"){
-        document.activeElement.blur();
-      }
-      return;
-    }
-
-    // playback
-    if(e.code === "Space"){
-      e.preventDefault();
-      if(state.isPlaying) pause(); else play();
-      return;
-    }
-    if(e.key.toLowerCase() === "s"){
-      stop();
-      return;
-    }
-
-    // undo/redo
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){
-      e.preventDefault();
-      doUndo();
-      return;
-    }
-    if((e.ctrlKey || e.metaKey) && (e.key.toLowerCase()==="y" || (e.shiftKey && e.key.toLowerCase()==="z"))){
-      e.preventDefault();
-      doRedo();
-      return;
-    }
-
-    // tools
-    if(e.key === "1") setTool("select");
-    if(e.key === "2") setTool("tap");
-    if(e.key === "3") setTool("hold");
-    if(e.key === "4") setTool("erase");
-
-    // delete
-    if(e.code === "Delete"){
-      deleteSelection();
-      return;
-    }
-
-    // snap toggle
-    if(e.key.toLowerCase() === "q"){
-      setSnapOn(!state.snapOn);
-      return;
-    }
-
-    // preview toggle
-    if(e.key.toLowerCase() === "p"){
-      previewToggle.checked = !previewToggle.checked;
-      updatePreviewVisibility();
-      return;
-    }
-
-    // sidebar toggle
-    if(e.key === "\\"){
-      toggleRight();
-      return;
-    }
-
-    // copy/paste/dup
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="c"){
-      e.preventDefault();
-      copySelection();
-      return;
-    }
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="v"){
-      e.preventDefault();
-      pasteClipboard();
-      return;
-    }
-    if(e.key.toLowerCase() === "d"){
-      duplicateSelection();
-      return;
-    }
-
-    // nudge
-    const stepMs = snapMsAt(state.timeMs);
-    const big = e.shiftKey ? 4 : 1;
-    if(e.key === "ArrowLeft"){ nudgeSelection(-1, 0); return; }
-    if(e.key === "ArrowRight"){ nudgeSelection(+1, 0); return; }
-    if(e.key === "ArrowUp"){ nudgeSelection(0, -stepMs*big); return; }
-    if(e.key === "ArrowDown"){ nudgeSelection(0, +stepMs*big); return; }
-
-    recKeyDown(e);
-  });
-
-  window.addEventListener("keyup", (e)=> recKeyUp(e));
-
-  // ===== Wiring UI =====
-  closeHelpBtn.addEventListener("click", ()=> helpOverlay.classList.remove("show"));
-  helpOverlay.addEventListener("click", (e)=>{ if(e.target === helpOverlay) helpOverlay.classList.remove("show"); });
-
-  tabs.forEach(t => t.addEventListener("click", ()=> setTab(t.getAttribute("data-tab"))));
-  tools.forEach(b => b.addEventListener("click", ()=> setTool(b.getAttribute("data-tool"))));
-
-  newBtn.addEventListener("click", newProject);
-
-  importOsuBtn.addEventListener("click", ()=> osuImportFile.click());
-  osuImportFile.addEventListener("change", async ()=>{
-    const f = osuImportFile.files[0];
-    osuImportFile.value = "";
-    if(!f) return;
-    await importOsuFile(f);
-  });
-
-  saveProjBtn.addEventListener("click", saveProjectJson);
-  loadProjBtn.addEventListener("click", ()=> projImportFile.click());
-  projImportFile.addEventListener("change", async ()=>{
-    const f = projImportFile.files[0];
-    projImportFile.value = "";
-    if(!f) return;
-    await loadProjectJsonFile(f);
-  });
-
-  exportBtnTop.addEventListener("click", exportOsu);
-
-  toggleRightBtn.addEventListener("click", toggleRight);
-
-  audioFile.addEventListener("change", async ()=>{
-    const f = audioFile.files[0];
-    if(!f) return;
-    await loadAudio(f);
-  });
-
-  keysSel.addEventListener("change", ()=>{
-    pushUndo();
-    setKeys(parseInt(keysSel.value,10));
-  });
-
-  scrollIn.addEventListener("change", ()=>{
-    pushUndo();
-    state.scrollPxPerSec = clamp(parseInt(scrollIn.value,10)||1700, 250, 9000);
-    state.forceRedraw = true;
-  });
-
-  tlWinIn.addEventListener("change", ()=>{
-    pushUndo();
-    state.tlWinSec = clamp(parseInt(tlWinIn.value,10)||8, 3, 30);
-    state.forceRedraw = true;
-  });
-
-  snapSel.addEventListener("change", ()=>{
-    pushUndo();
-    setSnap(parseInt(snapSel.value,10));
-  });
-
-  undoBtn.addEventListener("click", doUndo);
-  redoBtn.addEventListener("click", doRedo);
-  deleteBtn.addEventListener("click", deleteSelection);
-  clearNotesBtn.addEventListener("click", clearNotes);
-
-  [propTime, propLane, propType, propEnd, hsVol, hsFlags].forEach(el=>{
-    el.addEventListener("change", applyProps);
-  });
-  hsWhistle.addEventListener("click", ()=> toggleHs(2));
-  hsFinish.addEventListener("click", ()=> toggleHs(4));
-  hsClap.addEventListener("click", ()=> toggleHs(8));
-
-  breakBtn.addEventListener("click", toggleBreakMode);
-
-  tpAdd.addEventListener("click", ()=>{
-    pushUndo();
-    const ms = Math.round(state.timeMs);
-    const cur = activeTP(ms);
-    state.timing.push({ id: uid(), t: ms, bpm: cur.bpm, meter: cur.meter||4 });
     normalizeTiming();
-    renderTPList();
-    state.forceRedraw = true;
-  });
-  tpSort.addEventListener("click", ()=>{
-    pushUndo();
-    normalizeTiming();
-    renderTPList();
-    state.forceRedraw = true;
-  });
-  tpReset.addEventListener("click", ()=>{
-    pushUndo();
-    state.timing = [{ id: uid(), t:0, bpm:180, meter:4 }];
-    renderTPList();
-    state.forceRedraw = true;
+
+    keysSel.value = String(state.keys);
+    const tp0 = state.timing[0];
+    bpmIn.value = String(tp0.bpm);
+    offIn.value = String(tp0.t);
+
+    markPreviewDirty();
+    resetPreviewRuntime();
+    renderBookmarks();
+    syncHitsoundUI();
+
+    alert("Import OK. Agora carregue o áudio em OPTIONS > Áudio.");
   });
 
-  recToggle.addEventListener("change", ()=>{ state.rec.on = !!recToggle.checked; });
-  recQuantToggle.addEventListener("change", ()=>{ state.rec.quantize = !!recQuantToggle.checked; });
+  /* ===== Bookmarks add (bottom + keybind) ===== */
+  addBmBtn.addEventListener("click", addBookmark);
 
-  previewToggle.addEventListener("change", updatePreviewVisibility);
+  /* ===== Timeline zoom controls ===== */
+  // already wired
 
-  snapToggle.addEventListener("change", ()=>{ pushUndo(); setSnapOn(!!snapToggle.checked); });
-
-  playBtn.addEventListener("click", ()=> { if(state.isPlaying) pause(); else play(); });
-  stopBtn.addEventListener("click", stop);
-
-  volRange.addEventListener("input", ()=>{ if(state.gain) state.gain.gain.value = parseFloat(volRange.value)||1; });
-
-  rateBtns.forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      rateBtns.forEach(b=>b.classList.remove("active"));
-      btn.classList.add("active");
-      state.rate = parseFloat(btn.getAttribute("data-rate"));
-      if(state.isPlaying){ pause(); play(); }
-      state.forceRedraw = true;
-    });
-  });
-
-  bgFile.addEventListener("change", async ()=>{
-    const f = bgFile.files[0];
-    if(!f) return;
-    pushUndo();
-    state.bgName = f.name;
-    const url = URL.createObjectURL(f);
-    const img = new Image();
-    img.onload = ()=>{ state.bgImg = img; URL.revokeObjectURL(url); state.forceRedraw = true; };
-    img.src = url;
-  });
-  bgOpacity.addEventListener("change", ()=>{
-    pushUndo();
-    state.bgOpacity = clamp(parseFloat(bgOpacity.value)||0.35, 0, 1);
-    state.forceRedraw = true;
-  });
-  laneOpacity.addEventListener("change", ()=>{
-    pushUndo();
-    state.laneOpacity = clamp(parseFloat(laneOpacity.value)||0.08, 0, 1);
-    state.forceRedraw = true;
-  });
-
-  prevAhead.addEventListener("change", ()=>{
-    pushUndo();
-    state.preview.lookAheadMs = clamp(parseInt(prevAhead.value,10)||2200, 200, 6000);
-    state.forceRedraw = true;
-  });
-  prevSpeed.addEventListener("change", ()=>{
-    pushUndo();
-    state.preview.speedFactor = clamp(parseFloat(prevSpeed.value)||0.70, 0.2, 2.0);
-    state.forceRedraw = true;
-  });
-
-  selectAllBtn.addEventListener("click", ()=>{
-    state.selected.clear();
-    state.notes.forEach(n=> state.selected.add(n.id));
-    updateSelectionUI();
-    state.forceRedraw = true;
-  });
-  deselectBtn.addEventListener("click", ()=>{
-    state.selected.clear();
-    updateSelectionUI();
-    state.forceRedraw = true;
-  });
-  snapToGridBtn.addEventListener("click", ()=>{
-    if(state.selected.size===0) return;
-    pushUndo();
-    for(const n of state.notes){
-      if(!state.selected.has(n.id)) continue;
-      n.t = quantizeAt(n.t);
-      if(n.type === "hold") n.end = Math.max(n.t+1, quantizeAt(n.end));
-      else n.end = n.t;
-    }
-    sortNotes();
-    updateSelectionUI();
-    state.forceRedraw = true;
-  });
-  sortNotesBtn.addEventListener("click", ()=>{
-    pushUndo();
-    sortNotes();
-    state.forceRedraw = true;
-  });
-
-  // ===== Init =====
-  function init(){
-    setTab("compose");
+  /* ===== Global init ===== */
+  function initDefaults(){
     setTool("select");
-    setKeys(4);
-    setSnap(4);
-    setSnapOn(true);
+    keysSel.value = "4";
+    snapSel.value = "4";
+    bpmIn.value = "180";
+    offIn.value = "0";
+    rateSel.value = "1";
+    snapOnToggle.checked = true;
 
-    updatePreviewVisibility();
+    bgImg.style.opacity = "0.35";
+    bgImg.style.filter = "blur(0px)";
 
-    renderTPList();
-    renderBreakList();
-    updateSelectionUI();
-    updatePills();
-
-    // disabled until audio (but can import osu and still export structure)
-    exportBtnTop.disabled = true;
-    clearNotesBtn.disabled = true;
-    breakBtn.disabled = true;
-    tpAdd.disabled = true;
-    tpSort.disabled = true;
-    tpReset.disabled = true;
+    renderBookmarks();
+    updatePlayIcon();
+    refreshHUD();
   }
 
-  // ===== Main loop (throttled) =====
-  function loop(now){
+  /* ===== Main loop ===== */
+  function loop(){
     updateTimeFromAudio();
-    updateHUD();
+    refreshHUD();
 
-    // throttle to ~60fps while playing/dragging; otherwise ~30fps unless forced
-    const wantsFast = state.isPlaying || state.drag.down || state.songDrag.down;
-    const frameBudget = wantsFast ? 16 : 33;
-
-    if(state.forceRedraw || (now - state.lastDraw) > frameBudget){
-      drawSongStrip();
-      drawStage();
-      if(state.preview.enabled) drawPreview();
-
-      state.lastDraw = now;
-      state.forceRedraw = false;
-    }
+    drawAmpStrip();
+    drawWaveform();
+    drawEditor();
+    drawPreview();
 
     requestAnimationFrame(loop);
   }
 
-  init();
+  /* ===== Buttons ===== */
+  addBmBtn.addEventListener("click", addBookmark);
+
+  /* ===== Set initial timing from inputs ===== */
+  function applyTimingFromUI(){
+    state.timing = [{ id: uid(), t: Math.max(0, Math.round(parseFloat(offIn.value)||0)), bpm: clamp(parseFloat(bpmIn.value)||180, 30, 400), meter:4 }];
+    normalizeTiming();
+  }
+  applyTimingFromUI();
+
+  /* ===== Preview toggle layout ===== */
+  function setPreviewEnabled(on){
+    state.preview.enabled = !!on;
+    previewToggle.checked = !!on;
+    applyPreviewLayout();
+  }
+
+  /* ===== Click bookmark on waveform area: right-click add BM ===== */
+  waveWrap.addEventListener("contextmenu", (e)=>{
+    e.preventDefault();
+    addBookmark();
+  });
+
+  /* ===== Options open loads correct UI ===== */
+  optionsBtn.addEventListener("click", ()=>{
+    // sync UI fields with current state
+    keysSel.value = String(state.keys);
+    snapSel.value = String(state.snap);
+    snapOnToggle.checked = !!state.snapOn;
+
+    const tp0 = state.timing[0] || {t:0,bpm:180};
+    bpmIn.value = String(tp0.bpm);
+    offIn.value = String(tp0.t);
+
+    rateSel.value = String(state.rate);
+
+    previewToggle.checked = !!state.preview.enabled;
+
+    bgOpacity.value = String(state.bg.opacity);
+    bgBlur.value = String(state.bg.blur);
+
+    modalBackdrop.classList.add("show");
+  });
+
+  /* ===== Volume global (use hsVol only for note; master uses browser) ===== */
+  // (se você quiser master volume global depois, eu adiciono no layout igual o osu)
+
+  initDefaults();
+  fitCanvas(ampCanvas);
+  fitCanvas(waveCanvas);
+  fitCanvas(editCanvas);
+  applyPreviewLayout();
   requestAnimationFrame(loop);
 })();
 </script>

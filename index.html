@@ -2,64 +2,125 @@
 <html lang="pt-BR">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gravador leve (osu!)</title>
+<title>Gravador leve (controle total)</title>
 <style>
-  body{margin:0;background:#0f1115;color:#e6e6e6;font-family:system-ui;display:grid;place-items:center;min-height:100vh}
-  .box{width:min(820px,92vw);display:grid;gap:12px}
-  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  button,select,label{background:#161a22;border:1px solid #2a3140;color:#e6e6e6;border-radius:10px;padding:10px 12px;font-weight:600}
+  :root{--bg:#0f1115;--fg:#e6e6e6;--mut:#9aa4b2;--bd:#2a3140;--p:#161a22}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui;min-height:100vh;display:grid;place-items:center}
+  .wrap{width:min(960px,92vw);display:grid;gap:12px}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--p);border:1px solid var(--bd);border-radius:14px;padding:12px}
+  button,select{background:#0f131b;border:1px solid var(--bd);color:var(--fg);border-radius:12px;padding:10px 12px;font-weight:650}
   button{cursor:pointer} button:disabled{opacity:.5;cursor:not-allowed}
-  label{display:flex;gap:8px;align-items:center;font-weight:500}
-  video{width:100%;max-height:70vh;background:#000;border:1px solid #2a3140;border-radius:14px}
-  #s{opacity:.85}
+  label{display:flex;gap:8px;align-items:center;background:#0f131b;border:1px solid var(--bd);border-radius:12px;padding:10px 12px;color:var(--fg)}
+  small{color:var(--mut)}
+  .sp{flex:1}
+  video{width:100%;max-height:70vh;background:#000;border:1px solid var(--bd);border-radius:16px}
+  .hint{background:var(--p);border:1px solid var(--bd);border-radius:14px;padding:12px;color:var(--mut);line-height:1.45}
+  .pill{padding:6px 10px;border:1px solid var(--bd);border-radius:999px;color:var(--mut)}
 </style>
 
-<div class="box">
-  <div class="row">
+<div class="wrap">
+  <div class="bar">
     <button id="start">Iniciar</button>
     <button id="stop" disabled>Parar</button>
     <button id="down" disabled>Baixar</button>
 
-    <select id="mode" title="Qualidade">
-      <option value="ultra" selected>Ultra leve (osu!)</option>
-      <option value="normal">Normal</option>
+    <div class="sp"></div>
+
+    <select id="res" title="Resolução">
+      <option value="native" selected>Nativo</option>
+      <option value="1920x1080">1080p</option>
+      <option value="1280x720">720p (recomendado)</option>
+      <option value="960x540">540p (bem leve)</option>
+      <option value="854x480">480p (ultra leve)</option>
     </select>
 
-    <label title="Depende de marcar 'Compartilhar áudio' na janela do navegador">
-      <input id="sys" type="checkbox" checked> som do sistema
+    <select id="fps" title="FPS">
+      <option value="15">15</option>
+      <option value="20">20</option>
+      <option value="24" selected>24 (bom e leve)</option>
+      <option value="30">30</option>
+      <option value="60">60 (pesa muito)</option>
+    </select>
+
+    <select id="br" title="Qualidade (bitrate)">
+      <option value="800000">0.8 Mbps (leve)</option>
+      <option value="1200000">1.2 Mbps (ok)</option>
+      <option value="1800000" selected>1.8 Mbps (limpo/leve)</option>
+      <option value="2500000">2.5 Mbps (limpo)</option>
+      <option value="4000000">4 Mbps (pesa)</option>
+      <option value="6000000">6 Mbps (pesa muito)</option>
+    </select>
+
+    <label title="Na janela do Chrome/Edge marque 'Compartilhar áudio'">
+      <input id="audio" type="checkbox"> Áudio
     </label>
 
-    <span id="s">Parado</span>
+    <label title="Ajuda muito no desempenho">
+      <input id="noPreview" type="checkbox" checked> Sem preview gravando
+    </label>
+
+    <span id="st" class="pill">Parado</span>
   </div>
 
   <video id="v" controls playsinline></video>
+
+  <div class="hint">
+    <b>Pra osu! ficar suave:</b> escolha <b>Janela → osu!</b> (evite Tela inteira).  
+    Preset que costuma ficar “limpo sem travar”: <b>720p • 24fps • 1.8 Mbps • Sem preview</b>.  
+    Se ainda travar: desce para <b>540p</b> ou <b>20fps</b>. Áudio também pode pesar um pouco.
+  </div>
 </div>
 
 <script>
-let rec, chunks=[], blob=null, stream=null;
+let rec=null, chunks=[], blob=null, stream=null;
 
 const $=id=>document.getElementById(id);
-const S=t=>$("s").textContent=t;
+const setSt=t=>$("st").textContent=t;
 
-function mime(){
-  const c=["video/webm;codecs=vp8,opus","video/webm;codecs=vp8","video/webm"];
-  return c.find(x=>MediaRecorder.isTypeSupported(x))||"video/webm";
+function pickMime(){
+  const c=[
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
+    "video/webm;codecs=vp9",
+    "video/webm;codecs=vp8",
+    "video/webm"
+  ];
+  return c.find(x=>MediaRecorder.isTypeSupported(x)) || "";
+}
+
+function stopAll(){
+  try{ stream?.getTracks().forEach(t=>t.stop()); }catch(e){}
+  stream=null;
+}
+
+function parseRes(val){
+  if(val==="native") return null;
+  const [w,h]=val.split("x").map(n=>parseInt(n,10));
+  return {w,h};
 }
 
 $("start").onclick = async () => {
   blob=null; chunks=[]; $("down").disabled=true;
 
-  const ultra = $("mode").value==="ultra";
-  const wantAudio = $("sys").checked;
+  const fps = parseInt($("fps").value,10);
+  const br  = parseInt($("br").value,10);
+  const wantAudio = $("audio").checked;
+  const noPreview = $("noPreview").checked;
+  const r = parseRes($("res").value);
 
-  // Otimizado pra não travar o osu!: 720p + ~20fps + bitrate baixo
-  const videoConstraints = ultra ? {
-    frameRate:{ideal:20,max:20},
-    width:{ideal:1280},
-    height:{ideal:720}
-  } : {
-    frameRate:{ideal:30,max:30}
+  // Preview durante a gravação custa (decodificar/mostrar vídeo); desligar ajuda muito.
+  if(noPreview){
+    $("v").removeAttribute("src");
+    $("v").load();
+  }
+
+  const videoConstraints = {
+    frameRate: { ideal: fps, max: fps }
   };
+  if(r){
+    videoConstraints.width  = { ideal: r.w };
+    videoConstraints.height = { ideal: r.h };
+  }
 
   try{
     stream = await navigator.mediaDevices.getDisplayMedia({
@@ -67,41 +128,60 @@ $("start").onclick = async () => {
       audio: wantAudio
     });
   }catch(e){
-    S("Cancelado/erro");
+    setSt("Cancelado/erro");
     return;
   }
 
-  const bits = ultra ? 900000 : 2500000; // 0.9 Mbps vs 2.5 Mbps
-  rec = new MediaRecorder(stream,{ mimeType:mime(), videoBitsPerSecond:bits });
-
-  rec.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
-  rec.onstop = () => {
-    blob = new Blob(chunks,{type:rec.mimeType});
-    $("v").src = URL.createObjectURL(blob);
-    $("down").disabled = false;
+  const mimeType = pickMime();
+  const opts = {
+    mimeType: mimeType || undefined,
+    videoBitsPerSecond: br
   };
 
-  // Se você parar o compartilhamento pelo navegador, para aqui também
+  try{
+    rec = new MediaRecorder(stream, opts);
+  }catch(e){
+    stopAll();
+    setSt("Erro: MediaRecorder");
+    return;
+  }
+
+  rec.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = ()=>{
+    blob = new Blob(chunks,{type: rec.mimeType || "video/webm"});
+    if(noPreview){
+      $("v").src = URL.createObjectURL(blob);
+    }else{
+      // se preview estava ligado, ainda atualiza normal
+      $("v").src = URL.createObjectURL(blob);
+    }
+    $("down").disabled=false;
+  };
+
+  // Se parar o compartilhamento pelo navegador
   stream.getVideoTracks()[0].addEventListener("ended", ()=>{ if(rec?.state==="recording") $("stop").click(); });
 
-  rec.start(300);
-  $("start").disabled=true; $("stop").disabled=false;
-  S("Gravando… (dica: escolha a JANELA do osu!, não tela inteira)");
+  // Chunk mais longo = menos overhead.
+  rec.start(1000);
+
+  $("start").disabled=true;
+  $("stop").disabled=false;
+  setSt("Gravando… (use Janela → osu!)");
 };
 
 $("stop").onclick = () => {
   try{ if(rec && rec.state==="recording") rec.stop(); }catch(e){}
-  stream?.getTracks().forEach(t=>t.stop());
-  stream=null;
-  $("start").disabled=false; $("stop").disabled=true;
-  S("Parado");
+  stopAll();
+  $("start").disabled=false;
+  $("stop").disabled=true;
+  setSt("Parado");
 };
 
 $("down").onclick = () => {
   if(!blob) return;
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="osu_gravacao.webm";
+  a.download="gravacao.webm";
   a.click();
 };
 </script>
